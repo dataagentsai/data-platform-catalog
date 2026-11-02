@@ -1,0 +1,23 @@
+# DAC obligations for X8, Observability. Normative: edit here.
+- id: OPS-01
+  status: draft
+  since: 0.1.0
+  title: Alerts reach someone who can act
+  concern: X8
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - platform
+  statement: A failed run MUST reach a named person or rota who can act, within a declared time.
+  failure_mode: Failure emails went to a shared mailbox nobody read; a load had failed for four days before a user
+    asked why the report had not changed.
+  test: Make a job fail in test and time how long it takes for a person to know.
+  evidence: Alerts for failure, lateness against the freshness target and data checks, routed to a named team or
+    on-call rota, with an expected response time.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: OPS-01
+  related:
+  - DQ-04

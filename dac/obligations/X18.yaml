@@ -1,0 +1,74 @@
+# DAC obligations for X18, Resilience and recovery. Normative: edit here.
+- id: ORCH-05
+  status: draft
+  since: 0.1.0
+  title: Recovery time and data loss limits
+  concern: X18
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - platform
+  statement: Every dataset MUST declare a recovery time and a data-loss limit, and a restore MUST have been timed
+    against them.
+  failure_mode: A storage account was deleted by mistake; the backups existed but nobody had tried a restore, and
+    it took four days instead of the four hours the business assumed.
+  test: Restore one important table from backup into a test environment and time it.
+  evidence: An agreed recovery time and acceptable data loss, a backup or replication design that meets them, and
+    the result of a restore test.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: ORCH-05
+  related:
+  - REL-07
+- id: ORCH-06
+  status: draft
+  since: 0.1.0
+  title: Stream restarts from where it stopped
+  concern: X18
+  level: MUST
+  core: false
+  dimension: completeness
+  stages:
+  - bronze
+  - silver
+  statement: A stream stopped for longer than a typical outage, or redeployed with changed code, MUST restart from
+    where it stopped with no lost and no doubled events.
+  failure_mode: A redeploy changed the stream's checkpoint location; the job restarted from the earliest available
+    data, reprocessed a week and flooded downstream tables.
+  test: Stop the stream for longer than a typical outage in test, redeploy a changed version, restart, and compare
+    counts with the source.
+  evidence: Where progress is saved, how it survives redeploys and code changes, the source retention versus the
+    longest expected outage, and a runbook for resetting a stream.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: ORCH-06
+  related:
+  - DUP-04
+  - ORCH-03
+- id: REL-07
+  status: draft
+  since: 0.1.0
+  title: Rolling back a release, including its data
+  concern: X18
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - platform
+  statement: A release that changes a table MUST be reversible, including the data it changed, within a declared
+    time.
+  failure_mode: A release changed a table's structure and backfilled it; the code could be rolled back in minutes,
+    but the data could not, and reports were broken for two days.
+  test: Deploy a release that changes a table in test, then roll it back fully, and time it.
+  evidence: A rollback plan per release covering code, schema and data (restore points or table versions), and a
+    rehearsal in a production-like environment.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: REL-07
+  related:
+  - REL-03
+  - ORCH-05

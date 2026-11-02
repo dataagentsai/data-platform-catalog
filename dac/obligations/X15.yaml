@@ -1,0 +1,217 @@
+# DAC obligations for X15, Replay, backfill and idempotency. Normative: edit here.
+- id: DUP-01
+  status: draft
+  since: 0.1.0
+  title: Same batch or file arriving twice
+  concern: X15
+  level: MUST
+  core: true
+  dimension: uniqueness
+  stages:
+  - landing
+  - bronze
+  - silver
+  - gold
+  statement: A file or batch delivered a second time MUST NOT change the row count or any key total in any layer.
+  failure_mode: After an outage the source resent yesterday's file, the pipeline loaded it again as new, and revenue
+    on the dashboard doubled for a day before anyone noticed.
+  test: Load the same file twice in a test environment; row counts and key totals in every layer must not change
+    after the second load.
+  evidence: A business key or file fingerprint, a record of what has already been loaded, and a test that loads
+    the same input twice.
+  cites:
+  - standard: ODCS
+    ref: quality[].metric = duplicateValues
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  review_check: DUP-01
+  related:
+  - DUP-02
+  - DUP-03
+  - REC-01
+- id: DUP-02
+  status: draft
+  since: 0.1.0
+  title: Rerunning a job leaves the result unchanged
+  concern: X15
+  level: MUST
+  core: true
+  dimension: uniqueness
+  stages:
+  - bronze
+  - silver
+  - gold
+  statement: Running the same job twice for the same window MUST leave every output table with the same fingerprint
+    (row count, key totals) as running it once.
+  failure_mode: Operations reran a failed nightly job, but its first half had already appended rows, so the fact
+    table held two copies of the night's orders until month-end reconciliation found them.
+  test: Run the pipeline twice in a row for the same day in test and compare a fingerprint of every output table
+    (counts, sums of key measures); they must be identical.
+  evidence: Each write described as merge on a key, or replace of a whole partition or period, never a blind append;
+    a rerun test per pipeline; the runbook says reruns are safe.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  review_check: DUP-02
+  related:
+  - DUP-01
+  - ORCH-03
+  - TEST-05
+- id: DUP-04
+  status: draft
+  since: 0.1.0
+  title: Replayed events in a stream
+  concern: X15
+  level: MUST
+  core: false
+  dimension: uniqueness
+  stages:
+  - bronze
+  - silver
+  statement: Events replayed by a stream after a restart or rewind MUST NOT be counted twice in any output.
+  failure_mode: A consumer restarted from an older position and replayed two hours of events; the counts sink appended
+    them again and the real-time dashboard overstated traffic for the day.
+  test: In test, stop the stream mid-flow, rewind its position by a known number of events, restart, and confirm
+    output counts match the input exactly.
+  evidence: An event id or key plus sequence used to deduplicate, a stated delivery guarantee end to end, and an
+    idempotent or transactional write to the sink.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  review_check: DUP-04
+  related:
+  - DUP-02
+  - ORCH-06
+  - LATE-03
+- id: HIST-03
+  status: draft
+  since: 0.1.0
+  title: Handing over from history load to incremental loads
+  concern: X15
+  level: MUST
+  core: false
+  dimension: completeness
+  stages:
+  - bronze
+  - silver
+  statement: The switch from the first full load to incremental loads MUST lose no change made at the source while
+    the full load was running.
+  failure_mode: The full snapshot finished at 10:00 but incremental capture was started at 11:00; an hour of changes
+    was never loaded and the totals were quietly short for months.
+  test: In test, change rows in the source while the full load runs, then start incremental; every changed row must
+    appear once with its latest value.
+  evidence: A defined high-water mark or change position taken before the snapshot starts, incremental capture starting
+    from it, and overlapping rows absorbed by a merge on key.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Integration and Interoperability, chapter 8
+  review_check: HIST-03
+  related:
+  - DUP-01
+  - REC-01
+- id: HIST-04
+  status: draft
+  since: 0.1.0
+  title: Reloading or backfilling a past period
+  concern: X15
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - bronze
+  - silver
+  - gold
+  statement: Reloading a past window MUST be a parameter of the normal job, and MUST change only that window's rows
+    and the derived rows that depend on it.
+  failure_mode: A source bug corrupted three days in March; the only way to fix them was a full rebuild that took
+    the platform down for a weekend.
+  test: In test, reload one day from three days ago with a parameter and check that only that day's rows and its
+    downstream aggregates changed.
+  evidence: Pipelines parameterised by period, writes that replace exactly that period, a runbook step for reloading
+    a period, and a note on which downstream tables must also be rebuilt.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: HIST-04
+  related:
+  - DUP-02
+  - LATE-01
+- id: LATE-01
+  status: draft
+  since: 0.1.0
+  title: Late and corrected rows rebuild the right periods
+  concern: X15
+  level: MUST
+  core: true
+  dimension: timeliness
+  stages:
+  - silver
+  - gold
+  statement: A late or corrected row MUST cause every period it affects to be rebuilt, within a declared look-back
+    window, and nothing outside it.
+  failure_mode: Returns were booked against sales from three weeks earlier, but the pipeline only rebuilt the last
+    two days, so monthly net revenue never matched the finance ledger.
+  test: In a real extract, compare business date against load date and find the longest lag; then insert a row two
+    weeks late in test and check the monthly total updates.
+  evidence: A profile of how late data really arrives, an agreed correction window, and a design that reprocesses
+    affected periods by business date rather than load date.
+  cites:
+  - standard: ODCS
+    ref: slaProperties[].property = latency
+  review_check: LATE-01
+  related:
+  - LATE-02
+  - HIST-04
+  - REC-01
+- id: ORCH-03
+  status: draft
+  since: 0.1.0
+  title: Restart after failing in the middle
+  concern: X15
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - bronze
+  - silver
+  - gold
+  statement: A job killed while writing and then restarted MUST produce the same output as a run that was never
+    interrupted.
+  failure_mode: A job failed after updating three of five tables; reports joined new facts to old dimensions, and
+    rerunning from the start re-applied the first three updates.
+  test: Kill a job in test while it is writing, then restart it; outputs must match an uninterrupted run.
+  evidence: Atomic writes per table, a defined restart point per step, consumers reading only completed runs, and
+    a failure-injection test.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: ORCH-03
+  related:
+  - DUP-02
+  - TEST-05
+  - ORCH-04
+- id: SCD-02
+  status: draft
+  since: 0.1.0
+  title: History rows stay correct on reruns and out-of-order changes
+  concern: X15
+  level: MUST
+  core: true
+  dimension: consistency
+  stages:
+  - silver
+  statement: A table that keeps history MUST end with exactly one current row per key and no overlapping validity
+    periods, whatever order the changes arrive in and however often a batch is re-run.
+  failure_mode: A rerun closed and reopened every current row, and an older change arriving late became "current",
+    so customers showed last year's address with overlapping validity periods.
+  test: Feed three versions of one record in reverse order, then rerun the same batch; exactly one current row and
+    no overlapping date ranges may remain.
+  evidence: Changes ordered by a source sequence or change timestamp, not arrival time; a hash to skip unchanged
+    rows; and tests for rerun, two-changes-per-batch and out-of-order cases.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Warehousing and Business Intelligence, chapter 11
+  review_check: SCD-02
+  related:
+  - DUP-02
+  - SCD-04

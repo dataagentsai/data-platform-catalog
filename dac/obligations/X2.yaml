@@ -1,0 +1,79 @@
+# DAC obligations for X2, Orchestration. Normative: edit here.
+- id: ORCH-01
+  status: draft
+  since: 0.1.0
+  title: Jobs wait for their data, not the clock
+  concern: X2
+  level: MUST
+  core: true
+  dimension: timeliness
+  stages:
+  - bronze
+  - silver
+  - gold
+  statement: A job MUST start when its input data is complete, not at a clock time, and MUST NOT run on partial
+    or stale input.
+  failure_mode: The report job ran at 06:00 assuming the load finished at 05:00; one night the load ran late, and
+    the report published half a day's figures to the whole company.
+  test: Delay an upstream job in test and check that the downstream waits instead of running on stale or partial
+    data.
+  evidence: Dependencies declared between jobs or on completion markers, cross-team dependencies named, and what
+    happens when an upstream is late.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: ORCH-01
+  related:
+  - ORCH-02
+  - SERV-02
+- id: ORCH-02
+  status: draft
+  since: 0.1.0
+  title: Retries for passing failures only
+  concern: X2
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - platform
+  statement: Only failures declared as passing (timeouts, throttling) MAY be retried automatically; a data error
+    MUST fail at once and alert.
+  failure_mode: Every failure was retried five times; a bad-data error retried for three hours, burning compute
+    and delaying the alert until the morning.
+  test: In test, cause one timeout and one data error; the first should retry and succeed, the second should fail
+    fast and alert.
+  evidence: A retry policy per job with limits and back-off, failures classified as transient or permanent, and
+    an alert after the last retry.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: ORCH-02
+  related:
+  - ORCH-01
+  - DQ-03
+  - OPS-01
+- id: ORCH-04
+  status: draft
+  since: 0.1.0
+  title: Two runs writing the same table at once
+  concern: X2
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - bronze
+  - silver
+  - gold
+  statement: Two runs that write the same table at the same time MUST NOT both succeed with interleaved writes;
+    the second MUST wait or fail clearly.
+  failure_mode: A manual rerun overlapped the scheduled run; both merged into the same table, one failed on a conflict,
+    and the other left half-updated rows.
+  test: Start the same job twice in test and see what happens to the second run and the table.
+  evidence: One writer per table by design, a limit of one concurrent run per job, and a runbook rule for manual
+    reruns.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: ORCH-04
+  related:
+  - ORCH-03

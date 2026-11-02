@@ -1,0 +1,26 @@
+# DAC obligations for X19, Performance. Normative: edit here.
+- id: PERF-05
+  status: draft
+  since: 0.1.0
+  title: Storage layout and file sizes kept healthy
+  concern: X19
+  level: SHOULD
+  core: false
+  dimension: null
+  stages:
+  - bronze
+  - silver
+  - gold
+  statement: Table file counts and file sizes SHOULD be measured and kept inside declared bounds by routine maintenance.
+  failure_mode: A streaming load wrote thousands of tiny files an hour; reads slowed every week until a simple query
+    took ten minutes and cost ten times more.
+  test: After a week of test loads, count files and average file size for the busiest table.
+  evidence: Layout chosen from the main filter and join columns, a scheduled compaction and cleanup job, and a metric
+    for average file size.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: PERF-05
+  related:
+  - COST-04
+  - SEC-03

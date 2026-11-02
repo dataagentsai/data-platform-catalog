@@ -1,0 +1,23 @@
+# DAC obligations for X20, Self-healing. Normative: edit here.
+- id: HEAL-01
+  status: draft
+  since: 0.1.0
+  title: A self-healing fix goes through the same gates
+  concern: X20
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - platform
+  statement: An automatic fix MUST be made in development, pass the same tests, be deployed through the normal pipeline,
+    be verified after deployment, and roll back by itself if verification fails.
+  failure_mode: An automatic fix to a renamed column was applied straight to production and silently mapped the
+    wrong field.
+  test: Trigger a known fixable incident; the fix must appear as a reviewed change, pass tests, and roll back when
+    its check is made to fail.
+  evidence: The fix's change record, test run, deployment and verification result.
+  cites: []
+  related:
+  - GATE-03
+  review_check: null
+  plan_rule: R6

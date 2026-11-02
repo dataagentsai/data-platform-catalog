@@ -1,0 +1,134 @@
+# DAC obligations for X3, Contracts and schema evolution. Normative: edit here.
+- id: DES-04
+  status: draft
+  since: 0.1.0
+  title: Grain and keys of every table
+  concern: X3
+  level: MUST
+  core: true
+  dimension: uniqueness
+  stages:
+  - silver
+  - gold
+  statement: Every table MUST declare its grain and its key, and the key MUST be tested for uniqueness on every
+    run.
+  failure_mode: The orders table mixed order headers and order lines; summing it double-counted shipping, and two
+    teams built different fixes.
+  test: For each target table, finish the sentence "one row is one …" and test the key for uniqueness.
+  evidence: 'For each table: one sentence for the grain, the key columns, and a uniqueness test on that key.'
+  cites:
+  - standard: ODCS
+    ref: schema[].properties[].primaryKey
+  - standard: DAMA-DMBOK
+    ref: Data Modeling and Design, chapter 5
+  review_check: DES-04
+  related:
+  - DUP-03
+  - SERV-01
+- id: GATE-02
+  status: draft
+  since: 0.1.0
+  title: A contract is never loosened to make a job pass
+  concern: X3
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - platform
+  statement: 'Contract and metric definition files MUST be protected paths: changing them MUST need review by their
+    named owner, and no automated process MAY relax a rule to turn a failing run green.'
+  failure_mode: A job failed on a new null column, so someone made the column nullable in the contract at night;
+    the report then showed blanks for a month.
+  test: Open a change that relaxes one rule, as a pipeline identity and as an agent; both must be refused or held
+    for the owner.
+  evidence: Branch protection or path ownership rules for contract and metric files; the refused attempt in the
+    audit log.
+  cites:
+  - standard: ODCS
+    ref: quality[]
+  - standard: DAMA-DMBOK
+    ref: Data Governance, chapter 3
+  related:
+  - GATE-03
+  - SERV-04
+  review_check: null
+  plan_rule: R6
+- id: SCH-01
+  status: draft
+  since: 0.1.0
+  title: A new column appears at the source
+  concern: X3
+  level: MUST
+  core: false
+  dimension: conformity
+  stages:
+  - bronze
+  - silver
+  statement: A new source column MUST be kept in bronze and reported, and MUST NOT reach silver or gold until the
+    contract adds it.
+  failure_mode: The source added a discount column; the raw layer dropped it silently, and when finance asked for
+    it three months later the history could not be recovered.
+  test: Add a column to a test source file or table and run the pipeline; see what each layer does and whether anyone
+    is told.
+  evidence: 'A schema policy per layer (for example: raw keeps everything including unknown columns, cleaned layers
+    change only through a reviewed change), and an alert when a new column appears.'
+  cites:
+  - standard: ODCS
+    ref: schema[]
+  review_check: SCH-01
+  related:
+  - SCH-02
+- id: SCH-02
+  status: draft
+  since: 0.1.0
+  title: A column renamed, removed or retyped
+  concern: X3
+  level: MUST
+  core: true
+  dimension: conformity
+  stages:
+  - bronze
+  - silver
+  statement: A renamed, removed or retyped source column MUST stop the affected load with a message that names the
+    column; it MUST NOT load as nulls.
+  failure_mode: A source changed an amount column from cents to a decimal in dollars; the pipeline cast it happily
+    and revenue fell a hundredfold in the morning report.
+  test: In test, rename one column and change one type in a source sample; the load must fail with a message that
+    names the column.
+  evidence: An expected schema checked on every load, breaking changes failing the load with a clear alert, and
+    range or distribution checks on key measures.
+  cites:
+  - standard: ODCS
+    ref: schema[].properties[]
+  review_check: SCH-02
+  related:
+  - SCH-01
+  - DQ-01
+  - OPS-01
+- id: SERV-01
+  status: draft
+  since: 0.1.0
+  title: A contract with each consumer
+  concern: X3
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - gold
+  - semantic
+  statement: Every consumer-facing dataset MUST have a published contract naming its fields, grain, freshness and
+    owner.
+  failure_mode: A downstream team built a pricing model on an internal staging table; a routine refactor renamed
+    it and the pricing model failed on a sale day.
+  test: Ask the main consumer which exact fields they will read; check each is in the data model with a definition.
+  evidence: A list of consumers and, for each, the published interface, its fields and meaning, grain, freshness
+    promise and a named contact.
+  cites:
+  - standard: ODCS
+    ref: schema[]
+  - standard: ODPS
+    ref: outputPorts[]
+  review_check: SERV-01
+  related:
+  - DES-04
+  - SERV-04

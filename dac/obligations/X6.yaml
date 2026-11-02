@@ -1,0 +1,131 @@
+# DAC obligations for X6, Reconciliation. Normative: edit here.
+- id: DEL-01
+  status: draft
+  since: 0.1.0
+  title: Detecting hard deletes at the source
+  concern: X6
+  level: MUST
+  core: true
+  dimension: completeness
+  stages:
+  - bronze
+  - silver
+  statement: Rows deleted at the source MUST be detected (from a change feed, a delete flag or a full-key comparison)
+    and recorded in silver by the dataset's declared delete rule.
+  failure_mode: Cancelled orders were deleted in the source, but the incremental extract only picked up new and
+    changed rows, so the cancelled orders stayed in the warehouse and inflated sales.
+  test: Ask the source owner whether rows are ever deleted, then delete a test row in a source test system and run
+    the load; the platform must reflect it.
+  evidence: 'For each source, whether deletes happen and how they are captured: change capture with delete events,
+    a periodic full key comparison, or a delete feed from the source.'
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Integration and Interoperability, chapter 8
+  review_check: DEL-01
+  related:
+  - DEL-03
+  - REC-01
+- id: DEL-03
+  status: draft
+  since: 0.1.0
+  title: Deletes flow through derived tables
+  concern: X6
+  level: MUST
+  core: false
+  dimension: consistency
+  stages:
+  - gold
+  - semantic
+  statement: A source delete MUST flow through every derived table, so that summaries still equal the sum of their
+    detail after the delete.
+  failure_mode: The detail table dropped a deleted order, but the daily summary built from it was only ever appended
+    to, so detail and summary disagreed and users stopped trusting both.
+  test: Delete one source row in test, run the full chain, and compare the summary total against the sum of the
+    detail.
+  evidence: Derived tables rebuilt for the affected periods when deletes arrive, and a test that checks detail and
+    summary still agree after a delete.
+  cites:
+  - standard: ISO-25012
+    ref: consistency
+  review_check: DEL-03
+  related:
+  - DEL-01
+  - LATE-01
+  - REC-01
+- id: REC-01
+  status: draft
+  since: 0.1.0
+  title: Counts and totals reconciled layer by layer
+  concern: X6
+  level: MUST
+  core: true
+  dimension: completeness
+  stages:
+  - sources
+  - bronze
+  - silver
+  - gold
+  statement: On every run, row counts and declared control totals MUST be compared at each hop from source to gold,
+    and a difference MUST name the hop where it appeared.
+  failure_mode: The report was four percent short of the source and nobody could say in which layer rows had been
+    lost, so a week went into tracing one join that dropped orphan rows.
+  test: For one day of real data, write down the source count and total, then the count and total in each layer,
+    and explain every difference.
+  evidence: Counts and sums of key measures captured at the source and after each layer for every run, stored, compared,
+    and every expected difference (filters, quarantined rows) accounted for.
+  cites:
+  - standard: ODCS
+    ref: quality[].metric = rowCount
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  review_check: REC-01
+  related:
+  - REC-03
+  - DUP-01
+- id: REC-03
+  status: draft
+  since: 0.1.0
+  title: Tolerances and who signs off differences
+  concern: X6
+  level: MUST
+  core: true
+  dimension: accuracy
+  stages:
+  - platform
+  statement: Every reconciliation MUST have a declared tolerance and a named person who signs off differences inside
+    it.
+  failure_mode: Test found a 0.3 percent gap; engineering called it rounding, finance called it a blocker, and go-live
+    slipped two weeks while they argued.
+  test: Put the tolerance question on the next sign-off agenda and record a number for the top three measures.
+  evidence: A tolerance per measure and a named person who accepts reconciliation results.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  review_check: REC-03
+  related:
+  - REC-01
+- id: REC-05
+  status: draft
+  since: 0.1.0
+  title: Reconciliation names the hop that drifted
+  concern: X6
+  level: MUST
+  core: true
+  dimension: consistency
+  stages:
+  - sources
+  - bronze
+  - silver
+  - gold
+  statement: When totals drift beyond tolerance, the result MUST name the first hop where the difference appeared,
+    not only that source and report disagree.
+  failure_mode: Gold was 2% short of the source; it took three days to find the silver filter that caused it.
+  test: Plant a difference at one hop in test; the reconciliation result must name that hop.
+  evidence: Reconciliation results stored per hop per run.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  related:
+  - REC-01
+  - REC-03
+  review_check: null

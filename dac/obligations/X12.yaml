@@ -1,0 +1,59 @@
+# DAC obligations for X12, Privacy and personal data. Normative: edit here.
+- id: SEC-01
+  status: draft
+  since: 0.1.0
+  title: Personal and sensitive data found and classified
+  concern: X12
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - bronze
+  - silver
+  - gold
+  statement: Every column MUST carry a classification, and personal data MUST be detected by scanning content, including
+    free-text columns.
+  failure_mode: Free-text notes held customer phone numbers and health details; nobody had classified them, so they
+    were copied unmasked into a table hundreds of analysts could read.
+  test: Scan a real extract of each source for patterns like emails, phone numbers and national ids, including in
+    free-text columns.
+  evidence: A classification for every column in scope (public, internal, confidential, personal, special category),
+    including free-text fields, recorded in the data dictionary or catalog.
+  cites:
+  - standard: ODCS
+    ref: schema[].properties[].classification
+  - standard: DAMA-DMBOK
+    ref: Data Security, chapter 7
+  review_check: SEC-01
+  related:
+  - SEC-02
+  - SEC-03
+- id: SEC-03
+  status: draft
+  since: 0.1.0
+  title: Retention and the right to be forgotten
+  concern: X12
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - bronze
+  - silver
+  - gold
+  statement: Every dataset holding personal data MUST declare a retention period, and an erasure request MUST remove
+    the person from every table, version and extract within the declared time.
+  failure_mode: A customer's erasure request deleted their current row, but the history table, old file versions
+    kept for recovery and a weekly extract to a partner still held their data.
+  test: Trace one test person through every table, version and extract in test and count where their data would
+    remain after the erasure procedure.
+  evidence: A retention period per data class, an erasure procedure that covers every layer, history, versions and
+    copies, and the time it takes to complete.
+  cites:
+  - standard: ODCS
+    ref: slaProperties[].property = retention
+  - standard: DAMA-DMBOK
+    ref: Data Security, chapter 7
+  review_check: SEC-03
+  related:
+  - SEC-01
+  - PERF-05

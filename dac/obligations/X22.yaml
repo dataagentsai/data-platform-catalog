@@ -1,0 +1,22 @@
+# DAC obligations for X22, Simulation. Normative: edit here.
+- id: SIM-01
+  status: draft
+  since: 0.1.0
+  title: Every incident kind has a planted test
+  concern: X22
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - platform
+  statement: Every incident kind in the data world's calendar MUST be joined to the detector expected to fire, and
+    each detector MUST have been seen to fire on a planted incident.
+  failure_mode: The late-data detector had never fired in two years; when it mattered, it was misconfigured.
+  test: Join the incident calendar to the detectors; every unmatched incident kind or never-fired detector is a
+    gap.
+  evidence: The join table, with the run in which each detector last fired on a planted incident.
+  cites: []
+  related:
+  - TEST-05
+  review_check: null
+  plan_rule: R9

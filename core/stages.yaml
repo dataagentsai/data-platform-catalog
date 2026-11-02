@@ -1,0 +1,10 @@
+# The spine: data moves one way, left to right (rule R8). Shared by DPC and DAC.
+# "platform" means the obligation is about the platform as a whole, not one stage.
+sources:     Systems the data comes from; the platform reads them and never writes to them
+landing:     Files kept exactly as received, so a bad parse can be redone (skipped when change capture writes straight to bronze)
+bronze:      Every record as delivered, with load metadata, append-only
+silver:      Cleaned, typed, deduplicated, history kept, bad rows quarantined
+gold:        Shaped for a business question (facts, dimensions, aggregates)
+semantic:    Metrics and their definitions, defined once
+experiences: Dashboards, conversation interfaces, extracts and other consumers
+platform:    The platform as a whole (control plane, environments, release, cost, access)

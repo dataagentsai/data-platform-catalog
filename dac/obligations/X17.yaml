@@ -1,0 +1,46 @@
+# DAC obligations for X17, Testing. Normative: edit here.
+- id: TEST-03
+  status: draft
+  since: 0.1.0
+  title: Automated tests run on every change
+  concern: X17
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - platform
+  statement: Automated tests, including data tests, MUST run on every change and block the merge when they fail.
+  failure_mode: A small refactor changed a join; the tests existed but were run by hand and nobody ran them, so
+    the regression reached production.
+  test: Break one business rule deliberately on a branch; the pipeline must fail before merge.
+  evidence: Tests wired into the pull request and deployment pipeline as required gates, with coverage of the transformations
+    that carry business rules.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  review_check: TEST-03
+  related:
+  - REL-02
+- id: TEST-05
+  status: draft
+  since: 0.1.0
+  title: Failure, rerun and recovery tested on purpose
+  concern: X17
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - platform
+  statement: Every failure the design claims to handle MUST have a test that causes it on purpose.
+  failure_mode: Every test assumed the happy path; in the first month the pipeline met a resent file, a late batch
+    and a crash mid-write, and each one corrupted data.
+  test: List every failure the architecture says it handles and check each has a test case.
+  evidence: Negative test cases for each failure the design claims to handle, with expected outcomes.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: TEST-05
+  related:
+  - DUP-02
+  - ORCH-03
+  - SCH-02

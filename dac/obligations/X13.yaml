@@ -1,0 +1,26 @@
+# DAC obligations for X13, Governance, catalog and semantics. Normative: edit here.
+- id: SERV-04
+  status: draft
+  since: 0.1.0
+  title: Business definitions live in one place
+  concern: X13
+  level: MUST
+  core: true
+  dimension: consistency
+  stages:
+  - semantic
+  statement: Each business metric MUST be defined once, in one place, and every consumer MUST read that definition.
+  failure_mode: Three dashboards calculated margin three ways; the leadership meeting spent an hour arguing about
+    which number was right instead of deciding anything.
+  test: Ask two consumers to write down how they calculate the top measure; compare the answers.
+  evidence: A definitions list with the owner of each measure, implemented once in a shared model or semantic layer
+    that reports reuse.
+  cites:
+  - standard: Ossie
+    ref: metric
+  - standard: DAMA-DMBOK
+    ref: Data Governance, chapter 3
+  review_check: SERV-04
+  related:
+  - SERV-01
+  - SCD-04

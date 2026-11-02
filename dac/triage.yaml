@@ -1,0 +1,94 @@
+# Which data-project-review Tech checks became DAC obligations (DE-021, 2 Nov 2026).
+obligation:
+- COST-02
+- COST-03
+- COST-04
+- DEL-01
+- DEL-03
+- DES-04
+- DQ-01
+- DQ-02
+- DQ-03
+- DQ-04
+- DUP-01
+- DUP-02
+- DUP-03
+- DUP-04
+- ENV-01
+- ENV-02
+- HIST-03
+- HIST-04
+- LATE-01
+- LATE-02
+- LATE-03
+- LATE-04
+- OPS-01
+- OPS-03
+- ORCH-01
+- ORCH-02
+- ORCH-03
+- ORCH-04
+- ORCH-05
+- ORCH-06
+- PERF-02
+- PERF-05
+- REC-01
+- REC-03
+- REL-01
+- REL-02
+- REL-03
+- REL-04
+- REL-05
+- REL-06
+- REL-07
+- SCD-02
+- SCD-04
+- SCH-01
+- SCH-02
+- SEC-01
+- SEC-02
+- SEC-03
+- SEC-04
+- SERV-01
+- SERV-02
+- SERV-04
+- TEST-03
+- TEST-05
+review_only:
+  COST-01: An estimate made before build, not a property of the running platform.
+  DQ-05: Profiling before design is a project step; the platform obligation is PROF-01.
+  DEL-02: Deciding what a delete means is a business call; DEL-01 holds the platform to the declared rule.
+  DES-01: A delivery practice (thin slice), not a platform property.
+  DES-02: Writing non-functional needs as numbers is a document check; the numbers then feed PERF-02 and ORCH-05.
+  DES-05: A design choice; DPC records the framework capability.
+  DES-06: A design choice made per consumer, not testable on the platform.
+  ENV-03: Network access in discovery is a project step.
+  ENV-04: Naming standards are a document check.
+  ENV-05: Fit with an existing platform is a review conversation.
+  EST-01: Estimation.
+  EST-02: Estimation.
+  EST-03: Estimation.
+  EST-04: Estimation.
+  EST-05: Estimation.
+  EST-07: Estimation.
+  HAND-01: Handover.
+  HAND-02: Handover.
+  HAND-03: Handover.
+  HAND-06: Handover.
+  HIST-01: History scope is a project decision; HIST-04 holds the platform to reload correctly.
+  HIST-02: Load on the source during extract is planned with the source owner.
+  SCD-01: Which tables keep history is a business call; SCD-02 holds the platform to it.
+  SCD-03: Asking source owners about key reuse is discovery work.
+  OPS-05: Hypercare is a plan item.
+  PERF-01: Volumes stated by source owners is discovery work.
+  PERF-03: Testing at production volume is a project step; the platform obligations are PERF-02 and PERF-05.
+  PERF-04: Skew analysis is a design step; DPC records the capability.
+  REC-02: Choosing the trusted business number is a business call; REC-01 does the comparing.
+  REC-04: A go-live checklist item.
+  SCH-03: Source teams warning before change is an agreement between people.
+  SEC-05: Where data may live is a compliance decision recorded in the binding.
+  SERV-03: Announcing change is a process; lineage (LIN-01) makes it possible.
+  SERV-05: Load testing consumer queries is a project step.
+  TEST-01: A test-strategy document check.
+  TEST-02: Test data realism is a project step.
+  TEST-04: User acceptance is a project step.

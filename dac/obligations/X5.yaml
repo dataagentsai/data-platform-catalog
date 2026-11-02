@@ -1,0 +1,26 @@
+# DAC obligations for X5, Profiling. Normative: edit here.
+- id: PROF-01
+  status: draft
+  since: 0.1.0
+  title: Every dataset is profiled and drift is visible
+  concern: X5
+  level: SHOULD
+  core: false
+  dimension: null
+  stages:
+  - bronze
+  - silver
+  statement: Every dataset SHOULD be profiled on each run (counts, nulls, distinct values, ranges), and a change
+    beyond a declared threshold SHOULD be reported.
+  failure_mode: A source started sending zero for unknown prices; nulls fell to nothing and nobody noticed the averages
+    drop.
+  test: Change a column's distribution in a test delivery; the profile drift report must flag it.
+  evidence: Stored profiles per run and the drift report.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  - standard: ODCS
+    ref: quality[].metric = nullValues
+  related:
+  - DQ-04
+  review_check: null

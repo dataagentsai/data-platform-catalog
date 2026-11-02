@@ -1,0 +1,77 @@
+# DAC obligations for X11, Security and access. Normative: edit here.
+- id: ENV-02
+  status: draft
+  since: 0.1.0
+  title: Access through groups and service identities
+  concern: X11
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - platform
+  statement: Production jobs MUST run as service identities, and access MUST be granted to groups, never to named
+    people.
+  failure_mode: Production jobs ran under the lead developer's own account; when she left the company her account
+    was disabled and every nightly job failed.
+  test: List who owns and runs each production job; any job owned or run by a named person is a gap.
+  evidence: A role-to-group access model, service identities for jobs in each environment, no direct user grants
+    in production, and who approves access requests.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Security, chapter 7
+  review_check: ENV-02
+  related:
+  - ENV-01
+  - SEC-02
+  - REL-05
+- id: REL-05
+  status: draft
+  since: 0.1.0
+  title: No secrets in the repository
+  concern: X11
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - platform
+  statement: A secret MUST NOT be stored in the repository or anywhere in its history.
+  failure_mode: A database password was committed in a script; the repository was later shared with a vendor, and
+    the security team had to rotate credentials across four systems.
+  test: Run a secret scanner over the whole repository history today.
+  evidence: A named secret store per environment, code that reads secrets by name, and an automated secret scan
+    on the repository.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Security, chapter 7
+  review_check: REL-05
+  related:
+  - REL-04
+  - ENV-02
+- id: SEC-02
+  status: draft
+  since: 0.1.0
+  title: Who can see what
+  concern: X11
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - silver
+  - gold
+  - semantic
+  - experiences
+  statement: Access MUST be granted by role, and the lowest-privilege role MUST NOT be able to read a restricted
+    column or row directly.
+  failure_mode: Regional managers were meant to see only their own region, but the report filtered it in the front
+    end; anyone querying the table directly saw every region's salaries.
+  test: Log in as a test user of the lowest-privilege persona and query the most sensitive table directly.
+  evidence: An access matrix by group, enforced in the data platform itself with masking and row-level rules, and
+    tests that run as each persona.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Security, chapter 7
+  review_check: SEC-02
+  related:
+  - SEC-01
+  - ENV-02
+  - SEC-04

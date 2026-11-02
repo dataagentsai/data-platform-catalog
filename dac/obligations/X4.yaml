@@ -1,0 +1,208 @@
+# DAC obligations for X4, Data quality. Normative: edit here.
+- id: DQ-01
+  status: draft
+  since: 0.1.0
+  title: Data quality rules written with owners
+  concern: X4
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - silver
+  - gold
+  statement: Every quality rule MUST be declared in the dataset's contract with a severity and a named owner; a
+    rule that exists only in code does not count.
+  failure_mode: Everyone assumed someone else checked that order totals were positive; a source bug sent negative
+    totals for a week and nobody's check caught it.
+  test: Ask the business owner for the five things that would make them distrust the main report, and write each
+    as a rule that runs on today's data.
+  evidence: A rule list per table (not null, unique, valid values, ranges, referential integrity, business rules),
+    each with a business owner and a severity, implemented as automated checks.
+  cites:
+  - standard: ODCS
+    ref: quality[]
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  review_check: DQ-01
+  related:
+  - DQ-02
+- id: DQ-02
+  status: draft
+  since: 0.1.0
+  title: What happens to a row that fails a rule
+  concern: X4
+  level: MUST
+  core: true
+  dimension: conformity
+  stages:
+  - silver
+  statement: A row that fails a blocking rule MUST be kept in quarantine with the rule id and the reason, and MUST
+    be countable and replayable once fixed.
+  failure_mode: Bad rows were filtered out silently; three thousand orders a day disappeared into a table no one
+    looked at, and sales were understated for a quarter.
+  test: Feed a sample with known bad rows in test and check each lands where the design says, with a reason, and
+    that an owner is notified.
+  evidence: An action per rule severity, a quarantine table with reasons, a count of quarantined rows reported to
+    an owner, and a way to reprocess rows once fixed.
+  cites:
+  - standard: ODCS
+    ref: quality[].severity
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  review_check: DQ-02
+  related:
+  - DQ-01
+  - DQ-03
+  - OPS-01
+- id: DQ-03
+  status: draft
+  since: 0.1.0
+  title: One poison record does not stop the whole load
+  concern: X4
+  level: MUST
+  core: false
+  dimension: conformity
+  stages:
+  - landing
+  - bronze
+  statement: One malformed record MUST NOT stop the rest of its delivery from loading; the malformed record MUST
+    be kept with the parse error.
+  failure_mode: One record with a malformed date crashed the stream parser on every retry; the pipeline was stuck
+    for six hours while all later data waited behind it.
+  test: Put one malformed record in the middle of a test input; the rest must load and the bad record must be kept
+    somewhere readable.
+  evidence: Parsing that captures unreadable records into a side table with the raw content and the error, and a
+    test with deliberately malformed input.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  review_check: DQ-03
+  related:
+  - DQ-02
+  - ORCH-02
+- id: DUP-03
+  status: draft
+  since: 0.1.0
+  title: Duplicates already inside the source
+  concern: X4
+  level: MUST
+  core: true
+  dimension: uniqueness
+  stages:
+  - silver
+  statement: Rows that share a declared key inside one source delivery MUST be resolved by a written rule, and every
+    row the rule drops MUST be kept with the reason.
+  failure_mode: The source table had no primary key and sent the same customer twice with different spellings; joins
+    to it multiplied order rows and inflated sales by eight percent.
+  test: Count rows per proposed key in a real extract of every source table; any key with more than one row needs
+    a written rule before design continues.
+  evidence: A profile showing key uniqueness per source table, the chosen business key, and an agreed rule for duplicates
+    (keep latest, keep all, reject), signed by the data owner.
+  cites:
+  - standard: ODCS
+    ref: quality[].metric = duplicateValues
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  review_check: DUP-03
+  related:
+  - DES-04
+- id: GATE-01
+  status: draft
+  since: 0.1.0
+  title: Nothing passes by absence
+  concern: X4
+  level: MUST
+  core: true
+  dimension: completeness
+  stages:
+  - bronze
+  - silver
+  - gold
+  - semantic
+  statement: A check that examined zero rows, or did not run, MUST report error, never pass.
+  failure_mode: The quality dashboard said 0 failures for a week; the source had sent nothing, so nothing was checked.
+  test: Run every check against an empty input; each must report error.
+  evidence: Check results include the number of rows examined, and an error for each zero.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  related:
+  - DQ-04
+  review_check: null
+  plan_rule: R7
+- id: LATE-02
+  status: draft
+  since: 0.1.0
+  title: Facts arriving before their reference data
+  concern: X4
+  level: MUST
+  core: false
+  dimension: completeness
+  stages:
+  - silver
+  - gold
+  statement: A fact whose reference row has not yet arrived MUST be kept and linked once the reference arrives;
+    it MUST NOT be dropped by an inner join.
+  failure_mode: Orders for new products arrived hours before the product feed; an inner join silently dropped them,
+    and the new-launch report showed zero sales on launch day.
+  test: Load a fact row whose reference key does not exist yet, then load the reference row; the fact must be kept
+    and end up attached to the right reference record.
+  evidence: An "unknown" or placeholder member, or a quarantine with automatic reprocessing, and a step that re-points
+    facts once the reference record arrives.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Warehousing and Business Intelligence, chapter 11
+  review_check: LATE-02
+  related:
+  - LATE-01
+  - DQ-02
+  - REC-01
+- id: LATE-04
+  status: draft
+  since: 0.1.0
+  title: Time zones and business dates
+  concern: X4
+  level: MUST
+  core: false
+  dimension: accuracy
+  stages:
+  - silver
+  statement: Every timestamp MUST carry or be converted to a declared time zone, and the business date rule MUST
+    be declared per dataset.
+  failure_mode: One source sent local time and another sent universal time; orders placed late in the evening fell
+    into the next day and daily sales never matched the stores' own reports.
+  test: Pick ten real transactions near midnight and check that their business date matches what the source application
+    shows.
+  evidence: The time zone of every source timestamp, a single storage convention, a defined business-day time zone,
+    and a rule for daylight-saving changes.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  review_check: LATE-04
+  related:
+  - DES-04
+- id: SCD-04
+  status: draft
+  since: 0.1.0
+  title: Facts joined to the right version of history
+  concern: X4
+  level: SHOULD
+  core: false
+  dimension: accuracy
+  stages:
+  - gold
+  statement: Facts SHOULD be joined to the version of a dimension that was valid at the fact's business date, unless
+    the dataset declares otherwise.
+  failure_mode: Facts were joined to the current customer row; reports that should show sales by the region at the
+    time showed today's region instead, and nobody had written down which was wanted.
+  test: Take one customer who changed region last year and check a sales report shows each sale under the region
+    the business expects.
+  evidence: For each report, whether it shows "as it was" or "as it is now", and joins that use the fact date within
+    the validity range or the surrogate key captured at load.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Warehousing and Business Intelligence, chapter 11
+  review_check: SCD-04
+  related:
+  - SCD-02
+  - SERV-04

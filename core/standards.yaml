@@ -1,0 +1,38 @@
+# Standards an obligation may cite. Cite, never restate (REUSE.md, 2 Nov 2026).
+# `ref` in a citation must follow `ref_style`. `verified` says whether the ref style was read on the primary source.
+ODCS:
+  name: Open Data Contract Standard (Bitol, Linux Foundation)
+  version: 3.2.0
+  licence: Apache-2.0
+  ref_style: field path, for example quality[].metric = duplicateValues
+  verified: true
+ODPS:
+  name: Open Data Product Standard (Bitol, Linux Foundation)
+  version: 1.1.0
+  licence: Apache-2.0
+  ref_style: field path
+  verified: true
+DAMA-DMBOK:
+  name: DAMA-DMBOK, Data Management Body of Knowledge
+  version: "2nd edition (revised)"
+  licence: copyright; cite area name and chapter only, never quote
+  ref_style: knowledge area name and chapter, for example "Data Quality, chapter 13"
+  verified: false   # chapter numbers from the 2nd edition table of contents, not yet checked on a copy
+ISO-25012:
+  name: ISO/IEC 25012:2008 Data quality model
+  version: "2008"
+  licence: paid standard; characteristic names only
+  ref_style: characteristic name, for example currentness
+  verified: false   # 7 of 15 names confirmed: accuracy, completeness, consistency, credibility, currentness, accessibility, traceability
+OpenLineage:
+  name: OpenLineage (LF AI and Data)
+  version: 2-0-2
+  licence: Apache-2.0
+  ref_style: object name, for example RunEvent
+  verified: true
+Ossie:
+  name: Apache Ossie (formerly Open Semantic Interchange), incubating
+  version: 0.1.1
+  licence: Apache-2.0
+  ref_style: object name, for example metric
+  verified: true

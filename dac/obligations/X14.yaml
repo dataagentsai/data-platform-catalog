@@ -1,0 +1,76 @@
+# DAC obligations for X14, Audit and run log. Normative: edit here.
+- id: CFG-03
+  status: draft
+  since: 0.1.0
+  title: Every run records the configuration it ran under
+  concern: X14
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - platform
+  statement: Every run record MUST carry a fingerprint and a snapshot of the merged configuration it ran under,
+    so a replay knows exactly what it is repeating.
+  failure_mode: A rerun of last month gave different numbers; the configuration had changed since, and nobody could
+    tell what it had been.
+  test: Change one configuration value between two runs; the two run records must show different fingerprints and
+    the old value must be readable.
+  evidence: Run log rows with a configuration fingerprint and snapshot.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Metadata Management, chapter 12
+  related:
+  - OPS-03
+  review_check: null
+- id: OPS-03
+  status: draft
+  since: 0.1.0
+  title: Every run leaves a record
+  concern: X14
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - bronze
+  - silver
+  - gold
+  statement: Every run MUST leave a record (inputs, outputs, row counts, status, start and end), and every row MUST
+    be traceable to the run and the delivery that wrote it.
+  failure_mode: A user reported a wrong figure from two weeks ago; with no run records nobody could say which load
+    produced it or which input it came from.
+  test: Ask which source file produced a given row in yesterday's table, and see how long it takes to answer.
+  evidence: A run log or audit table with run id, inputs, outputs, counts, timings and status, kept for a stated
+    period.
+  cites:
+  - standard: ISO-25012
+    ref: traceability
+  - standard: DAMA-DMBOK
+    ref: Metadata Management, chapter 12
+  review_check: OPS-03
+  related:
+  - REC-01
+  - OPS-01
+  - COST-03
+- id: SEC-04
+  status: draft
+  since: 0.1.0
+  title: Access is audited
+  concern: X14
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - platform
+  statement: Every read of restricted data MUST appear in an audit log that can be queried within an hour.
+  failure_mode: After a data leak, the team could not say who had queried the customer table in the last month,
+    and the regulator treated the whole table as exposed.
+  test: Query a sensitive test table, then find that query in the audit log within an hour.
+  evidence: Audit logs switched on for data access, kept for the regulated period, and a named reviewer with a review
+    frequency.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Security, chapter 7
+  review_check: SEC-04
+  related:
+  - SEC-02
+  - OPS-03

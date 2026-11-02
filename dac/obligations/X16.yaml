@@ -1,0 +1,144 @@
+# DAC obligations for X16, Environments, CI/CD and release. Normative: edit here.
+- id: ENV-01
+  status: draft
+  since: 0.1.0
+  title: Separate environments with separate data
+  concern: X16
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - platform
+  statement: Development and test identities MUST NOT be able to write to production data.
+  failure_mode: A developer ran a cleanup script pointed at what they thought was development; the paths were shared
+    and production tables were wiped the night before a board meeting.
+  test: Using a development identity, try to write to a production table; it must be refused.
+  evidence: Named environments with separate storage, catalogs or schemas, identities and compute, and a rule that
+    non-production identities cannot write to production.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Security, chapter 7
+  review_check: ENV-01
+  related:
+  - ENV-02
+  - REL-04
+- id: REL-01
+  status: draft
+  since: 0.1.0
+  title: Everything that runs is in version control
+  concern: X16
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - platform
+  statement: Everything that runs in production (code, configuration, contracts, schedules) MUST be recreatable
+    from version control alone.
+  failure_mode: The schedule and parameters were edited by hand in the production interface; when the job was recreated
+    after an incident, nobody knew the real settings and it ran with wrong ones for a week.
+  test: Pick one production job and try to recreate it in a fresh environment only from the repository.
+  evidence: A repository layout that includes code, job and schedule definitions and configuration, and a rule that
+    production is never changed by hand.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: REL-01
+  related:
+  - REL-02
+  - REL-03
+  - REL-06
+- id: REL-02
+  status: draft
+  since: 0.1.0
+  title: Branching and code review
+  concern: X16
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - platform
+  statement: Changes to the main branch MUST go through review; direct pushes MUST be refused.
+  failure_mode: A developer pushed a join change straight to the main branch on a Friday; it removed a filter, and
+    the weekend loads double-counted refunds.
+  test: Try to push directly to the main branch; it should be refused.
+  evidence: A short branching model, protected main branch, required reviewer, and automated tests and linting run
+    on every pull request.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Governance, chapter 3
+  review_check: REL-02
+  related:
+  - REL-01
+  - TEST-03
+- id: REL-03
+  status: draft
+  since: 0.1.0
+  title: Automated promotion of the same build
+  concern: X16
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - platform
+  statement: The same build MUST be promoted from test to production by the pipeline, with no manual change in the
+    target environment.
+  failure_mode: Each environment was deployed by copying scripts by hand; production ended up with an older version
+    of one script, and test results said nothing about what really ran.
+  test: Deploy the thin slice to test using only the pipeline, with nobody clicking in the target environment.
+  evidence: A pipeline that builds once, deploys the same version to each environment with environment settings
+    injected, and records which version is where.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: REL-03
+  related:
+  - REL-01
+  - REL-04
+  - REL-07
+- id: REL-04
+  status: draft
+  since: 0.1.0
+  title: Configuration per environment, not in code
+  concern: X16
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - platform
+  statement: Environment-specific values MUST come from configuration, never from code.
+  failure_mode: A storage path to production was hard-coded in a shared module; tests in development read and then
+    overwrote production data.
+  test: Search the code for production host names, paths and catalog names; each hit is a defect.
+  evidence: A configuration file or variable set per environment, and code that reads all environment values from
+    it.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: REL-04
+  related:
+  - REL-03
+  - REL-05
+  - ENV-01
+- id: REL-06
+  status: draft
+  since: 0.1.0
+  title: Infrastructure defined as code
+  concern: X16
+  level: SHOULD
+  core: false
+  dimension: null
+  stages:
+  - platform
+  statement: Infrastructure SHOULD be defined as code, so an environment can be rebuilt from the repository.
+  failure_mode: The test environment was built by hand months after production and differed in network and permission
+    settings, so tests passed that failed in production.
+  test: Build a throwaway environment from the infrastructure code alone and compare its settings with test.
+  evidence: Infrastructure code in version control covering workspaces, storage, networks, identities, policies
+    and grants, applied through a pipeline.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: REL-06
+  related:
+  - REL-01
+  - ENV-01

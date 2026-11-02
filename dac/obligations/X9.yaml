@@ -1,0 +1,105 @@
+# DAC obligations for X9, Freshness and SLOs. Normative: edit here.
+- id: DQ-04
+  status: draft
+  since: 0.1.0
+  title: A source goes quiet or sends far too little
+  concern: X9
+  level: MUST
+  core: true
+  dimension: completeness
+  stages:
+  - bronze
+  statement: A delivery that is empty, missing or far below its expected volume MUST raise an alert and MUST NOT
+    be reported as a green success.
+  failure_mode: The source sent an empty file after a failed export; the load succeeded, every job was green, and
+    the business saw a day with zero sales before any engineer did.
+  test: Run a load with an empty input in test; it must not complete as a green success without someone being told.
+  evidence: Freshness and volume checks per source with expected ranges, which fail or alert rather than load quietly.
+  cites:
+  - standard: ODCS
+    ref: quality[].metric = rowCount
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  review_check: DQ-04
+  related:
+  - OPS-01
+  - DQ-01
+- id: LATE-03
+  status: draft
+  since: 0.1.0
+  title: Event time, watermarks and late events in streams
+  concern: X9
+  level: SHOULD
+  core: false
+  dimension: timeliness
+  stages:
+  - bronze
+  - silver
+  statement: A stream SHOULD declare how late an event may arrive and still be counted, and MUST count the events
+    that arrive later than that.
+  failure_mode: The window waited ten minutes, but mobile clients uploaded events hours later after going offline;
+    those events were silently discarded and daily active users were understated.
+  test: Measure the gap between event time and arrival time in a day of real events and see what share falls beyond
+    the proposed watermark.
+  evidence: The lateness of real events measured, a watermark chosen from that, and a stated home for events beyond
+    it (a correction batch or a side table) agreed with consumers.
+  cites:
+  - standard: ODCS
+    ref: slaProperties[].property = latency
+  review_check: LATE-03
+  related:
+  - LATE-01
+  - DUP-04
+  - PERF-02
+- id: PERF-02
+  status: draft
+  since: 0.1.0
+  title: Freshness target measured end to end
+  concern: X9
+  level: MUST
+  core: true
+  dimension: timeliness
+  stages:
+  - gold
+  - semantic
+  statement: Freshness MUST be measured end to end against the dataset's declared target on every run, and a miss
+    MUST be reported.
+  failure_mode: Each step met its own target, but source export, transfer, three layers and the report refresh added
+    up to ninety minutes against a promised thirty.
+  test: Time one record from source change to visible in the report in the thin slice, and compare with the target.
+  evidence: A freshness target per consumer, a time budget split across every hop, and a measured end to end time
+    from the thin slice or a test run.
+  cites:
+  - standard: ODCS
+    ref: slaProperties[].property = timeOfAvailability
+  - standard: ISO-25012
+    ref: currentness
+  review_check: PERF-02
+  related:
+  - SERV-02
+- id: SERV-02
+  status: draft
+  since: 0.1.0
+  title: Consumers can tell whether data is complete
+  concern: X9
+  level: MUST
+  core: false
+  dimension: timeliness
+  stages:
+  - semantic
+  - experiences
+  statement: A consumer MUST be able to see when the data was last complete, so stale data is never mistaken for
+    current data.
+  failure_mode: The load failed overnight but the dashboard looked normal; the sales director presented yesterday's
+    numbers as today's to the board.
+  test: Stop the load in test and look at the report as a user would; can you tell it is stale?
+  evidence: A visible "data as of" time on reports, a completeness flag or status table, and a way to warn consumers
+    when a load is late.
+  cites:
+  - standard: ISO-25012
+    ref: currentness
+  review_check: SERV-02
+  related:
+  - ORCH-01
+  - PERF-02
+  - OPS-01

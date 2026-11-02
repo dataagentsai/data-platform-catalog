@@ -1,0 +1,73 @@
+# DAC obligations for X10, Cost and FinOps. Normative: edit here.
+- id: COST-02
+  status: draft
+  since: 0.1.0
+  title: Platform cost guardrails
+  concern: X10
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - platform
+  statement: Budgets, alerts and compute limits MUST stop one team, job or user from spending beyond a declared
+    limit unnoticed.
+  failure_mode: A developer left a large compute cluster running over a holiday weekend, and the month's budget
+    was gone by the fourth.
+  test: Try to create the largest compute allowed as an ordinary developer in the development environment; the policy
+    should stop you.
+  evidence: Budgets with alerts per team or project, policies that cap compute size and enforce automatic shutdown,
+    and a named person who receives cost alerts.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Governance, chapter 3
+  review_check: COST-02
+  related:
+  - COST-03
+  - COST-04
+  - ENV-02
+- id: COST-03
+  status: draft
+  since: 0.1.0
+  title: Cost can be traced to a team and a job
+  concern: X10
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - platform
+  statement: Every unit of spend MUST be attributable to a team and a job; untagged spend MUST be reported.
+  failure_mode: The platform bill doubled in one month and nobody could say which project caused it, so every team
+    was asked to cut costs instead of the one that needed to.
+  test: Pull last week's cost broken down by project tag; check how much is untagged.
+  evidence: A mandatory tagging standard (project, owner, environment), enforced on compute and storage, and a cost
+    report by tag.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Governance, chapter 3
+  review_check: COST-03
+  related:
+  - COST-02
+  - OPS-03
+- id: COST-04
+  status: draft
+  since: 0.1.0
+  title: No compute running when nothing needs it
+  concern: X10
+  level: SHOULD
+  core: false
+  dimension: null
+  stages:
+  - platform
+  statement: Compute SHOULD NOT run when no work needs it; idle time per job SHOULD be measured.
+  failure_mode: A job that needed ten minutes of compute held a large cluster for two hours each run because it
+    waited on an upstream file, and nobody noticed for six months.
+  test: For the three most expensive jobs, compare the time compute was running against the time it was busy.
+  evidence: Compute sizes justified by measured runs, automatic stop or job-scoped compute, waits on upstream data
+    done outside paid compute, and a periodic review of utilisation.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: COST-04
+  related:
+  - COST-02
+  - PERF-05

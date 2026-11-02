@@ -1,0 +1,24 @@
+# The 22 cross-cutting concerns (agreed in PLAN.html). Shared by DPC and DAC.
+# Group: Run, Trust, See, Guard, Self.
+X1:  {name: "Metadata and control plane", group: Run, means: "Everything is declared in one manifest and validated"}
+X2:  {name: "Orchestration", group: Run, means: "What runs when, and in what order"}
+X3:  {name: "Contracts and schema evolution", group: Trust, means: "What a table promises, and what happens when a source changes shape"}
+X4:  {name: "Data quality", group: Trust, means: "Rules on rows and tables; bad rows quarantined"}
+X5:  {name: "Profiling", group: Trust, means: "Knowing what the data looks like, so change is visible"}
+X6:  {name: "Reconciliation", group: Trust, means: "Counts and sums agree from source to gold"}
+X7:  {name: "Lineage", group: See, means: "Where each table came from and what it feeds"}
+X8:  {name: "Observability", group: See, means: "One run is followable end to end"}
+X9:  {name: "Freshness and SLOs", group: See, means: "Is the data as new as promised"}
+X10: {name: "Cost and FinOps", group: See, means: "Who spent what, against which budget"}
+X11: {name: "Security and access", group: Guard, means: "Who may read or change what"}
+X12: {name: "Privacy and personal data", group: Guard, means: "Find, mask, keep only as long as allowed, erase on request"}
+X13: {name: "Governance, catalog and semantics", group: Guard, means: "Owners, glossary, metric definitions"}
+X14: {name: "Audit and run log", group: Guard, means: "A record of every run and every change"}
+X15: {name: "Replay, backfill and idempotency", group: Run, means: "Re-running never doubles a number"}
+X16: {name: "Environments, CI/CD and release", group: Run, means: "Development to test to production, infrastructure as code"}
+X17: {name: "Testing", group: Run, means: "Unit, contract, data and simulation tests"}
+X18: {name: "Resilience and recovery", group: Run, means: "Retries, retention, time travel, recovery"}
+X19: {name: "Performance", group: See, means: "File sizes, layout, compaction, right-sized compute"}
+X20: {name: "Self-healing", group: Self, means: "Detect, fix in development, deploy, verify, roll back"}
+X21: {name: "Agent assistance", group: Self, means: "Agents draft manifests, rules and docs"}
+X22: {name: "Simulation", group: Self, means: "A fake world that breaks the platform on purpose"}

@@ -1,0 +1,55 @@
+# DAC obligations for X7, Lineage. Normative: edit here.
+- id: FLOW-01
+  status: draft
+  since: 0.1.0
+  title: Data flows one way through the layers
+  concern: X7
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - bronze
+  - silver
+  - gold
+  - semantic
+  - experiences
+  statement: Each layer MUST read only from the layer before it (gold from silver, semantic from gold, experiences
+    from semantic); any other edge in the lineage MUST be reported.
+  failure_mode: A dashboard read silver directly to save a day; when gold's rules changed, two dashboards showed
+    two revenues.
+  test: Compare the recorded lineage against the allowed edges; every other edge is a finding.
+  evidence: A lineage graph and the list of allowed edges it was checked against.
+  cites:
+  - standard: OpenLineage
+    ref: RunEvent
+  - standard: DAMA-DMBOK
+    ref: Data Architecture, chapter 4
+  related:
+  - LIN-01
+  review_check: null
+  plan_rule: R8
+- id: LIN-01
+  status: draft
+  since: 0.1.0
+  title: Every hop emits lineage
+  concern: X7
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - bronze
+  - silver
+  - gold
+  - semantic
+  statement: Every job MUST emit a lineage event naming what it read and what it wrote, on every run.
+  failure_mode: A source column was dropped, and nobody could say which reports it fed until users complained.
+  test: Run the chain once; every table must have a lineage edge back to its source.
+  evidence: Lineage events per run.
+  cites:
+  - standard: OpenLineage
+    ref: RunEvent
+  - standard: DAMA-DMBOK
+    ref: Metadata Management, chapter 12
+  related:
+  - FLOW-01
+  review_check: null

@@ -1,0 +1,25 @@
+# DAC obligations for X21, Agent assistance. Normative: edit here.
+- id: GATE-03
+  status: draft
+  since: 0.1.0
+  title: Agents propose, gates decide
+  concern: X21
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - platform
+  statement: An agent MUST NOT change production directly; it MAY only propose a change to the manifest, and the
+    same gates as a person's change MUST decide.
+  failure_mode: An assistant 'fixed' a failing job by editing the production table, and the fix was never in version
+    control.
+  test: Give the agent a failing job; its only output must be a proposed change that runs through review and tests.
+  evidence: Agent identities hold no production write grants; every agent change is a reviewed merge.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Governance, chapter 3
+  related:
+  - GATE-02
+  - HEAL-01
+  review_check: null
+  plan_rule: R6

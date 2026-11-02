@@ -1,0 +1,47 @@
+# DAC obligations for X1, Metadata and control plane. Normative: edit here.
+- id: CFG-01
+  status: draft
+  since: 0.1.0
+  title: Everything that runs was declared
+  concern: X1
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - platform
+  statement: Every pipeline, table and check deployed MUST have a manifest entry that asked for it; the difference
+    between what is deployed and what is declared MUST be reported.
+  failure_mode: A hand-made table fed the finance report for a year; nobody knew it existed until its owner left.
+  test: Diff the deployed inventory against the manifest; every undeclared object is a finding.
+  evidence: The inventory diff, empty or with each finding owned.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Metadata Management, chapter 12
+  related:
+  - CFG-02
+  - CFG-03
+  review_check: null
+  plan_rule: R2
+- id: CFG-02
+  status: draft
+  since: 0.1.0
+  title: Cross-cutting concerns are on by default
+  concern: X1
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - platform
+  statement: Quality rules, lineage, reconciliation, cost tags and freshness monitoring MUST be on for every dataset
+    by default; turning one off MUST need a waiver with a reason, an approver and an expiry.
+  failure_mode: A new table went live with no quality rules because the template made them optional; it carried
+    negative prices for a month.
+  test: Declare a dataset with no settings; every concern must be on. Remove one; the validator must demand a waiver.
+  evidence: The validator's rule, and the list of waivers with their expiry dates.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Governance, chapter 3
+  related:
+  - CFG-01
+  review_check: null
+  plan_rule: R5

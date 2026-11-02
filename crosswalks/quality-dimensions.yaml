@@ -1,0 +1,28 @@
+# Quality dimension words differ between sources (REUSE.md risk). DAC tags obligations with the ODCS word,
+# because contracts will carry it. This table lets a reader who knows DAMA or ISO find the matching tag.
+# DAMA column: the commonly quoted six dimensions (DAMA UK white paper, 2013), cited by name only (unverified on
+# a primary source, see core/standards.yaml). ISO column: ISO/IEC 25012:2008 characteristic names, confirmed ones only.
+# null means the source has no matching word.
+- odcs: completeness
+  dama: completeness
+  iso_25012: completeness
+- odcs: uniqueness
+  dama: uniqueness
+  iso_25012: null
+- odcs: timeliness
+  dama: timeliness
+  iso_25012: currentness
+- odcs: conformity
+  dama: validity
+  iso_25012: null
+  note: DAMA's validity (values follow the declared format and range) is what ODCS calls conformity.
+- odcs: accuracy
+  dama: accuracy
+  iso_25012: accuracy
+- odcs: consistency
+  dama: consistency
+  iso_25012: consistency
+- odcs: coverage
+  dama: null
+  iso_25012: null
+  note: ODCS only. How much of the real-world population the data covers.
