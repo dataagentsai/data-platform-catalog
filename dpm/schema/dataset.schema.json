@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dataagentsai/data-platform-catalog/dpm/schema/dataset.schema.json",
+  "title": "DPM dataset manifest v0.1",
+  "description": "One file per dataset: how it is loaded. Shape kept from LakeIngestionFramework's dataset YAML (source_name, dataset_name, is_enabled, config, columns, dedup) so the validating loader writes it to the metadata DB unchanged; the other blocks are what DPM adds. Columns, types and quality rules are never here: they live in the ODCS contract the manifest points to. Config keys are checked against dpm/keys.yaml by the linter, not by this schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source_name", "dataset_name", "is_enabled", "config", "contract", "contract_version", "archetypes",
+               "load", "reconciliation", "owners"],
+  "properties": {
+    "source_name": {"$ref": "#/$defs/name"},
+    "source_env": {"type": "string"},
+    "dataset_name": {"$ref": "#/$defs/name"},
+    "is_enabled": {"type": "boolean"},
+    "config": {
+      "description": "Key-value map; every key registered in dpm/keys.yaml; values are strings, as in the metadata DB.",
+      "type": "object",
+      "additionalProperties": {"type": "string"}
+    },
+    "columns": {"type": "array", "description": "LakeIngestionFramework's optional column list (dataset_config_columns)."},
+    "dedup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "business_keys"],
+      "properties": {
+        "mode": {"enum": ["business_key_latest", "business_key_first", "full_row", "none"]},
+        "business_keys": {"type": "array", "items": {"$ref": "#/$defs/name"}, "minItems": 1},
+        "order_by": {"$ref": "#/$defs/name"}
+      }
+    },
+    "contract": {"type": "string", "pattern": "\\.odcs\\.ya?ml$", "description": "Path to the ODCS contract. A reference, never a copy."},
+    "contract_version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "description": "Pinned; must equal the contract's version."},
+    "archetypes": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^PA\\d+$"}},
+    "load": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pattern", "batch_key", "new_columns", "deletes"],
+      "properties": {
+        "pattern": {"enum": ["append", "overwrite_window", "upsert", "history"]},
+        "history_order_by": {"$ref": "#/$defs/name"},
+        "batch_key": {"type": "array", "minItems": 1, "items": {"enum": ["delivery_window", "content_checksum", "file_name", "source_batch_id"]}},
+        "new_columns": {"enum": ["stop", "hold_in_bronze"]},
+        "deletes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["detect", "apply"],
+          "properties": {
+            "detect": {"enum": ["change_feed", "key_compare", "none"]},
+            "apply": {"enum": ["mark_deleted", "remove", "none"]}
+          }
+        },
+        "quarantine_stop_share": {"type": "number", "minimum": 0, "maximum": 1},
+        "late_lookback_days": {"type": "integer", "minimum": 0}
+      },
+      "if": {"properties": {"pattern": {"const": "history"}}},
+      "then": {"required": ["history_order_by"]}
+    },
+    "volume": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "expected_rows_per_delivery": {
+          "type": "object", "additionalProperties": false, "required": ["min", "max"],
+          "properties": {"min": {"type": "integer", "minimum": 0}, "max": {"type": "integer", "minimum": 0}}
+        }
+      }
+    },
+    "reconciliation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hops", "measures", "tolerance"],
+      "properties": {
+        "hops": {"type": "array", "minItems": 2, "items": {"enum": ["sources", "landing", "bronze", "silver", "gold", "semantic", "experiences"]}},
+        "measures": {
+          "type": "array", "minItems": 1,
+          "items": {"type": "object", "additionalProperties": false, "required": ["name"],
+                    "properties": {"name": {"$ref": "#/$defs/name"}, "column": {"$ref": "#/$defs/name"}}}
+        },
+        "tolerance": {"type": "object", "additionalProperties": {"type": "number", "minimum": 0}},
+        "signed_off_by": {"type": "string"}
+      }
+    },
+    "owners": {
+      "type": "object",
+      "required": ["dataset"],
+      "properties": {"dataset": {"type": "string"}, "alerts": {"type": "string"}}
+    },
+    "concerns": {
+      "description": "Every concern is on by default (DPC-0003). Per-concern settings go here; switching one off needs a waiver.",
+      "type": "object",
+      "propertyNames": {"pattern": "^X([1-9]|1\\d|2[0-2])$"}
+    },
+    "waivers": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["concern", "reason", "approver", "expires"],
+        "properties": {
+          "concern": {"type": "string", "pattern": "^X([1-9]|1\\d|2[0-2])$"},
+          "reason": {"type": "string", "minLength": 10},
+          "approver": {"type": "string"},
+          "expires": {"type": "string", "format": "date"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"}
+  }
+}

@@ -1,11 +1,12 @@
 # /// script
 # requires-python = ">=3.9"
-# dependencies = ["pyyaml"]
+# dependencies = ["pyyaml", "jsonschema"]
 # ///
-"""Check DAC obligations follow dac/README.md. Exit 1 on any error.
+"""Check the catalog: DAC obligations, archetypes, ports, capabilities and DPM manifests. Exit 1 on any error.
 
     uv run scripts/lint.py
 """
+import json
 import re
 import sys
 from pathlib import Path
@@ -244,12 +245,50 @@ def lint_triage(recs, root=ROOT):
     return errs
 
 
+def lint_manifest(manifest, contract, keys, schema, archetype_ids, name="manifest"):
+    """DPM (DE-022): the JSON schema, then the cross-file rules a schema cannot express."""
+    from jsonschema import Draft202012Validator
+    errs = [f"{name}: {'/'.join(map(str, e.path)) or '(top)'}: {e.message}"
+            for e in sorted(Draft202012Validator(schema).iter_errors(manifest), key=lambda e: list(e.path))]
+    if errs:
+        return errs
+    allowed = set(keys["dataset_config"]) | {p["key"] for p in keys["proposed"]}
+    errs += [f"{name}: config key '{k}' is not in dpm/keys.yaml" for k in manifest["config"] if k not in allowed]
+    if str(manifest["contract_version"]) != str(contract.get("version")):
+        errs.append(f"{name}: pins contract {manifest['contract_version']} but the contract is {contract.get('version')}")
+    cols = {p["name"] for s in contract.get("schema", []) for p in s.get("properties", [])}
+    used = [("load.history_order_by", manifest["load"].get("history_order_by")),
+            ("dedup.order_by", (manifest.get("dedup") or {}).get("order_by"))]
+    used += [("dedup.business_keys", k) for k in (manifest.get("dedup") or {}).get("business_keys", [])]
+    used += [(f"reconciliation measure {m['name']}", m.get("column")) for m in manifest["reconciliation"]["measures"]]
+    errs += [f"{name}: {where} uses '{c}', which is not a contract column" for where, c in used if c and c not in cols]
+    errs += [f"{name}: archetype {a} is not in core/archetypes.yaml" for a in manifest["archetypes"]
+             if a not in archetype_ids]
+    band = (manifest.get("volume") or {}).get("expected_rows_per_delivery")
+    if band and band["min"] > band["max"]:
+        errs.append(f"{name}: volume band min {band['min']} is above max {band['max']}")
+    return errs
+
+
+def lint_manifests(root=ROOT):
+    keys = yaml.safe_load((root / "dpm" / "keys.yaml").read_text())
+    schema = json.loads((root / "dpm" / "schema" / "dataset.schema.json").read_text())
+    arch = set(yaml.safe_load((root / "core" / "archetypes.yaml").read_text()))
+    errs = []
+    for m_path in sorted(root.glob("slices/*/manifest/*.yaml")):
+        m = yaml.safe_load(m_path.read_text())
+        c = yaml.safe_load((m_path.parent / m["contract"]).read_text()) if "contract" in m else {}
+        errs += lint_manifest(m, c, keys, schema, arch, str(m_path.relative_to(root)))
+    return errs
+
+
 def main():
     recs, vocab = load_obligations(), load_vocab()
     ports, caps = load_ports(), load_capabilities()
     dac_ids = {r["id"] for r in recs}
     errs = (lint(recs, vocab) + lint_triage(recs) + lint_archetypes(vocab)
-            + lint_ports(ports, vocab, dac_ids) + lint_capabilities(caps, vocab, dac_ids, {p["port"] for p in ports}))
+            + lint_ports(ports, vocab, dac_ids) + lint_capabilities(caps, vocab, dac_ids, {p["port"] for p in ports})
+            + lint_manifests())
     for e in errs:
         print("ERROR", e)
     core = sum(1 for r in recs if r.get("core"))

@@ -14,9 +14,9 @@ is_enabled: true
 config:                                   # key-value map, every key in the key registry (D10)
   load_type: INCREMENTAL                  # existing key
   watermark_column: change_seq            # existing key; the watermark itself lives in the metadata DB (DPC-0027)
-  freshness_warn_after_hours: "4"         # existing key; matches the contract's latency SLA
-  freshness_error_after_hours: "8"        # existing key
-  schedule: on_delivery                   # existing key; on_delivery = start when the delivery manifest exists (DPC-0004)
+  sla_freshness_hours: "4"                # registered key, the warning threshold; matches the contract's latency SLA
+  sla_freshness_error_hours: "8"          # PROPOSED key (dpm/keys.yaml): the error threshold
+  schedule_trigger: on_delivery           # PROPOSED key (dpm/keys.yaml); on_delivery = start when the delivery manifest exists (DPC-0004)
   schedule_timezone: Asia/Kolkata         # existing key; the business time zone for dates (DPC-0014)
 
 dedup:                                    # existing block (DUP-03, DPC-0012)

@@ -1,0 +1,127 @@
+# The config keys a DPM manifest may use. Generated; do not edit by hand.
+copied_from: LakeIngestionFramework src/lake_ingestion_framework/core/metadata/keys (registry), 2026-11-02
+rule: A key in a manifest config block must be registered here. Unknown keys are rejected, as the registry does.
+dataset_config:
+- allow_dirty_reads
+- array_max_explode_rows
+- array_strategy
+- azure_blob_container
+- bigquery_dataset
+- bigquery_partition_column
+- bigquery_project
+- bulk_api_version
+- compression
+- cost_center
+- csv_delimiter
+- csv_escape_char
+- csv_has_header
+- csv_infer_types
+- csv_quote_char
+- csv_skip_rows
+- custom_query
+- dataset_type
+- dataverse_entity_set
+- dataverse_expand
+- dataverse_filter
+- dataverse_select
+- dedup.business_keys
+- dedup.mode
+- dedup.order_by
+- document_extract_text
+- document_max_size_bytes
+- document_mime_filter
+- document_offload_threshold_bytes
+- document_text_extractor
+- enable_staging
+- enabled_overrides_master
+- estimated_row_count
+- estimated_size_bytes
+- excel_header_row
+- excel_sheet_name
+- exclude_deleted
+- extraction_mode
+- file_encoding
+- file_format
+- file_format_data
+- file_name
+- file_pattern
+- flattening_engine
+- flattening_mode
+- flattening_path_separator
+- intended_dius
+- lifecycle_archive_days
+- lifecycle_cool_days
+- lifecycle_delete_days
+- load_consistency_mode
+- load_profile
+- load_type
+- notes
+- object_name
+- pagination_cursor_param
+- pagination_cursor_path
+- pagination_page_param
+- pagination_size_default
+- pagination_size_param
+- pagination_style
+- parallel_copies
+- parquet_row_group_mb
+- partition_column
+- partition_count
+- partition_lower
+- partition_upper
+- preserve_raw_record
+- primary_array_path
+- processor_groups.case_normalize
+- processor_groups.dedup
+- processor_groups.hygiene
+- processor_groups.pii
+- processor_groups.provenance
+- processor_groups.standardization
+- processor_groups.timestamp_normalize
+- processor_groups.type_safety
+- query_timeout_seconds
+- realm
+- reingest_data_window_from
+- reingest_data_window_to
+- reingest_strategy
+- relative_url
+- resegment_on_run
+- response_data_path
+- rest_endpoint_path
+- rest_method
+- rest_record_path
+- retry_count
+- retry_interval_seconds
+- s3_bucket
+- salesforce_fields
+- salesforce_object
+- schedule_cron
+- schedule_timezone
+- schema_name
+- segment_count
+- segment_size_rows
+- segmentation_column
+- segmentation_strategy
+- sftp_folder_path
+- sharepoint_path_prefix
+- sink_max_concurrent_connections
+- sla_freshness_hours
+- target_container
+- target_load_date_override
+- target_path_template
+- timeout_seconds
+- watermark_column
+- watermark_expression
+- watermark_format
+- watermark_initial_value
+- watermark_param
+- xml_record_xpath
+proposed:
+- key: sla_freshness_error_hours
+  why: The registry has one freshness threshold (sla_freshness_hours, used as the warning); the contract needs a
+    second, the error threshold (FRESH-01).
+  add_to_registry: DE-037
+- key: schedule_trigger
+  why: 'The registry schedules by cron only; slice 1 starts a load when the delivery manifest exists (DPC-0004).
+    Values: cron | on_delivery.'
+  add_to_registry: DE-037
