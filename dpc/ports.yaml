@@ -1,0 +1,477 @@
+# DPC ports: the seams every product sits behind (rule R4, code to interface). Normative: edit here.
+# Record shape copied from the AI Harness Catalog's ports/*.yaml. See dpc/README.md.
+#   service: A acquire (sources to silver) | B model (silver to semantic) | C serve (experiences) | platform
+#   tier: core (needed by slice 1 or every platform) | later
+#   kernel_owns: what our own code decides, whatever product sits behind the port
+#   supplied_outside: what the adapter brings
+#   invariants[].obligation: the DAC obligation the invariant protects
+
+# ---------- Service A: acquire ----------
+- port: mover
+  status: draft
+  since: 0.1.0
+  service: A
+  tier: core
+  concerns: [X15, X8]
+  stages: [sources, landing]
+  summary: >-
+    Copies bytes from a source into landing as files plus a small delivery manifest. It can be any tool
+    (decision D11); it holds no business logic and no state the platform depends on.
+  kernel_owns: >-
+    The delivery manifest shape (source, window, file list, row count, checksum), the watermark, and the rule
+    that a delivery is complete only when its manifest is written.
+  supplied_outside: Reaching the source (network, credentials, connectors), paging, throttling and the copy itself.
+  operations:
+    - {name: deliver, intent: Copy one declared window of one source into landing and write its delivery manifest.}
+    - {name: describe, intent: Report which load patterns this mover supports (full, watermark, log-based change, files, pages)., optional: true}
+  invariants:
+    - must: Watermarks and run state live in the metadata service, never inside the mover.
+      because: State kept inside a tool is lost when a source moves to another mover.
+      obligation: HIST-04
+      checkable: static
+    - must: A delivery without a manifest is not picked up.
+      because: A half-copied folder would otherwise load as a complete day.
+      obligation: ORCH-01
+      checkable: dynamic
+
+- port: landing_store
+  status: draft
+  since: 0.1.0
+  service: A
+  tier: core
+  concerns: [X18, X14]
+  stages: [landing]
+  summary: Keeps every delivery exactly as received, so a bad parse can be redone from the original bytes.
+  kernel_owns: The folder layout by source, delivery and date; retention; the rule that landing is written once and never edited.
+  supplied_outside: The storage itself.
+  operations:
+    - {name: put, intent: Store a delivery's files and manifest under its delivery id.}
+    - {name: list, intent: List deliveries not yet landed, oldest first.}
+    - {name: read, intent: Read one delivery's files by id.}
+  invariants:
+    - must: A delivery is immutable once its manifest exists.
+      because: Replaying a day must read the same bytes as the first run.
+      obligation: DUP-02
+      checkable: dynamic
+
+- port: table_writer
+  status: draft
+  since: 0.1.0
+  service: A
+  tier: core
+  concerns: [X15, X3]
+  stages: [bronze, silver, gold]
+  summary: Writes rows into a table by a declared pattern (append, overwrite a window, upsert, history type 1 or 2).
+  kernel_owns: >-
+    Which pattern a dataset uses (from the manifest), the business key, the batch key that makes a rerun change
+    nothing, and the load metadata columns on every row.
+  supplied_outside: The table format, its transactions, and how a merge or overwrite is executed.
+  operations:
+    - {name: write, intent: Write a batch to a table by the dataset's declared pattern and batch key, in one transaction.}
+    - {name: fingerprint, intent: Return row count and key totals for a table or a window of it.}
+    - {name: restore, intent: Return a table to an earlier version., optional: true}
+  invariants:
+    - must: Writing the same batch twice leaves the table unchanged.
+      because: Sources resend files and jobs get rerun; neither may double a number.
+      obligation: DUP-01
+      checkable: dynamic
+    - must: A write either completes or leaves no trace.
+      because: A job killed half-way must not leave half a day behind.
+      obligation: ORCH-03
+      checkable: dynamic
+    - must: History tables end with one current row per key whatever the arrival order.
+      because: Out-of-order changes are normal in change capture.
+      obligation: SCD-02
+      checkable: dynamic
+
+- port: contract_enforcer
+  status: draft
+  since: 0.1.0
+  service: A
+  tier: core
+  concerns: [X3, X4]
+  stages: [bronze, silver]
+  summary: Compares an incoming batch with the dataset's contract (columns, types, keys) before it reaches silver.
+  kernel_owns: >-
+    What counts as a breaking change (rename, removal, retype), what counts as additive (a new column), and the
+    rule that the contract file is the only source of the expected shape.
+  supplied_outside: Reading the contract format and comparing schemas.
+  operations:
+    - {name: check, intent: Compare a batch's schema with the contract and return pass, additive change or breaking change with the columns named.}
+  invariants:
+    - must: A breaking change stops the load and names the column.
+      because: A renamed column loaded as nulls looks like a quiet business change for weeks.
+      obligation: SCH-02
+      checkable: dynamic
+    - must: The enforcer never edits the contract.
+      because: A contract loosened to make a job pass hides the very change it exists to catch.
+      obligation: GATE-02
+      checkable: static
+
+- port: quarantine
+  status: draft
+  since: 0.1.0
+  service: A
+  tier: core
+  concerns: [X4]
+  stages: [bronze, silver]
+  summary: Holds rows that failed a blocking rule or could not be parsed, with the reason, until they are fixed and replayed.
+  kernel_owns: The reason codes (rule id or parse error), counts per run, and the replay path back into silver.
+  supplied_outside: The storage.
+  operations:
+    - {name: hold, intent: Keep failed rows with the rule id, the reason and the run id.}
+    - {name: count, intent: Count held rows by dataset, run and reason.}
+    - {name: release, intent: Return fixed rows to the normal load path.}
+  invariants:
+    - must: Every row that leaves the load path is either in silver or in quarantine.
+      because: A row that disappears silently breaks reconciliation and nobody can say why.
+      obligation: DQ-02
+      checkable: dynamic
+
+# ---------- Service B: model ----------
+- port: model_runner
+  status: draft
+  since: 0.1.0
+  service: B
+  tier: later
+  concerns: [X15, X17]
+  stages: [gold]
+  summary: Builds gold tables from silver as models written as code, with tests beside them.
+  kernel_owns: The model's grain and key, the look-back window for late rows, and the tests that must pass before publish.
+  supplied_outside: Compiling and running the models.
+  operations:
+    - {name: build, intent: Build one model, or the models affected by changed input windows.}
+    - {name: test, intent: Run a model's tests and return results with rows examined.}
+  invariants:
+    - must: A late row rebuilds every period it affects and nothing else.
+      because: Rebuilding everything costs money; rebuilding too little leaves wrong totals.
+      obligation: LATE-01
+      checkable: dynamic
+
+- port: semantic_layer
+  status: draft
+  since: 0.1.0
+  service: B
+  tier: later
+  concerns: [X13]
+  stages: [semantic]
+  summary: Holds each metric's definition once, and answers every consumer from that definition.
+  kernel_owns: The metric files and the rule that they are protected paths.
+  supplied_outside: Query planning and caching.
+  operations:
+    - {name: define, intent: Publish a metric definition from its file.}
+    - {name: query, intent: Answer a metric query for a consumer.}
+  invariants:
+    - must: No consumer computes a governed metric outside this port.
+      because: Two formulas for revenue give two numbers in the same meeting.
+      obligation: SERV-04
+      checkable: static
+
+- port: product_publisher
+  status: draft
+  since: 0.1.0
+  service: B
+  tier: later
+  concerns: [X3, X13]
+  stages: [gold, semantic]
+  summary: Publishes a gold dataset as a data product with its contract, owner and freshness promise.
+  kernel_owns: The product description and its contract reference.
+  supplied_outside: Where and how the product is listed and shared.
+  operations:
+    - {name: publish, intent: List a product with its contract and owner.}
+    - {name: deprecate, intent: Mark a product or field as going away, with a date.}
+  invariants:
+    - must: Nothing is published without a contract.
+      because: A consumer with no contract has nothing to hold the platform to.
+      obligation: SERV-01
+      checkable: static
+
+# ---------- Service C: serve (later) ----------
+- port: experience
+  status: draft
+  since: 0.1.0
+  service: C
+  tier: later
+  concerns: [X9, X11]
+  stages: [experiences]
+  summary: Any consumer surface (dashboard, conversation interface, extract, feature read, reverse load). One port for v0.1; it splits when a binding needs it.
+  kernel_owns: The rule that experiences read only the semantic layer or published products, and show when data was last complete.
+  supplied_outside: The surface itself.
+  operations:
+    - {name: read, intent: Read a metric or product on behalf of a consumer, with their identity.}
+  invariants:
+    - must: An experience shows the time its data was last complete.
+      because: Stale data mistaken for current data drives wrong decisions.
+      obligation: SERV-02
+      checkable: dynamic
+    - must: An experience reads only from the semantic layer or a published product.
+      because: Reading silver directly breaks the one-way flow and the single metric definition.
+      obligation: FLOW-01
+      checkable: static
+
+# ---------- Platform: cross-cutting ----------
+- port: metadata_service
+  status: draft
+  since: 0.1.0
+  service: platform
+  tier: core
+  concerns: [X1]
+  stages: [platform]
+  summary: >-
+    Serves the merged configuration for a dataset (platform, then source, then dataset, the metadata DB design
+    adopted in D10). Pipelines read configuration only through this port.
+  kernel_owns: The key registry, the merge order, defaults that switch every concern on, and waivers.
+  supplied_outside: The database that stores the tables.
+  operations:
+    - {name: dataset_view, intent: Return the merged configuration for one dataset, with its fingerprint.}
+    - {name: load, intent: Validate manifest files against the key registry and write them to the store.}
+    - {name: watermark, intent: Read or advance a dataset's watermark in the same transaction as its run record.}
+  invariants:
+    - must: Every concern is on unless a waiver with a reason, an approver and an expiry turns it off.
+      because: Optional quality rules are skipped on exactly the table that needed them.
+      obligation: CFG-02
+      checkable: static
+    - must: Only the loader writes configuration, and only from manifest files in version control.
+      because: A setting changed by hand in the database cannot be reviewed or replayed.
+      obligation: REL-01
+      checkable: static
+
+- port: orchestrator
+  status: draft
+  since: 0.1.0
+  service: platform
+  tier: core
+  concerns: [X2]
+  stages: [platform]
+  summary: Starts jobs when their inputs are complete, in dependency order, with retries only for passing failures.
+  kernel_owns: The dependency graph (from the manifest), which failures are retryable, and the one-writer-per-table rule.
+  supplied_outside: Scheduling, triggering and running the jobs.
+  operations:
+    - {name: trigger, intent: Start a job for a window when its input deliveries are complete.}
+    - {name: status, intent: Report the state of a run.}
+  invariants:
+    - must: A job never starts on partial input.
+      because: A report built on half a day looks complete and is wrong.
+      obligation: ORCH-01
+      checkable: dynamic
+    - must: Two runs never write one table at the same time.
+      because: Interleaved writes corrupt totals in ways no single run explains.
+      obligation: ORCH-04
+      checkable: dynamic
+
+- port: quality_runner
+  status: draft
+  since: 0.1.0
+  service: platform
+  tier: core
+  concerns: [X4]
+  stages: [silver, gold]
+  summary: Runs the quality rules declared in a dataset's contract and returns results with rows examined.
+  kernel_owns: Which rules run (from the contract), severity, and the rule that zero rows examined is an error.
+  supplied_outside: The rule engine.
+  operations:
+    - {name: run, intent: Run a dataset's rules on a batch and return pass, fail or error per rule, with rows examined and rows failed.}
+  invariants:
+    - must: A rule that examined zero rows reports error.
+      because: Zero failures out of zero rows is not a pass.
+      obligation: GATE-01
+      checkable: dynamic
+
+- port: profiler
+  status: draft
+  since: 0.1.0
+  service: platform
+  tier: later
+  concerns: [X5]
+  stages: [bronze, silver]
+  summary: Measures what each batch looks like (counts, nulls, distinct values, ranges) and compares it with recent batches.
+  kernel_owns: Which measures are kept and the drift thresholds.
+  supplied_outside: The profiling engine.
+  operations:
+    - {name: profile, intent: Profile a batch and store the result.}
+    - {name: drift, intent: Compare a profile with recent ones and report changes beyond thresholds.}
+  invariants:
+    - must: Every batch is profiled and drift beyond a threshold is reported.
+      because: A source that starts sending zeros for unknowns changes averages without breaking any rule.
+      obligation: PROF-01
+      checkable: dynamic
+
+- port: reconciler
+  status: draft
+  since: 0.1.0
+  service: platform
+  tier: core
+  concerns: [X6]
+  stages: [sources, bronze, silver, gold]
+  summary: Compares counts and control totals between two hops and judges the difference against a tolerance.
+  kernel_owns: The hops compared, the measures, the tolerances and who signs differences off.
+  supplied_outside: Reading counts and totals from each store.
+  operations:
+    - {name: compare, intent: Compare two hops for a window by a rule and return the difference and a verdict.}
+  invariants:
+    - must: A drift names the first hop where it appeared.
+      because: Knowing only that source and report disagree costs days of searching.
+      obligation: REC-05
+      checkable: dynamic
+    - must: Every comparison has a declared tolerance.
+      because: Without one, every difference is either ignored or an emergency.
+      obligation: REC-03
+      checkable: static
+
+- port: lineage_emitter
+  status: draft
+  since: 0.1.0
+  service: platform
+  tier: core
+  concerns: [X7]
+  stages: [bronze, silver, gold, semantic]
+  summary: Emits a lineage event for every run, naming what it read and what it wrote.
+  kernel_owns: The allowed edges between layers and the check against them.
+  supplied_outside: The lineage store and its viewer.
+  operations:
+    - {name: emit, intent: Send one run's inputs and outputs as a lineage event.}
+    - {name: edges, intent: Return recorded edges for a table, upstream or downstream.}
+  invariants:
+    - must: Every run emits lineage.
+      because: A gap in lineage is exactly where a broken dependency hides.
+      obligation: LIN-01
+      checkable: dynamic
+
+- port: telemetry
+  status: draft
+  since: 0.1.0
+  service: platform
+  tier: core
+  concerns: [X8, X9]
+  stages: [platform]
+  summary: Carries logs, metrics and alerts, so one run can be followed end to end and failures reach a person.
+  kernel_owns: The run id carried on every log line, the freshness measures, and who is paged for what.
+  supplied_outside: Collecting, storing and alerting.
+  operations:
+    - {name: record, intent: Record a log line or measure tagged with the run id.}
+    - {name: alert, intent: Send an alert to the owner of a dataset or job.}
+  invariants:
+    - must: A failed run reaches a named person within the declared time.
+      because: An alert nobody receives is the same as no alert.
+      obligation: OPS-01
+      checkable: dynamic
+    - must: Freshness is measured end to end on every run.
+      because: Each job being on time does not mean the report is.
+      obligation: PERF-02
+      checkable: dynamic
+
+- port: run_log
+  status: draft
+  since: 0.1.0
+  service: platform
+  tier: core
+  concerns: [X14]
+  stages: [platform]
+  summary: Keeps a record of every run, its inputs and outputs, counts, status and the configuration it ran under.
+  kernel_owns: The record shape, one for every mover and engine.
+  supplied_outside: The store.
+  operations:
+    - {name: start, intent: Open a run record with the configuration fingerprint and snapshot.}
+    - {name: finish, intent: Close a run record with counts, status and outputs.}
+  invariants:
+    - must: Every run record carries the configuration fingerprint it ran under.
+      because: A replay must know exactly what it is repeating.
+      obligation: CFG-03
+      checkable: dynamic
+    - must: Every row can be traced to the run and delivery that wrote it.
+      because: Without it, "where did this row come from" takes a day to answer.
+      obligation: OPS-03
+      checkable: dynamic
+
+- port: cost_ledger
+  status: draft
+  since: 0.1.0
+  service: platform
+  tier: later
+  concerns: [X10]
+  stages: [platform]
+  summary: Attributes spend to a team, a dataset and a job, and holds budgets against it.
+  kernel_owns: The tags every job carries and the budgets.
+  supplied_outside: Billing data and enforcement of compute limits.
+  operations:
+    - {name: attribute, intent: Return spend by team, dataset and job for a period.}
+    - {name: untagged, intent: Return spend that carries no tag.}
+  invariants:
+    - must: Untagged spend is reported.
+      because: The cost nobody owns is the cost nobody cuts.
+      obligation: COST-03
+      checkable: dynamic
+
+- port: access_control
+  status: draft
+  since: 0.1.0
+  service: platform
+  tier: later
+  concerns: [X11, X12]
+  stages: [silver, gold, semantic, experiences]
+  summary: Grants access by role and masks or filters restricted columns and rows.
+  kernel_owns: Roles, classifications and the masking rule per classification.
+  supplied_outside: Enforcing grants and masks in the store.
+  operations:
+    - {name: grant, intent: Apply the declared grants for a dataset.}
+    - {name: check, intent: Report what a role can read in a dataset.}
+  invariants:
+    - must: The lowest-privilege role cannot read a restricted column directly.
+      because: A mask applied only in the dashboard leaks through every other door.
+      obligation: SEC-02
+      checkable: dynamic
+
+- port: secret_store
+  status: draft
+  since: 0.1.0
+  service: platform
+  tier: core
+  concerns: [X11]
+  stages: [platform]
+  summary: Hands credentials to jobs at run time, so none are written in code or configuration.
+  kernel_owns: The names jobs ask for.
+  supplied_outside: Storing and rotating secrets.
+  operations:
+    - {name: get, intent: Return a credential by name to an authorised job identity.}
+  invariants:
+    - must: No credential appears in the repository.
+      because: A secret in history is a secret published.
+      obligation: REL-05
+      checkable: static
+
+- port: deployer
+  status: draft
+  since: 0.1.0
+  service: platform
+  tier: later
+  concerns: [X16]
+  stages: [platform]
+  summary: Promotes one build through environments and rolls back a release, including its data changes.
+  kernel_owns: The environment list and what may differ between them (configuration only).
+  supplied_outside: Building, deploying and infrastructure.
+  operations:
+    - {name: promote, intent: Deploy a build to the next environment.}
+    - {name: rollback, intent: Return an environment to the previous release, including tables it changed.}
+  invariants:
+    - must: The same build is promoted, with no manual change in the target.
+      because: A hand fix in production is lost on the next deploy.
+      obligation: REL-03
+      checkable: dynamic
+
+- port: clock
+  status: draft
+  since: 0.1.0
+  service: platform
+  tier: core
+  concerns: [X22, X15]
+  stages: [platform]
+  summary: The only source of "now" for jobs, so the simulated world can move time and a replay can run as of a past day.
+  kernel_owns: The rule that no job reads the system time directly, and the declared business time zone.
+  supplied_outside: Real time in production; a controlled clock in simulation and tests.
+  operations:
+    - {name: now, intent: Return the current time in the declared time zone.}
+  invariants:
+    - must: Jobs read time only from this port.
+      because: A job that reads the machine's clock cannot be replayed or simulated.
+      obligation: SIM-01
+      checkable: static

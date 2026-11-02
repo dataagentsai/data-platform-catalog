@@ -1,0 +1,64 @@
+# Pipeline archetypes: the shapes a pipeline comes in (PLAN.html, B0). Tags, not a tree: a pipeline may carry
+# several. Boundaries are drawn by two questions only, as in the AI family: how data arrives, and what the
+# output touches. Not by business domain.
+# Ids are PA1..PA10 so they never clash with the AI family's A1..A10.
+PA1:
+  name: File drop
+  arrives: Files placed in a folder or bucket by someone else, on their schedule
+  touches: Tables in the platform
+  stages: [sources, landing, bronze, silver]
+  owes_most: Same file twice (DUP-01), poison record (DQ-03), empty or missing file (DQ-04), renamed column (SCH-02)
+PA2:
+  name: Database replication (change capture)
+  arrives: Inserts, updates and deletes read from a source database's log or by watermark
+  touches: Tables in the platform
+  stages: [sources, landing, bronze, silver]
+  owes_most: Deletes detected (DEL-01), full-to-incremental handover (HIST-03), history correct out of order (SCD-02)
+PA3:
+  name: API pull
+  arrives: Pages fetched from a service's interface, with limits and tokens
+  touches: Tables in the platform
+  stages: [sources, landing, bronze, silver]
+  owes_most: Retries only for passing failures (ORCH-02), restart mid-way (ORCH-03), state kept outside the tool
+PA4:
+  name: Event stream
+  arrives: A continuous flow of events, possibly out of order and replayed
+  touches: Tables in the platform
+  stages: [sources, bronze, silver, gold]
+  owes_most: Replayed events (DUP-04), late events (LATE-03), restart after an outage (ORCH-06)
+PA5:
+  name: Analytical mart
+  arrives: Silver tables inside the platform
+  touches: Gold facts and dimensions, metrics, dashboards
+  stages: [silver, gold, semantic, experiences]
+  owes_most: Facts joined to the right history (SCD-04), late rows rebuild periods (LATE-01), metric defined once (SERV-04)
+PA6:
+  name: Machine-learning feature pipeline
+  arrives: Silver or gold tables inside the platform
+  touches: Features read by models in training and in serving
+  stages: [silver, gold, experiences]
+  owes_most: Rerun leaves result unchanged (DUP-02), freshness measured (PERF-02), lineage (LIN-01)
+PA7:
+  name: Documents for AI (retrieval)
+  arrives: Documents and their metadata
+  touches: Chunks and indexes read by AI assistants
+  stages: [sources, landing, bronze, silver, experiences]
+  owes_most: Deletes flow through (DEL-03), access by role (SEC-02), personal data found (SEC-01)
+PA8:
+  name: Reverse load
+  arrives: Gold tables inside the platform
+  touches: An operational system outside the platform (a sales tool, an email system)
+  stages: [gold, experiences]
+  owes_most: Rerun changes nothing outside (DUP-02), two runs at once (ORCH-04), audit (SEC-04)
+PA9:
+  name: Data sharing and data products
+  arrives: Gold tables inside the platform
+  touches: Another team or company reading under a contract
+  stages: [gold, semantic, experiences]
+  owes_most: Published contract (SERV-01), consumers see staleness (SERV-02), contract never loosened (GATE-02)
+PA10:
+  name: Regulatory report
+  arrives: Gold tables inside the platform
+  touches: A regulator, on a legal deadline
+  stages: [gold, semantic, experiences]
+  owes_most: Configuration recorded per run (CFG-03), reconciliation names the hop (REC-05), reload a past window (HIST-04)

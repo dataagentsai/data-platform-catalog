@@ -32,7 +32,26 @@ DIMENSIONS = {"accuracy", "completeness", "conformity", "consistency", "coverage
 
 def load_vocab(root=ROOT):
     y = lambda p: yaml.safe_load((root / p).read_text())  # noqa: E731
-    return {"concerns": y("core/concerns.yaml"), "stages": y("core/stages.yaml"), "standards": y("core/standards.yaml")}
+    return {"concerns": y("core/concerns.yaml"), "stages": y("core/stages.yaml"), "standards": y("core/standards.yaml"),
+            "archetypes": y("core/archetypes.yaml")}
+
+
+def load_ports(root=ROOT):
+    return yaml.safe_load((root / "dpc" / "ports.yaml").read_text()) or []
+
+
+def load_capabilities(root=ROOT):
+    recs = []
+    for f in sorted((root / "dpc" / "capabilities").glob("*.yaml")):
+        for r in yaml.safe_load(f.read_text()) or []:
+            r["_file"] = f.stem
+            recs.append(r)
+    return recs
+
+
+def products_in(text):
+    low = (text or "").lower()
+    return [p for p in PRODUCTS if re.search(rf"\b{re.escape(p)}\b", low)]
 
 
 def load_obligations(root=ROOT):
@@ -88,11 +107,130 @@ def lint(recs, vocab):
             if x == r.get("id"):
                 errs.append(f"{w}: relates to itself")
         for k in TEXT_FIELDS:
-            low = (r.get(k) or "").lower()
-            for p in PRODUCTS:
-                if re.search(rf"\b{re.escape(p)}\b", low):
-                    errs.append(f"{w}: product name '{p}' in {k}")
+            for p in products_in(r.get(k)):
+                errs.append(f"{w}: product name '{p}' in {k}")
     return errs
+
+
+def lint_archetypes(vocab):
+    errs = []
+    for k, a in vocab["archetypes"].items():
+        if not re.match(r"^PA\d+$", k):
+            errs.append(f"archetype {k}: id must look like PA1")
+        for f in ("name", "arrives", "touches", "stages"):
+            if not a.get(f):
+                errs.append(f"archetype {k}: missing '{f}'")
+        for st in a.get("stages") or []:
+            if st not in vocab["stages"]:
+                errs.append(f"archetype {k}: unknown stage '{st}'")
+    return errs
+
+
+PORT_REQUIRED = ["port", "status", "since", "service", "tier", "concerns", "stages", "summary", "kernel_owns",
+                 "supplied_outside", "operations", "invariants"]
+
+
+def lint_ports(ports, vocab, dac_ids):
+    errs = []
+    names = [p.get("port") for p in ports]
+    for p in ports:
+        w = f"port {p.get('port', '?')}"
+        for k in PORT_REQUIRED:
+            if p.get(k) in (None, "", []):
+                errs.append(f"{w}: missing '{k}'")
+        if p.get("port") and not re.match(r"^[a-z][a-z_]*$", p["port"]):
+            errs.append(f"{w}: name must be lower_snake_case")
+        if names.count(p.get("port")) > 1:
+            errs.append(f"{w}: duplicate port")
+        if p.get("service") and p["service"] not in ("A", "B", "C", "platform"):
+            errs.append(f"{w}: service must be A, B, C or platform")
+        if p.get("tier") and p["tier"] not in ("core", "later"):
+            errs.append(f"{w}: tier must be core or later")
+        for c in p.get("concerns") or []:
+            if c not in vocab["concerns"]:
+                errs.append(f"{w}: unknown concern '{c}'")
+        for st in p.get("stages") or []:
+            if st not in vocab["stages"]:
+                errs.append(f"{w}: unknown stage '{st}'")
+        texts = [p.get("summary"), p.get("kernel_owns"), p.get("supplied_outside")]
+        for op in p.get("operations") or []:
+            if not op.get("name") or not op.get("intent"):
+                errs.append(f"{w}: operation needs a name and an intent")
+            texts.append(op.get("intent"))
+        for inv in p.get("invariants") or []:
+            for k in ("must", "because", "obligation", "checkable"):
+                if not inv.get(k):
+                    errs.append(f"{w}: invariant missing '{k}'")
+            if inv.get("obligation") and inv["obligation"] not in dac_ids:
+                errs.append(f"{w}: invariant obligation '{inv['obligation']}' is not a DAC id")
+            if inv.get("checkable") and inv["checkable"] not in ("static", "dynamic"):
+                errs.append(f"{w}: checkable must be static or dynamic")
+            texts += [inv.get("must"), inv.get("because")]
+        for t in texts:
+            for prod in products_in(t):
+                errs.append(f"{w}: product name '{prod}'")
+    return errs
+
+
+CAP_REQUIRED = ["id", "status", "since", "level", "title", "concern", "stages", "archetypes", "core", "requirement",
+                "failure_mode", "discharges", "realization_policy"]
+
+
+def lint_capabilities(caps, vocab, dac_ids, port_names):
+    errs = []
+    ids = [c.get("id") for c in caps]
+    for c in caps:
+        w = f"{c.get('_file', '?')}:{c.get('id', '?')}"
+        for k in CAP_REQUIRED:
+            if c.get(k) in (None, "", []):
+                errs.append(f"{w}: missing '{k}'")
+        if c.get("id") and not re.match(r"^DPC-\d{4}$", c["id"]):
+            errs.append(f"{w}: id must look like DPC-0001")
+        if ids.count(c.get("id")) > 1:
+            errs.append(f"{w}: duplicate id")
+        if c.get("status") and c["status"] not in STATUSES:
+            errs.append(f"{w}: unknown status '{c['status']}'")
+        if c.get("concern") and c["concern"] not in vocab["concerns"]:
+            errs.append(f"{w}: unknown concern '{c['concern']}'")
+        lv = c.get("level")
+        if lv and lv not in LEVELS:
+            errs.append(f"{w}: level must be MUST, SHOULD or MAY")
+        elif lv and lv not in (c.get("requirement") or ""):
+            errs.append(f"{w}: requirement does not use its level word '{lv}'")
+        if not isinstance(c.get("core"), bool):
+            errs.append(f"{w}: core must be true or false")
+        for st in c.get("stages") or []:
+            if st not in vocab["stages"]:
+                errs.append(f"{w}: unknown stage '{st}'")
+        for a in c.get("archetypes") or []:
+            if a not in vocab["archetypes"]:
+                errs.append(f"{w}: unknown archetype '{a}'")
+        if c.get("port") is not None and c.get("port") not in port_names:
+            errs.append(f"{w}: unknown port '{c.get('port')}'")
+        for d in c.get("discharges") or []:
+            if d not in dac_ids:
+                errs.append(f"{w}: discharges '{d}', which is not a DAC id")
+        if c.get("realization_policy") and c["realization_policy"] not in ("own", "adopt", "bind"):
+            errs.append(f"{w}: realization_policy must be own, adopt or bind")
+        for dd in c.get("design_decisions") or []:
+            for k in ("key", "question", "tension", "resolution"):
+                if not dd.get(k):
+                    errs.append(f"{w}: design decision missing '{k}'")
+        for x in c.get("see_also") or []:
+            if x not in ids:
+                errs.append(f"{w}: see_also id '{x}' does not exist")
+        texts = [c.get("title"), c.get("requirement"), c.get("failure_mode")]
+        texts += [dd.get(k) for dd in c.get("design_decisions") or [] for k in ("question", "tension", "resolution")]
+        for t in texts:
+            for prod in products_in(t):
+                errs.append(f"{w}: product name '{prod}'")
+    return errs
+
+
+def uncovered(obligations, caps):
+    """DAC ids no capability discharges. Reported now; an error from the v0.1 gate (DE-027)."""
+    done = {d for c in caps for d in c.get("discharges") or []}
+    return sorted(r["id"] for r in obligations if r["id"] not in done)
 
 
 def lint_triage(recs, root=ROOT):
@@ -107,12 +245,18 @@ def lint_triage(recs, root=ROOT):
 
 
 def main():
-    recs = load_obligations()
-    errs = lint(recs, load_vocab()) + lint_triage(recs)
+    recs, vocab = load_obligations(), load_vocab()
+    ports, caps = load_ports(), load_capabilities()
+    dac_ids = {r["id"] for r in recs}
+    errs = (lint(recs, vocab) + lint_triage(recs) + lint_archetypes(vocab)
+            + lint_ports(ports, vocab, dac_ids) + lint_capabilities(caps, vocab, dac_ids, {p["port"] for p in ports}))
     for e in errs:
         print("ERROR", e)
     core = sum(1 for r in recs if r.get("core"))
-    print(f"{len(recs)} obligations ({core} core), {len(errs)} errors")
+    gap = uncovered(recs, caps)
+    print(f"DAC: {len(recs)} obligations ({core} core). DPC: {len(ports)} ports, {len(caps)} capabilities.")
+    print(f"Coverage: {len(recs) - len(gap)} of {len(recs)} obligations discharged by a capability.")
+    print(f"{len(errs)} errors")
     sys.exit(1 if errs else 0)
 
 

@@ -86,3 +86,100 @@ def test_index_is_up_to_date():
 def test_every_concern_has_an_obligation():
     have = {r["concern"] for r in lint.load_obligations()}
     assert set(VOCAB["concerns"]) - have == set()
+
+
+# ---------- ports ----------
+DAC_IDS = {r["id"] for r in lint.load_obligations()}
+
+GOOD_PORT = {
+    "port": "table_writer", "status": "draft", "since": "0.1.0", "service": "A", "tier": "core",
+    "concerns": ["X15"], "stages": ["silver"], "summary": "Writes rows.", "kernel_owns": "The batch key.",
+    "supplied_outside": "The table format.", "operations": [{"name": "write", "intent": "Write a batch."}],
+    "invariants": [{"must": "Twice changes nothing.", "because": "Resends.", "obligation": "DUP-01",
+                    "checkable": "dynamic"}],
+}
+
+
+def port_(**changes):
+    p = copy.deepcopy(GOOD_PORT)
+    p.update(changes)
+    return p
+
+
+PORT_CASES = [
+    ("valid port", port_(), None),
+    ("missing summary", port_(summary=""), "missing 'summary'"),
+    ("name not snake case", port_(port="TableWriter"), "lower_snake_case"),
+    ("unknown service", port_(service="D"), "service must be A, B, C or platform"),
+    ("unknown tier", port_(tier="soon"), "tier must be core or later"),
+    ("unknown concern", port_(concerns=["X0"]), "unknown concern 'X0'"),
+    ("unknown stage", port_(stages=["lake"]), "unknown stage 'lake'"),
+    ("operation without intent", port_(operations=[{"name": "write"}]), "needs a name and an intent"),
+    ("invariant to unknown obligation", port_(invariants=[{**GOOD_PORT["invariants"][0], "obligation": "XX-01"}]),
+     "is not a DAC id"),
+    ("invariant bad checkable", port_(invariants=[{**GOOD_PORT["invariants"][0], "checkable": "manual"}]),
+     "static or dynamic"),
+    ("product in kernel_owns", port_(kernel_owns="The Kafka offset."), "product name 'kafka'"),
+]
+
+
+@pytest.mark.parametrize("name,port,want", PORT_CASES, ids=[c[0] for c in PORT_CASES])
+def test_lint_port(name, port, want):
+    errs = lint.lint_ports([port], VOCAB, DAC_IDS)
+    assert errs == [] if want is None else any(want in e for e in errs), errs
+
+
+def test_duplicate_port():
+    assert any("duplicate port" in e for e in lint.lint_ports([port_(), port_()], VOCAB, DAC_IDS))
+
+
+# ---------- capabilities ----------
+GOOD_CAP = {
+    "_file": "X15", "id": "DPC-0001", "status": "draft", "since": "0.1.0", "level": "MUST",
+    "title": "Every write carries a batch key", "concern": "X15", "stages": ["bronze"], "archetypes": ["PA1"],
+    "core": True, "port": "table_writer", "requirement": "Every write MUST carry its batch key.",
+    "failure_mode": "Revenue doubled.", "discharges": ["DUP-01"], "realization_policy": "own",
+    "design_decisions": [{"key": "k", "question": "q?", "tension": "t", "resolution": "r"}], "see_also": [],
+}
+PORTS = {"table_writer"}
+
+
+def cap_(**changes):
+    c = copy.deepcopy(GOOD_CAP)
+    c.update(changes)
+    return c
+
+
+CAP_CASES = [
+    ("valid capability", cap_(), None),
+    ("kernel-only capability has no port", cap_(port=None), None),
+    ("bad id", cap_(id="DPC-1"), "id must look like DPC-0001"),
+    ("missing requirement", cap_(requirement=""), "missing 'requirement'"),
+    ("requirement lacks level word", cap_(requirement="Every write carries a key."), "level word"),
+    ("unknown archetype", cap_(archetypes=["A6"]), "unknown archetype 'A6'"),
+    ("unknown port", cap_(port="writer"), "unknown port 'writer'"),
+    ("discharges unknown obligation", cap_(discharges=["NOPE-01"]), "not a DAC id"),
+    ("bad realization policy", cap_(realization_policy="buy"), "own, adopt or bind"),
+    ("half a design decision", cap_(design_decisions=[{"key": "k", "question": "q?"}]), "missing 'tension'"),
+    ("see_also missing", cap_(see_also=["DPC-0099"]), "see_also id 'DPC-0099'"),
+    ("product in design decision", cap_(design_decisions=[{**GOOD_CAP["design_decisions"][0], "resolution": "Use dbt."}]),
+     "product name 'dbt'"),
+]
+
+
+@pytest.mark.parametrize("name,cap,want", CAP_CASES, ids=[c[0] for c in CAP_CASES])
+def test_lint_capability(name, cap, want):
+    errs = lint.lint_capabilities([cap], VOCAB, DAC_IDS, PORTS)
+    assert errs == [] if want is None else any(want in e for e in errs), errs
+
+
+def test_uncovered_lists_obligations_no_capability_discharges():
+    obligations = [{"id": "DUP-01"}, {"id": "DUP-02"}]
+    assert lint.uncovered(obligations, [cap_()]) == ["DUP-02"]
+
+
+def test_real_ports_archetypes_and_capabilities_are_clean():
+    ports = lint.load_ports()
+    assert lint.lint_archetypes(VOCAB) == []
+    assert lint.lint_ports(ports, VOCAB, DAC_IDS) == []
+    assert lint.lint_capabilities(lint.load_capabilities(), VOCAB, DAC_IDS, {p["port"] for p in ports}) == []
