@@ -1,0 +1,24 @@
+# DPC capabilities for X9, Freshness and SLOs. Normative: edit here.
+- id: DPC-0020
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Freshness measured per dataset
+  concern: X9
+  stages:
+  - silver
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  core: true
+  port: telemetry
+  requirement: Every dataset MUST record, on every run, the latest source change it contains, and compare its age
+    with the declared freshness target.
+  failure_mode: Every job was on time, but the source extract had stalled, so the data was two days old.
+  discharges:
+  - PERF-02
+  realization_policy: own
+  slice: 1
+  see_also: []

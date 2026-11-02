@@ -1,0 +1,32 @@
+# DPC capabilities for X7, Lineage. Normative: edit here.
+- id: DPC-0018
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Lineage emitted on every run
+  concern: X7
+  stages:
+  - bronze
+  - silver
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  - PA6
+  - PA7
+  - PA8
+  - PA9
+  - PA10
+  core: true
+  port: lineage_emitter
+  requirement: Every run MUST emit a lineage event in the open lineage format naming what it read and wrote, and
+    the recorded edges MUST be checked against the allowed one-way flow between layers.
+  failure_mode: A source column was dropped and nobody could say which reports it fed.
+  discharges:
+  - LIN-01
+  - FLOW-01
+  realization_policy: adopt
+  slice: 1
+  see_also: []

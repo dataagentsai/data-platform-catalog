@@ -1,0 +1,32 @@
+# DPC capabilities for X22, Simulation. Normative: edit here.
+- id: DPC-0032
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Time only from the clock port
+  concern: X22
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  - PA6
+  - PA7
+  - PA8
+  - PA9
+  - PA10
+  core: true
+  port: clock
+  requirement: Jobs MUST read the current time only from the clock port, so a simulation can move time and a replay
+    can run as of a past day.
+  failure_mode: A job that read the machine clock could not be replayed for last month; every replay used today's
+    date.
+  discharges:
+  - SIM-01
+  - LATE-04
+  realization_policy: own
+  slice: 1
+  see_also: []

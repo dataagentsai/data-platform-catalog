@@ -1,0 +1,30 @@
+# DPC capabilities for X8, Observability. Normative: edit here.
+- id: DPC-0019
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Failures reach the dataset owner
+  concern: X8
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  - PA6
+  - PA7
+  - PA8
+  - PA9
+  - PA10
+  core: true
+  port: telemetry
+  requirement: A failed or stopped run MUST alert the dataset's named owner or rota within the declared time, with
+    the run id and the reason.
+  failure_mode: The job failed on Friday night and the first person to know was a director on Monday.
+  discharges:
+  - OPS-01
+  realization_policy: bind
+  slice: 1
+  see_also: []

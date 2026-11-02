@@ -1,0 +1,32 @@
+# DPC capabilities for X16, Environments, CI/CD and release. Normative: edit here.
+- id: DPC-0030
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Everything that runs is in version control
+  concern: X16
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  - PA6
+  - PA7
+  - PA8
+  - PA9
+  - PA10
+  core: true
+  port: null
+  requirement: Code, manifests, contracts and schedules MUST be recreatable from version control alone, and the
+    same build MUST be promoted between environments.
+  failure_mode: A production job could not be rebuilt after an outage because its latest version existed only in
+    the workspace.
+  discharges:
+  - REL-01
+  - REL-03
+  realization_policy: bind
+  slice: 1
+  see_also: []

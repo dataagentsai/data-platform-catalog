@@ -1,0 +1,87 @@
+# The orders contract for slice 1, in the Open Data Contract Standard v3.2.0 (adopted, not restated).
+# Validated against the published ODCS v3.2.0 JSON schema by tests/test_slices.py.
+apiVersion: v3.2.0
+kind: DataContract
+id: shop-orders-silver
+name: Shop orders (silver)
+version: 0.1.0
+status: draft
+domain: sales
+description:
+  purpose: One row per order line as it stands now and as it stood before, for sales reporting.
+  limitations: Orders only. Returns, payments and stock come in later slices.
+schema:
+  - name: orders
+    physicalName: silver_orders
+    logicalType: object
+    dataGranularityDescription: One row per order per version (history kept, one current row per order)
+    properties:
+      - name: order_id
+        logicalType: string
+        primaryKey: true
+        primaryKeyPosition: 1
+        required: true
+      - name: customer_id
+        logicalType: string
+        required: true
+        classification: restricted
+      - name: store_id
+        logicalType: string
+        required: true
+      - name: order_ts
+        logicalType: timestamp
+        required: true
+        description: When the order was placed, converted to the declared business time zone.
+      - name: status
+        logicalType: string
+        required: true
+        quality:
+          - type: library
+            metric: invalidValues
+            arguments:
+              validValues: [placed, paid, shipped, delivered, cancelled]
+            mustBe: 0
+            dimension: conformity
+            severity: error
+      - name: amount
+        logicalType: number
+        required: true
+        quality:
+          - type: sql
+            description: Amounts are never negative on an order (refunds are a different dataset).
+            query: SELECT COUNT(*) FROM ${object} WHERE amount < 0
+            mustBe: 0
+            dimension: accuracy
+            severity: error
+      - name: currency
+        logicalType: string
+        required: true
+      - name: change_seq
+        logicalType: integer
+        required: true
+        description: The source's change sequence. History is ordered by this, never by arrival (DPC-0025).
+    quality:
+      - type: library
+        metric: duplicateValues
+        arguments:
+          properties: [order_id, change_seq]
+        mustBe: 0
+        dimension: uniqueness
+        severity: error
+      - type: library
+        metric: rowCount
+        mustBeGreaterThan: 0
+        dimension: completeness
+        severity: error
+team:
+  name: shop-data
+  members:
+    - username: orders-owner@example.org
+      role: owner
+slaProperties:
+  - property: latency
+    value: 4
+    unit: h
+  - property: retention
+    value: 7
+    unit: y

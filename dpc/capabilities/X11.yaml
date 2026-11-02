@@ -1,0 +1,31 @@
+# DPC capabilities for X11, Security and access. Normative: edit here.
+- id: DPC-0029
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Credentials only from the secret store
+  concern: X11
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  - PA6
+  - PA7
+  - PA8
+  - PA9
+  - PA10
+  core: true
+  port: secret_store
+  requirement: Jobs MUST get credentials from the secret store at run time; no credential MAY appear in code, configuration
+    or the repository history.
+  failure_mode: A database password in an old commit was found by a scanner a year after it was rotated, but the
+    old one still worked on a forgotten replica.
+  discharges:
+  - REL-05
+  realization_policy: bind
+  slice: 1
+  see_also: []

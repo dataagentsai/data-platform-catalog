@@ -72,5 +72,5 @@ Rules (checked by `scripts/lint.py`, tested by `tests/test_lint.py`):
 ```bash
 uv run scripts/lint.py                                   # lint the catalog
 uv run scripts/index.py                                  # regenerate INDEX.md after editing records
-uv run --with pytest --with pyyaml pytest -q             # table-driven tests
+uv run --with pytest --with pyyaml --with jsonschema pytest -q   # table-driven tests
 ```

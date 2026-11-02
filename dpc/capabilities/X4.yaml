@@ -1,0 +1,126 @@
+# DPC capabilities for X4, Data quality. Normative: edit here.
+- id: DPC-0010
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Quality rules run from the contract on every batch
+  concern: X4
+  stages:
+  - silver
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  core: true
+  port: quality_runner
+  requirement: The quality rules in a dataset's contract MUST run on every batch, and each result MUST report rows
+    examined and rows failed; a rule that examined zero rows MUST report error.
+  failure_mode: The quality dashboard said zero failures for a week while the source sent nothing.
+  discharges:
+  - DQ-01
+  - GATE-01
+  realization_policy: bind
+  slice: 1
+  see_also: []
+- id: DPC-0011
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Failed rows quarantined with a reason
+  concern: X4
+  stages:
+  - bronze
+  - silver
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  core: true
+  port: quarantine
+  requirement: A row that cannot be parsed or fails a blocking rule MUST go to quarantine with the rule id, the
+    reason and the run id, the rest of the batch MUST continue, and quarantined rows MUST be replayable once fixed.
+  failure_mode: One bad date in a million rows stopped the whole night's load.
+  discharges:
+  - DQ-02
+  - DQ-03
+  design_decisions:
+  - key: stop_threshold
+    question: When does quarantine become a stopped load?
+    tension: Quarantining everything keeps the load green while most of it is wrong; stopping on one bad row is
+      fragile.
+    resolution: Each dataset declares a share of quarantined rows above which the load stops; the default is low.
+  realization_policy: own
+  slice: 1
+  see_also: []
+- id: DPC-0012
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Duplicate keys inside a delivery resolved by rule
+  concern: X4
+  stages:
+  - silver
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  core: true
+  port: table_writer
+  requirement: When rows in one delivery share a key, a declared rule (for example latest change sequence wins)
+    MUST pick one, and every dropped row MUST be kept with the reason.
+  failure_mode: The source sent two versions of the same order in one file and silver kept both.
+  discharges:
+  - DUP-03
+  realization_policy: own
+  slice: 1
+  see_also: []
+- id: DPC-0013
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Volume checked on every delivery
+  concern: X4
+  stages:
+  - bronze
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  core: true
+  port: quality_runner
+  requirement: Every delivery MUST be compared with its expected volume range, and an empty, missing or far-too-small
+    delivery MUST alert and MUST NOT be marked a success.
+  failure_mode: The source system went down and sent empty files for two days; every run was green.
+  discharges:
+  - DQ-04
+  realization_policy: own
+  slice: 1
+  see_also: []
+- id: DPC-0014
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Times in one declared zone
+  concern: X4
+  stages:
+  - silver
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  core: false
+  port: null
+  requirement: The lander MUST convert every timestamp to the dataset's declared time zone, and the business date
+    rule MUST be declared per dataset.
+  failure_mode: Orders placed just before midnight landed on the next day and the daily totals never matched the
+    till.
+  discharges:
+  - LATE-04
+  realization_policy: own
+  slice: 1
+  see_also: []

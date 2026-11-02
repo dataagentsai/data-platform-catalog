@@ -1,0 +1,83 @@
+# DBS draft: which product serves each port slice 1 uses, on Databricks (Free Edition for the build, plus local
+# open-source Spark and Delta for internals, PLAN.html). Product names are allowed here and nowhere else.
+#
+# Not a copy: "how to do it and how to verify it" per obligation already lives in
+# data-project-review/bindings/databricks.yaml (checked against the docs on 2026-11-01). Each port below points
+# at those entries by obligation id. DE-023 decides the final DBS format; the AI family's harness-profile format
+# is the first candidate.
+#
+#   serves: the product or our own code behind the port
+#   ours:   true when no product fills the port and we build it (the "yours to build" list a binding produces)
+#   verify_with: obligation ids whose do/verify/traps in data-project-review apply to this port
+tech: databricks
+version_note: Product names as of 2026-11-02; inherits data-project-review's 2026-11-01 check.
+decisions: {D6: "Service A on Lakeflow Declarative Pipelines", D11: "mover swappable; lander is our own code"}
+
+ports:
+  mover:
+    serves: Auto Loader reading files from a Unity Catalog volume (the world's mock source writes files there)
+    ours: false
+    verify_with: [DUP-01, SCH-01]
+    note: Lakeflow Connect or a JDBC read are other movers for a real database; same port, same delivery manifest.
+  landing_store:
+    serves: Unity Catalog volume, one folder per source, delivery and date
+    ours: false
+    verify_with: [DUP-01]
+  table_writer:
+    serves: Lakeflow Declarative Pipelines with AUTO CDC ... STORED AS SCD TYPE 2, SEQUENCE BY change_seq
+    ours: false
+    verify_with: [DUP-01, DUP-02, SCD-02, DEL-01, HIST-04]
+    note: The batch key (DPC-0024) and load metadata columns (DPC-0022) are ours, added by the lander before AUTO CDC.
+  contract_enforcer:
+    serves: our own check of the batch schema against the ODCS file, before the pipeline writes silver
+    ours: true
+    verify_with: [SCH-01, SCH-02]
+    note: Explicit schema plus Delta schema enforcement is the backstop; neither reads an ODCS contract.
+  quarantine:
+    serves: a quarantine Delta table written by an inverted expectation, with the rule id and reason as columns
+    ours: false
+    verify_with: [DQ-02]
+  quality_runner:
+    serves: pipeline expectations generated from the ODCS quality block, plus our row-count gate
+    ours: false
+    verify_with: [DQ-02, DQ-04]
+    note: Zero rows examined reported as error (GATE-01) is ours; expectations do not report it.
+  reconciler:
+    serves: our own reconciliation table written by a task after each layer, read from DESCRIBE HISTORY metrics
+    ours: true
+    verify_with: [REC-01]
+  lineage_emitter:
+    serves: Unity Catalog lineage (system.access.table_lineage); the one-way-flow check against it is ours
+    ours: false
+    verify_with: []
+  telemetry:
+    serves: Lakeflow Jobs notifications and duration warnings; freshness measured by our own task
+    ours: false
+    verify_with: [OPS-01, PERF-02]
+  run_log:
+    serves: our own run_log table (from LakeIngestionFramework), joined to system.lakeflow run tables
+    ours: true
+    verify_with: [OPS-03]
+  metadata_service:
+    serves: our own metadata DB and loader (LakeIngestionFramework, D10); a Unity Catalog schema holds the tables
+    ours: true
+    verify_with: []
+  orchestrator:
+    serves: Lakeflow Jobs with a file-arrival trigger, max concurrent runs 1, task retries for timeouts only
+    ours: false
+    verify_with: [ORCH-01, ORCH-02, ORCH-04, HIST-04]
+  secret_store:
+    serves: Databricks secret scopes read with dbutils.secrets
+    ours: false
+    verify_with: [REL-05]
+  clock:
+    serves: our own clock module; production reads real time, the world's runs pass the simulated day as a parameter
+    ours: true
+    verify_with: [LATE-04]
+
+not_covered:                             # obligations in slice 1 no product meets on its own: we build these
+  - {obligation: GATE-01, why: Expectations report pass on zero rows.}
+  - {obligation: GATE-02, why: Protected contract files are a Git branch-protection setting, outside the platform.}
+  - {obligation: REC-05, why: No product reconciles across hops and names the hop.}
+  - {obligation: CFG-03, why: No product records a configuration fingerprint per run.}
+  - {obligation: SIM-01, why: No product joins an incident calendar to its detectors.}

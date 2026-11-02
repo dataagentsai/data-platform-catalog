@@ -1,0 +1,65 @@
+# DPM draft: the manifest entry for slice 1's orders dataset.
+#
+# Shape: the dataset file LakeIngestionFramework already loads (config/datasets/<source>/<dataset>.yaml, see its
+# core/config_yaml.py: source_name, dataset_name, is_enabled, config key-value map, columns, dedup), so the
+# validating loader agreed on 27 Oct can write it to the metadata DB unchanged. The blocks marked NEW are the
+# delta DPM adds; DE-022 turns this into a JSON schema with a validator.
+#
+# The manifest never copies the contract: columns, types and quality rules live in the ODCS file it points to.
+source_name: shop_db
+source_env: prod
+dataset_name: orders
+is_enabled: true
+
+config:                                   # key-value map, every key in the key registry (D10)
+  load_type: INCREMENTAL                  # existing key
+  watermark_column: change_seq            # existing key; the watermark itself lives in the metadata DB (DPC-0027)
+  freshness_warn_after_hours: "4"         # existing key; matches the contract's latency SLA
+  freshness_error_after_hours: "8"        # existing key
+  schedule: on_delivery                   # existing key; on_delivery = start when the delivery manifest exists (DPC-0004)
+  schedule_timezone: Asia/Kolkata         # existing key; the business time zone for dates (DPC-0014)
+
+dedup:                                    # existing block (DUP-03, DPC-0012)
+  mode: business_key_latest
+  business_keys: [order_id]
+  order_by: change_seq
+
+# ---- NEW in DPM ----
+
+contract: ../contracts/orders.odcs.yaml   # NEW: reference, never a copy. The validator checks it resolves and is pinned.
+contract_version: 0.1.0
+
+archetypes: [PA2]                         # NEW: database replication; decides which obligations apply
+
+load:                                     # NEW: what the lander and table writer do (DPC-0008, -0017, -0024, -0025)
+  pattern: history                        # append | overwrite_window | upsert | history
+  history_order_by: change_seq            # never arrival order
+  batch_key: [delivery_window, content_checksum]
+  new_columns: hold_in_bronze             # stop | hold_in_bronze
+  deletes:
+    detect: change_feed                   # change_feed | key_compare | none
+    apply: mark_deleted                   # mark_deleted | remove
+  quarantine_stop_share: 0.01             # stop the load above 1% quarantined rows (DPC-0011)
+  late_lookback_days: 30                  # how far back a late change may rebuild (DPC-0026)
+
+volume:                                   # NEW (DPC-0013)
+  expected_rows_per_delivery: {min: 50, max: 50000}
+
+reconciliation:                           # NEW (DPC-0015, DPC-0016)
+  hops: [sources, bronze, silver]
+  measures:
+    - {name: row_count}
+    - {name: amount_total, column: amount}
+  tolerance: {row_count: 0, amount_total: 0.0}
+  signed_off_by: orders-owner@example.org
+
+owners:                                   # NEW (DPC-0019)
+  dataset: orders-owner@example.org
+  alerts: shop-data-rota
+
+concerns: {}                              # NEW: every concern is on by default (DPC-0003). Turning one off needs:
+# waivers:
+#   - concern: X5
+#     reason: profiling arrives in a later slice
+#     approver: platform-lead@example.org
+#     expires: 2026-12-31

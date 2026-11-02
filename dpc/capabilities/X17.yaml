@@ -1,0 +1,31 @@
+# DPC capabilities for X17, Testing. Normative: edit here.
+- id: DPC-0031
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Every claimed failure has a test that causes it
+  concern: X17
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  - PA6
+  - PA7
+  - PA8
+  - PA9
+  - PA10
+  core: true
+  port: null
+  requirement: Every incident kind the platform claims to handle MUST have a test that plants it on purpose and
+    checks the expected detector fires.
+  failure_mode: The late-data detector had never fired in two years; when it mattered, it was misconfigured.
+  discharges:
+  - TEST-05
+  - SIM-01
+  realization_policy: own
+  slice: 1
+  see_also: []

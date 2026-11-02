@@ -1,0 +1,82 @@
+# DWD draft: the data world for slice 1. Extends AgentTwin's world format (awd/v0) for data.
+#
+# The one rule, kept from AWD: a world cites the specification and never declares the domain. Here the
+# specification is the orders contract and manifest; the world never lists columns or rules of its own.
+# What DWD adds to AWD: a clock with days, a change feed per source, and an incident calendar where each
+# incident names the detector (a DAC obligation) expected to fire and the capability (DPC) that must handle it
+# (rule R9, SIM-01). Ground truth is kept beside every generated row, so the oracle can judge silver exactly.
+apiVersion: dwd/v0
+extends: awd/v0
+name: clothing-shop-orders
+seed: 7
+cites:
+  contract: {id: shop-orders-silver, version: 0.1.0, path: contracts/orders.odcs.yaml}
+  manifest: {source: shop_db, dataset: orders, path: manifest/orders.yaml}
+
+fidelity:
+  faithful_about:
+    - order life cycle (placed, paid, shipped, delivered, cancelled) and the change sequence the source assigns
+    - hard deletes of cancelled orders, which the source really does
+    - deliveries arriving as files with a manifest, once a day
+  not_faithful_about:
+    - volume (hundreds of orders a day, not millions); performance is out of scope for this slice
+    - customers, stores and products, which are ids only until their own slices
+
+clock:
+  start: 2026-11-02T00:00:00+05:30        # the world's own time; jobs read it through the clock port (DPC-0032)
+  days: 7
+  delivery_at: "02:00"
+
+systems:
+  shop_db:
+    projects: source
+    resolution: mock                       # mock | replay | real | shadow, as in AWD
+    change_feed: true                      # inserts, updates and deletes with a change sequence
+
+population:
+  orders_per_day: {min: 200, max: 400}
+  status_flow: [placed, paid, shipped, delivered]
+  cancel_share: 0.05
+  generator: faker                         # behind the population port; never a hosted generator (REUSE.md)
+
+calendar:                                  # each entry: when, what, what must notice, what must handle it
+  - id: same-batch-twice
+    day: 3
+    kind: duplicate_delivery
+    does: Resend day 2's delivery under a new file name, byte for byte.
+    expect:
+      detector: DUP-01
+      handled_by: [DPC-0024, DPC-0023]
+      oracle: silver row count and amount total equal the world's truth for day 2
+  - id: cancelled-order-deleted
+    day: 4
+    kind: source_delete
+    does: Hard-delete 3 cancelled orders from day 1 at the source.
+    pick: 3
+    expect:
+      detector: DEL-01
+      handled_by: [DPC-0017]
+      oracle: the 3 orders are marked deleted in silver and no longer counted as current
+  - id: late-status-change
+    day: 5
+    kind: late_change
+    does: Deliver a status change for a day-2 order whose change sequence is older than a change already loaded.
+    pick: 1
+    expect:
+      detector: SCD-02
+      handled_by: [DPC-0025, DPC-0026]
+      oracle: the order has exactly one current row, holding the newest status by change sequence, with no overlapping periods
+  - id: amount-renamed
+    day: 6
+    kind: renamed_column
+    does: The source renames amount to order_amount in that day's delivery.
+    expect:
+      detector: SCH-02
+      handled_by: [DPC-0008]
+      oracle: the load stops with a message naming amount; silver is unchanged; no nulls loaded
+
+oracles:                                   # judged from world state, never from the platform's own logs
+  - id: silver-agrees-with-world
+    check: For every day, silver's current rows equal the world's true current orders (count, keys, amount total).
+  - id: every-incident-noticed
+    check: Every calendar entry's detector fired on its day and on no clean day (SIM-01).

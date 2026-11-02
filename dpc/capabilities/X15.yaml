@@ -1,0 +1,153 @@
+# DPC capabilities for X15, Replay, backfill and idempotency. Normative: edit here.
+- id: DPC-0023
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Deliveries kept as received, with a manifest
+  concern: X15
+  stages:
+  - landing
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  core: true
+  port: landing_store
+  requirement: Every delivery MUST land with a manifest (source, window, files, row count, checksum) and MUST NOT
+    be changed afterwards, so a replay reads the same bytes.
+  failure_mode: A replay of last Tuesday read a file that had since been overwritten, and gave different totals.
+  discharges:
+  - DUP-01
+  - DUP-02
+  realization_policy: own
+  slice: 1
+  see_also: []
+- id: DPC-0024
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Every write carries a batch key
+  concern: X15
+  stages:
+  - bronze
+  - silver
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  core: true
+  port: table_writer
+  requirement: Every write MUST carry the id of the delivery and window it came from, and writing a batch that was
+    already written MUST change nothing.
+  failure_mode: After an outage the source resent yesterday's file and revenue doubled on the dashboard.
+  discharges:
+  - DUP-01
+  - DUP-02
+  - ORCH-03
+  design_decisions:
+  - key: batch_key_source
+    question: Where does the batch key come from?
+    tension: A checksum of the file catches exact resends but not a resend with a new name; the source's own batch
+      id catches renames but only if the source has one.
+    resolution: Use the source's window plus a content checksum; record both in the run log.
+  realization_policy: own
+  slice: 1
+  see_also: []
+- id: DPC-0025
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: History ordered by the source's change sequence
+  concern: X15
+  stages:
+  - silver
+  archetypes:
+  - PA1
+  - PA2
+  core: true
+  port: table_writer
+  requirement: Tables that keep history MUST order changes by the source's change sequence, not by arrival, and
+    MUST end with one current row per key and no overlapping validity periods however often a batch is rerun.
+  failure_mode: Two updates to one order arrived in the wrong order and the older status became current.
+  discharges:
+  - SCD-02
+  design_decisions:
+  - key: ordering_column
+    question: What orders the changes when the source gives no sequence?
+    tension: Arrival time is always there but wrong when deliveries overlap; a source timestamp can tie.
+    resolution: Require a source sequence or timestamp in the contract; on a tie, use a declared tie-breaker column
+      and record the tie.
+  realization_policy: own
+  slice: 1
+  see_also: []
+- id: DPC-0026
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Late changes corrected in place
+  concern: X15
+  stages:
+  - silver
+  archetypes:
+  - PA1
+  - PA2
+  core: true
+  port: table_writer
+  requirement: A change that arrives after later ones MUST be placed in history by its source sequence, and the
+    validity periods around it MUST be corrected; the periods it affects MUST be marked for rebuild downstream.
+  failure_mode: An address change arrived a week late and every order in between was shown at the old address.
+  discharges:
+  - LATE-01
+  - SCD-02
+  realization_policy: own
+  slice: 1
+  see_also: []
+- id: DPC-0027
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Watermarks kept in the metadata store
+  concern: X15
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  core: true
+  port: metadata_service
+  requirement: A dataset's watermark MUST be kept in the metadata store, never in the mover, and MUST advance in
+    the same transaction that closes the run record.
+  failure_mode: The copy tool was replaced and its saved position went with it, so a month was loaded twice.
+  discharges:
+  - HIST-03
+  - HIST-04
+  realization_policy: own
+  slice: 1
+  see_also: []
+- id: DPC-0028
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Any past window can be reloaded by parameter
+  concern: X15
+  stages:
+  - bronze
+  - silver
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  core: true
+  port: orchestrator
+  requirement: The normal job MUST accept a window as a parameter and reload it, changing only that window's rows
+    and the rows derived from them.
+  failure_mode: Reloading one bad day meant a hand-written script that also wiped the day after.
+  discharges:
+  - HIST-04
+  realization_policy: own
+  slice: 1
+  see_also: []

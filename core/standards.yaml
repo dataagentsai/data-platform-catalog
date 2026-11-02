@@ -6,6 +6,7 @@ ODCS:
   licence: Apache-2.0
   ref_style: field path, for example quality[].metric = duplicateValues
   verified: true
+  schema_copy: core/odcs-json-schema-v3.2.0.json   # Apache-2.0, from bitol-io/open-data-contract-standard, fetched 2026-11-02
 ODPS:
   name: Open Data Product Standard (Bitol, Linux Foundation)
   version: 1.1.0

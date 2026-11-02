@@ -1,0 +1,102 @@
+# DPC capabilities for X1, Metadata and control plane. Normative: edit here.
+- id: DPC-0001
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Every dataset is declared in a manifest
+  concern: X1
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  - PA6
+  - PA7
+  - PA8
+  - PA9
+  - PA10
+  core: true
+  port: metadata_service
+  requirement: Every source and dataset MUST be declared in a manifest file in version control, validated against
+    a key registry before it is loaded; anything deployed without a manifest entry MUST be reported.
+  failure_mode: A hand-made table fed the finance report for a year, and nobody knew it existed until its owner
+    left.
+  discharges:
+  - CFG-01
+  - REL-01
+  design_decisions:
+  - key: authoring_format
+    question: Is the manifest authored as files or edited in the database?
+    tension: Files can be reviewed and replayed but need a loader; editing the database is quick and leaves no history.
+    resolution: Files in version control are the only way in; a validating loader writes the database, and pipelines
+      read only the database (agreed 27 Oct).
+  realization_policy: own
+  slice: 1
+  see_also: []
+- id: DPC-0002
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: One merged view of configuration per dataset
+  concern: X1
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  - PA6
+  - PA7
+  - PA8
+  - PA9
+  - PA10
+  core: true
+  port: metadata_service
+  requirement: Pipelines MUST read configuration only through one merged view per dataset (platform, then source,
+    then dataset, the later one winning), never from code or from their own files.
+  failure_mode: A connection string in a notebook pointed test at production for a week.
+  discharges:
+  - REL-04
+  design_decisions:
+  - key: merge_order
+    question: When the platform, the source and the dataset set the same key, which wins?
+    tension: A broad default is safe to set once; a narrow setting knows the data. Either can surprise someone.
+    resolution: The narrowest wins (dataset over source over platform), and the merged view records where each value
+      came from.
+  realization_policy: own
+  slice: 1
+  see_also: []
+- id: DPC-0003
+  status: draft
+  since: 0.1.0
+  level: MUST
+  title: Concerns on by default, off only by waiver
+  concern: X1
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  - PA6
+  - PA7
+  - PA8
+  - PA9
+  - PA10
+  core: true
+  port: metadata_service
+  requirement: Quality rules, reconciliation, lineage, freshness and cost tags MUST be on for every dataset unless
+    a waiver with a reason, an approver and an expiry date turns one off; expired waivers MUST fail validation.
+  failure_mode: A new table went live with no quality rules because the template made them optional.
+  discharges:
+  - CFG-02
+  realization_policy: own
+  slice: 1
+  see_also: []
