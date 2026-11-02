@@ -1,83 +1,139 @@
-# DBS draft: which product serves each port slice 1 uses, on Databricks (Free Edition for the build, plus local
-# open-source Spark and Delta for internals, PLAN.html). Product names are allowed here and nowhere else.
+# DBS v0.1: the Databricks binding for slice 1. Product names are allowed here and nowhere else.
 #
-# Not a copy: "how to do it and how to verify it" per obligation already lives in
-# data-project-review/bindings/databricks.yaml (checked against the docs on 2026-11-01). Each port below points
-# at those entries by obligation id. DE-023 decides the final DBS format; the AI family's harness-profile format
-# is the first candidate.
+# Format: dbs/README.md. It is the AI family's harness profile (six blocks) plus, on every binding, what the
+# binding rule needs: how much the product covers the port (full, partial, none), the gap, who fills it, and the
+# metadata keys that switch and configure it. Built and checked against data-platform-framework branch slice1.
 #
-#   serves: the product or our own code behind the port
-#   ours:   true when no product fills the port and we build it (the "yours to build" list a binding produces)
-#   verify_with: obligation ids whose do/verify/traps in data-project-review apply to this port
-tech: databricks
-version_note: Product names as of 2026-11-02; inherits data-project-review's 2026-11-01 check.
-decisions: {D6: "Service A on Lakeflow Declarative Pipelines", D11: "mover swappable; lander is our own code"}
+# "How to do it and how to verify it" per obligation already lives in data-project-review/bindings/databricks.yaml
+# (checked against the docs on 2026-11-01); `proves` points at those entries by DAC id instead of copying them.
+apiVersion: data-binding/v0.1
+subject:
+  name: shop orders, slice 1
+  platform: Databricks Free Edition (serverless, one workspace)
+  archetypes: [PA2]
+catalog:
+  dac: 0.1.0
+  dpc: 0.1.0
+decisions:
+  D6: {value: "Service A silver on Lakeflow Declarative Pipelines", source: chosen}
+  D11: {value: "mover swappable; lander is our own code", source: chosen}
+  environments: {value: "one schema set per environment (dp_<env>_*), since Free Edition has one workspace", source: chosen}
+thresholds:
+  quarantine_stop_share: 0.01
+  freshness_warn_hours: 4
+  freshness_error_hours: 8
 
-ports:
+bindings:
   mover:
-    serves: Auto Loader reading files from a Unity Catalog volume (the world's mock source writes files there)
-    ours: false
-    verify_with: [DUP-01, SCH-01]
-    note: Lakeflow Connect or a JDBC read are other movers for a real database; same port, same delivery manifest.
+    approach: platform
+    adapter: the world writes files into a Unity Catalog volume (stands in for Auto Loader or Lakeflow Connect)
+    coverage: full
+    metadata_keys: [file_pattern, schedule_trigger]
+    proves: [DUP-01]
   landing_store:
-    serves: Unity Catalog volume, one folder per source, delivery and date
-    ours: false
-    verify_with: [DUP-01]
+    approach: platform
+    adapter: Unity Catalog volume, one folder per source, dataset and window, read as files (dataplatform.adapters.files)
+    coverage: full
+    proves: [DUP-01]
   table_writer:
-    serves: Lakeflow Declarative Pipelines with AUTO CDC ... STORED AS SCD TYPE 2, SEQUENCE BY change_seq
-    ours: false
-    verify_with: [DUP-01, DUP-02, SCD-02, DEL-01, HIST-04]
-    note: The batch key (DPC-0024) and load metadata columns (DPC-0022) are ours, added by the lander before AUTO CDC.
+    approach: platform
+    adapter: Lakeflow Declarative Pipelines AUTO CDC, STORED AS SCD TYPE 2, SEQUENCE BY change_seq, apply_as_deletes op = 'D'
+    coverage: partial
+    gap: AUTO CDC needs a batch key and load columns it does not make, and does not refuse a resend.
+    gap_filled_by: {approach: in-house, adapter: "dataplatform.lander (batch key, load columns, resend skipped)"}
+    metadata_keys: [load.pattern, load.history_order_by, load.deletes, dedup.business_keys]
+    proves: [DUP-01, DUP-02, SCD-02, DEL-01, HIST-04]
   contract_enforcer:
-    serves: our own check of the batch schema against the ODCS file, before the pipeline writes silver
-    ours: true
-    verify_with: [SCH-01, SCH-02]
-    note: Explicit schema plus Delta schema enforcement is the backstop; neither reads an ODCS contract.
+    approach: in-house
+    adapter: dataplatform.contract.check_columns against the ODCS file, before bronze
+    coverage: none
+    gap: Delta schema enforcement stops a write but does not read an ODCS contract or name the missing column.
+    gap_filled_by: {approach: in-house, adapter: dataplatform.contract}
+    metadata_keys: [contract, contract_version, load.new_columns]
+    proves: [SCH-01, SCH-02]
   quarantine:
-    serves: a quarantine Delta table written by an inverted expectation, with the rule id and reason as columns
-    ours: false
-    verify_with: [DQ-02]
+    approach: platform
+    adapter: a pipeline table fed by the inverse of the expectations, with the failed rule names as a column
+    coverage: partial
+    gap: Expectations drop or count rows but do not keep them with the rule names.
+    gap_filled_by: {approach: in-house, adapter: realms/databricks/pipelines/silver.py quarantine table}
+    metadata_keys: [load.quarantine_stop_share]
+    proves: [DQ-02]
   quality_runner:
-    serves: pipeline expectations generated from the ODCS quality block, plus our row-count gate
-    ours: false
-    verify_with: [DQ-02, DQ-04]
-    note: Zero rows examined reported as error (GATE-01) is ours; expectations do not report it.
+    approach: platform
+    adapter: pipeline expectations (expect_all_or_drop), rules read from the metadata DB table quality_rules
+    coverage: partial
+    gap: Expectations report a pass on zero rows, and table-level rules (duplicates, row count) are not row rules.
+    gap_filled_by: {approach: in-house, adapter: "realms/databricks/tasks/checks.py (rowCount, duplicateValues)"}
+    metadata_keys: [quality_rules (compiled from the contract)]
+    proves: [DQ-02, DQ-04, GATE-01]
   reconciler:
-    serves: our own reconciliation table written by a task after each layer, read from DESCRIBE HISTORY metrics
-    ours: true
-    verify_with: [REC-01]
+    approach: in-house
+    adapter: dataplatform.reconcile, source to bronze per run, results in check_results
+    coverage: none
+    gap: No product reconciles counts and totals across hops and names the hop.
+    gap_filled_by: {approach: in-house, adapter: dataplatform.reconcile}
+    metadata_keys: [reconciliation.hops, reconciliation.measures, reconciliation.tolerance]
+    proves: [REC-01, REC-05]
   lineage_emitter:
-    serves: Unity Catalog lineage (system.access.table_lineage); the one-way-flow check against it is ours
-    ours: false
-    verify_with: []
+    approach: platform
+    adapter: Unity Catalog lineage, captured automatically for every table written
+    coverage: full
+    proves: [LIN-01]
   telemetry:
-    serves: Lakeflow Jobs notifications and duration warnings; freshness measured by our own task
-    ours: false
-    verify_with: [OPS-01, PERF-02]
+    approach: platform
+    adapter: Lakeflow Jobs run history and pipeline event log
+    coverage: partial
+    gap: Freshness against the contract's latency is not measured; no alert is sent.
+    gap_filled_by: {approach: in-house, adapter: not built in slice 1 (accepted gap)}
+    metadata_keys: [sla_freshness_hours, sla_freshness_error_hours]
+    proves: [OPS-01]
   run_log:
-    serves: our own run_log table (from LakeIngestionFramework), joined to system.lakeflow run tables
-    ours: true
-    verify_with: [OPS-03]
+    approach: in-house
+    adapter: run_log Delta table in the metadata schema, one row per step, with the config fingerprint
+    coverage: none
+    gap: Job run history does not record which config a run used.
+    gap_filled_by: {approach: in-house, adapter: dataplatform.adapters.spark_delta.SparkRunLog}
+    proves: [OPS-03, CFG-03]
   metadata_service:
-    serves: our own metadata DB and loader (LakeIngestionFramework, D10); a Unity Catalog schema holds the tables
-    ours: true
-    verify_with: []
+    approach: in-house
+    adapter: Delta tables in dp_<env>_meta; compiled manifest loaded by the prepare step only when its fingerprint changes
+    coverage: none
+    gap: No product holds a dataset manifest that pipelines read at run time.
+    gap_filled_by: {approach: in-house, adapter: dataplatform.adapters.spark_delta.SparkMeta}
+    proves: [CFG-01, CFG-02]
   orchestrator:
-    serves: Lakeflow Jobs with a file-arrival trigger, max concurrent runs 1, task retries for timeouts only
-    ours: false
-    verify_with: [ORCH-01, ORCH-02, ORCH-04, HIST-04]
+    approach: platform
+    adapter: Lakeflow Jobs, one run per world day, max concurrent runs 1, run id passed to every task
+    coverage: full
+    metadata_keys: [schedule_trigger, schedule_timezone]
+    proves: [ORCH-01, ORCH-02]
   secret_store:
-    serves: Databricks secret scopes read with dbutils.secrets
-    ours: false
-    verify_with: [REL-05]
+    approach: platform
+    adapter: Databricks secret scopes (not needed in slice 1; the world is inside the workspace)
+    coverage: full
+    proves: [REL-05]
   clock:
-    serves: our own clock module; production reads real time, the world's runs pass the simulated day as a parameter
-    ours: true
-    verify_with: [LATE-04]
+    approach: in-house
+    adapter: the world day is a job parameter; production would pass the real date
+    coverage: none
+    gap: No product lets a job run on a simulated date.
+    gap_filled_by: {approach: in-house, adapter: job parameter day}
+    proves: [LATE-04]
+  semantic_layer:
+    approach: platform
+    adapter: Unity Catalog metric view orders_metrics (dimensions order_date, status, store_id; measures orders, revenue)
+    coverage: full
+    proves: [SERV-04]
+  evidence:
+    approach: in-house
+    adapter: evidence view joining run_log and check_results by run id
+    coverage: none
+    gap: Each Databricks feature reports alone; nothing answers "is this number right, and how do we know?" for one run.
+    gap_filled_by: {approach: in-house, adapter: dataplatform.adapters.spark_delta.create_meta (evidence view)}
+    proves: [SIM-01]
 
-not_covered:                             # obligations in slice 1 no product meets on its own: we build these
-  - {obligation: GATE-01, why: Expectations report pass on zero rows.}
-  - {obligation: GATE-02, why: Protected contract files are a Git branch-protection setting, outside the platform.}
-  - {obligation: REC-05, why: No product reconciles across hops and names the hop.}
-  - {obligation: CFG-03, why: No product records a configuration fingerprint per run.}
-  - {obligation: SIM-01, why: No product joins an incident calendar to its detectors.}
+accepted_gaps:
+  - {obligation: GATE-02, reason: "Protected contract files are a Git branch-protection setting, outside the platform.", owner: platform-lead, review: "2026-12-01"}
+  - {obligation: SCH-01, reason: "New columns are reported but not kept in bronze yet (load.new_columns: hold_in_bronze is not built).", owner: platform-lead, review: "2026-12-01"}
+  - {obligation: OPS-01, reason: "Freshness is not measured against the contract's latency and no alert is sent in slice 1.", owner: platform-lead, review: "2026-12-01"}

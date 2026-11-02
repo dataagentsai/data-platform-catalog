@@ -282,13 +282,50 @@ def lint_manifests(root=ROOT):
     return errs
 
 
+def lint_binding(binding, schema, port_names, dac_ids, name="binding"):
+    """DBS (DE-023): the schema, then every port and obligation it names must exist."""
+    from jsonschema import Draft202012Validator
+    errs = [f"{name}: {'/'.join(map(str, e.path)) or '(top)'}: {e.message}"
+            for e in sorted(Draft202012Validator(schema).iter_errors(binding), key=lambda e: list(e.path))]
+    if errs:
+        return errs
+    errs += [f"{name}: binds '{p}', which is not a port in dpc/ports.yaml" for p in binding["bindings"]
+             if p not in port_names]
+    ids = [(p, i) for p, b in binding["bindings"].items() for i in b["proves"]]
+    ids += [("accepted_gaps", g["obligation"]) for g in binding["accepted_gaps"]]
+    errs += [f"{name}: {where} names {i}, which is not a DAC obligation" for where, i in ids if i not in dac_ids]
+    return errs
+
+
+def coverage_by_concern(binding, ports):
+    """Per concern: the ports bound, their coverage, and who fills each gap. Generated, never hand-written."""
+    out = {}
+    for p in ports:
+        b = binding["bindings"].get(p["port"])
+        for c in p.get("concerns") or []:
+            out.setdefault(c, []).append((p["port"], b["coverage"] if b else "unbound",
+                                          (b.get("gap_filled_by") or {}).get("approach", "") if b else ""))
+    return out
+
+
+def lint_bindings(root=ROOT, ports=None, dac_ids=None):
+    schema = json.loads((root / "dbs" / "schema" / "binding.schema.json").read_text())
+    ports = ports if ports is not None else load_ports(root)
+    dac_ids = dac_ids if dac_ids is not None else {r["id"] for r in load_obligations(root)}
+    errs = []
+    for f in sorted(root.glob("slices/*/binding-*.yaml")):
+        errs += lint_binding(yaml.safe_load(f.read_text()), schema, {p["port"] for p in ports}, dac_ids,
+                             str(f.relative_to(root)))
+    return errs
+
+
 def main():
     recs, vocab = load_obligations(), load_vocab()
     ports, caps = load_ports(), load_capabilities()
     dac_ids = {r["id"] for r in recs}
     errs = (lint(recs, vocab) + lint_triage(recs) + lint_archetypes(vocab)
             + lint_ports(ports, vocab, dac_ids) + lint_capabilities(caps, vocab, dac_ids, {p["port"] for p in ports})
-            + lint_manifests())
+            + lint_manifests() + lint_bindings(ports=ports, dac_ids=dac_ids))
     for e in errs:
         print("ERROR", e)
     core = sum(1 for r in recs if r.get("core"))

@@ -72,10 +72,11 @@ CHECKS = [
     ("every incident is handled by a slice 1 capability", all(c in CAPS and CAPS[c].get("slice") == 1 for e in WORLD["calendar"] for c in e["expect"]["handled_by"])),
     ("every handling capability discharges the detector", all(e["expect"]["detector"] in CAPS[c]["discharges"] or any(e["expect"]["detector"] in CAPS[x]["discharges"] for x in e["expect"]["handled_by"]) for e in WORLD["calendar"] for c in e["expect"]["handled_by"])),
     ("the renamed column exists in the contract", "amount" in PROPS),
-    ("every bound port exists", set(BINDING["ports"]) <= PORTS),
-    ("every port slice 1 uses is bound", {c["port"] for c in CAPS.values() if c.get("slice") == 1 and c.get("port")} <= set(BINDING["ports"])),
-    ("binding verify ids are DAC obligations", all(i in DAC for p in BINDING["ports"].values() for i in p["verify_with"])),
-    ("not-covered ids are DAC obligations", all(n["obligation"] in DAC for n in BINDING["not_covered"])),
+    ("every bound port exists", set(BINDING["bindings"]) <= PORTS),
+    ("every port slice 1 uses is bound", {c["port"] for c in CAPS.values() if c.get("slice") == 1 and c.get("port")} <= set(BINDING["bindings"])),
+    ("binding proves ids are DAC obligations", all(i in DAC for b in BINDING["bindings"].values() for i in b["proves"])),
+    ("accepted gaps are DAC obligations", all(g["obligation"] in DAC for g in BINDING["accepted_gaps"])),
+    ("every partial or missing coverage says who fills the gap", all("gap_filled_by" in b for b in BINDING["bindings"].values() if b["coverage"] != "full")),
 ]
 
 

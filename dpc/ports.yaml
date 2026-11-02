@@ -383,6 +383,29 @@
       obligation: OPS-03
       checkable: dynamic
 
+- port: evidence
+  status: draft
+  since: 0.1.0
+  service: platform
+  tier: core
+  concerns: [X14, X6, X4, X7]
+  stages: [platform]
+  summary: Joins everything known about one run (run log, quality results, reconciliation, lineage, cost) by its run id, to answer "is this number right, and how do we know?"
+  kernel_owns: The run id every port writes, and the join.
+  supplied_outside: Where the joined view is stored and shown.
+  operations:
+    - {name: for_run, intent: Return every verdict and record for one run id.}
+    - {name: for_number, intent: Return the runs and verdicts behind one published number.}
+  invariants:
+    - must: Every verdict and record a port writes carries the run id it belongs to.
+      because: Products each report alone; without a shared id the evidence for one number is scattered across tools.
+      obligation: OPS-03
+      checkable: dynamic
+    - must: A planted incident's detector verdict is in the evidence for the run that met it.
+      because: The simulation proves a detector fired only if the proof sits beside the run.
+      obligation: SIM-01
+      checkable: dynamic
+
 - port: cost_ledger
   status: draft
   since: 0.1.0

@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dataagentsai/data-platform-catalog/dbs/schema/binding.schema.json",
+  "title": "DBS binding v0.1",
+  "description": "Which product sits behind each port, for one platform. The AI family's harness profile (ai-harness-catalog schema/profile.schema.json) with the same blocks, plus coverage, gap, gap_filled_by and metadata_keys on every binding. The only file type in the catalog where a product may be named.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "subject", "catalog", "decisions", "thresholds", "bindings", "accepted_gaps"],
+  "properties": {
+    "apiVersion": {"const": "data-binding/v0.1"},
+    "extends": {"type": "string", "description": "A platform team's baseline binding this one inherits from."},
+    "subject": {
+      "type": "object", "required": ["name", "platform", "archetypes"],
+      "properties": {
+        "name": {"type": "string"},
+        "platform": {"type": "string"},
+        "archetypes": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^PA\\d+$"}}
+      }
+    },
+    "catalog": {
+      "type": "object", "required": ["dac", "dpc"], "additionalProperties": false,
+      "properties": {"dac": {"type": "string"}, "dpc": {"type": "string"}}
+    },
+    "decisions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object", "required": ["value", "source"], "additionalProperties": false,
+        "properties": {"value": {}, "source": {"enum": ["chosen", "golden-path", "inherited", "locked"]}}
+      }
+    },
+    "thresholds": {"type": "object"},
+    "bindings": {
+      "type": "object",
+      "description": "Port name to implementation.",
+      "additionalProperties": {"$ref": "#/$defs/binding"}
+    },
+    "accepted_gaps": {
+      "type": "array",
+      "items": {
+        "type": "object", "required": ["obligation", "reason", "owner", "review"], "additionalProperties": false,
+        "properties": {
+          "obligation": {"type": "string", "pattern": "^[A-Z]+-\\d{2}$"},
+          "reason": {"type": "string", "minLength": 20},
+          "owner": {"type": "string", "minLength": 1},
+          "review": {"type": "string", "format": "date"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "binding": {
+      "type": "object",
+      "required": ["approach", "adapter", "coverage", "proves"],
+      "additionalProperties": false,
+      "properties": {
+        "approach": {"enum": ["in-house", "framework", "open-source", "platform", "gateway", "cloud-native"],
+                     "description": "Who supplies the machinery. Same words as the AI family."},
+        "adapter": {"type": "string", "minLength": 1},
+        "coverage": {"enum": ["full", "partial", "none"],
+                     "description": "How much of the port the platform's own offering covers."},
+        "gap": {"type": "string", "minLength": 10, "description": "What the offering leaves undone."},
+        "gap_filled_by": {
+          "type": "object", "required": ["approach", "adapter"], "additionalProperties": false,
+          "properties": {"approach": {"enum": ["in-house", "open-source"]}, "adapter": {"type": "string"}}
+        },
+        "metadata_keys": {"type": "array", "items": {"type": "string"},
+                          "description": "Manifest fields or config keys that switch and configure this port."},
+        "settings": {"type": "object"},
+        "proves": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Z]+-\\d{2}$"}}
+      },
+      "if": {"properties": {"coverage": {"enum": ["partial", "none"]}}},
+      "then": {"required": ["gap", "gap_filled_by"]}
+    }
+  }
+}
