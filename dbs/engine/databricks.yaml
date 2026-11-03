@@ -19,6 +19,7 @@ decisions:
   D11: {value: "push movers write landing; the lander and the puller are our PySpark code", source: chosen}
   ADR-011: {value: "liquid clustering CLUSTER BY AUTO; predictive optimization on every managed table", source: golden-path}
   ADR-012: {value: "catalogs <env>_<layer> (landing, bronze, silver, gold, ops), schemas per source or domain", source: chosen}
+  streams: {value: "streaming tables run trigger-once (availableNow) on a schedule from the manifest, never continuous; decided 4 Nov", source: chosen}
   ADR-010: {value: "metadata store on Lakebase (Databricks managed PostgreSQL), stored procedures as the only way in; chosen over Aurora PostgreSQL on 4 Nov to drop one AWS service", source: chosen}
 thresholds:
   quarantine_stop_share: 0.01
@@ -307,7 +308,7 @@ profiles:
         proves: [OPS-03, CFG-03]
       stream_bus:
         approach: platform
-        adapter: event files dropped into a volume and read as a stream by Auto Loader (stands in for a stream bus)
+        adapter: event files dropped into a volume and read as a stream by Auto Loader, trigger-once per scheduled run (stands in for a stream bus)
         coverage: partial
         gap: A volume keeps files, not an event log with retention and replay positions.
         gap_filled_by: {approach: in-house, adapter: "the world's stream writer + checkpoint in the pipeline"}

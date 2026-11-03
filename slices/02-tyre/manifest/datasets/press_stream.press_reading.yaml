@@ -1,5 +1,6 @@
 # DPM v0.2: press sensor readings (PA4). The stream bus is the landing; event time with a late allowance;
-# replays dropped by reading id. Events, appended.
+# replays dropped by reading id. Events, appended. Read as a stream but run trigger-once on a schedule: each run
+# takes what has arrived since its checkpoint and stops; nothing runs continuously (decided 4 Nov).
 source_name: press_stream
 source_env: prod
 dataset_name: press_reading
@@ -10,6 +11,8 @@ config:
   watermark_column: event_ts
   sla_freshness_hours: "1"
   sla_freshness_error_hours: "1"
+  schedule_trigger: cron
+  schedule_cron: "*/15 * * * *"
   schedule_timezone: Asia/Kolkata
   cost_center: manufacturing-analytics
 dedup: {mode: business_key_first, business_keys: [reading_id]}
