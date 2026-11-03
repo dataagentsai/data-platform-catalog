@@ -17,7 +17,9 @@ prefer:
   compute_pool: engine       # serverless first; EC2 only for classic compute
   audit_log: engine          # data access audit; CloudTrail covers the account side
   infra_provisioner: cloud   # one Terraform run per environment, aws provider first, databricks provider after
-  agent_runtime: cloud       # the AWS agent harness (T-123); Mosaic AI for retrieval and serving only
+  agent_runtime: cloud       # Bedrock AgentCore with the AWS agent harness (T-123), confirmed 4 Nov; Mosaic AI for retrieval and serving only
 decisions:
   environments: {value: "dev and prod: separate catalogs, S3 prefixes, metadata schemas and bundle targets in one AWS account to start", source: chosen}
+  agents: {value: "agent_runtime on Bedrock AgentCore (cloud layer), confirmed 4 Nov", source: chosen}
+  metadata_store: {value: "Lakebase (engine layer), not Aurora, confirmed 4 Nov", source: chosen}
 accepted_gaps: []

@@ -4,7 +4,7 @@ Stack `aws-databricks`: engine databricks + cloud aws. Generated from `dbs/stack
 
 | Concern | Port | Layer | Coverage | Gap filled by |
 |---|---|---|---|---|
-| X1 Metadata and control plane | metadata_service | cloud | platform covers part | in-house |
+| X1 Metadata and control plane | metadata_service | engine | platform covers part | in-house |
 | X1 Metadata and control plane | stage_runner | engine | platform covers part | in-house |
 | X2 Orchestration | orchestrator | engine | platform covers it | - |
 | X3 Contracts and schema evolution | table_writer | engine | platform covers part | in-house |
@@ -53,7 +53,7 @@ Stack `aws-databricks`: engine databricks + cloud aws. Generated from `dbs/stack
 | X13 Governance, catalog and semantics | conversation | engine | platform covers it | - |
 | X13 Governance, catalog and semantics | data_catalog | engine | platform covers part | in-house |
 | X14 Audit and run log | landing_store | cloud | platform covers it | - |
-| X14 Audit and run log | run_log | cloud | platform covers part | in-house |
+| X14 Audit and run log | run_log | engine | platform covers part | in-house |
 | X14 Audit and run log | evidence | engine | platform has nothing | in-house |
 | X14 Audit and run log | model_registry | engine | platform covers part | in-house |
 | X14 Audit and run log | audit_log | engine | platform covers it | - |

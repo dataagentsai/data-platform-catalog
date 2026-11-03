@@ -19,6 +19,7 @@ decisions:
   D11: {value: "push movers write landing; the lander and the puller are our PySpark code", source: chosen}
   ADR-011: {value: "liquid clustering CLUSTER BY AUTO; predictive optimization on every managed table", source: golden-path}
   ADR-012: {value: "catalogs <env>_<layer> (landing, bronze, silver, gold, ops), schemas per source or domain", source: chosen}
+  ADR-010: {value: "metadata store on Lakebase (Databricks managed PostgreSQL), stored procedures as the only way in; chosen over Aurora PostgreSQL on 4 Nov to drop one AWS service", source: chosen}
 thresholds:
   quarantine_stop_share: 0.01
   freshness_warn_hours: 4
@@ -58,6 +59,21 @@ bindings:
     gap_filled_by: {approach: in-house, adapter: dataplatform.contract}
     metadata_keys: [contract, contract_version, load.new_columns]
     proves: [SCH-01, SCH-02]
+  metadata_service:
+    approach: platform
+    adapter: Lakebase (Databricks managed PostgreSQL), one database per environment with three schemas (config, runtime, dq), stored procedures as the only way in, fed by the validating loader from YAML in GitHub; synced to Unity Catalog for descriptions and tags
+    coverage: partial
+    gap: The database holds tables; the manifest schema, key registry, merge view and procedures are ours.
+    gap_filled_by: {approach: in-house, adapter: "dataplatform.meta (loader, procedures, dataset_view)"}
+    settings: {recovery: "point-in-time restore; a read replica in a second region for tier-1"}
+    proves: [CFG-01, CFG-02, REL-01, CFG-04]
+  run_log:
+    approach: platform
+    adapter: Lakebase runtime schema (master_run_log, run_log, step_log, file_log, error_log, dq_result, input_watermark, config_snapshot), with timeouts on every call
+    coverage: partial
+    gap: The store holds rows; the run recorder and its record shape are ours.
+    gap_filled_by: {approach: in-house, adapter: dataplatform.recorder}
+    proves: [OPS-03, CFG-03]
   quarantine:
     approach: platform
     adapter: a pipeline table fed by the inverse of the expectations, with the failed rule names as a column
