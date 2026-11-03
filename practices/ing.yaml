@@ -188,7 +188,7 @@
   since: 0.1.0
   kind: practice
   title: Streaming is a separate flow
-  why: Sensor and event streams need low delay and never-ending runs, which do not fit the batch lander.
+  why: Sensor and event streams are read as streams (each event once, in order, with checkpoints), which the file-based batch lander does not do; they still run trigger-once on a schedule, never continuously.
   how:
     binding: aws-databricks
     text: Kinesis and IoT SiteWise feed Databricks streaming tables in their own flow, with the same naming, tagging
