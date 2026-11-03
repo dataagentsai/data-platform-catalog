@@ -27,7 +27,7 @@ Enforced by: shift-left checks (SL), proposed checks not in the bundle yet, the 
 | DUP-03 | X4 Data quality | MUST | yes | Duplicates already inside the source | Tech check DUP-03 | 1 SL, runtime |
 | GATE-01 | X4 Data quality | MUST | yes | Nothing passes by absence | New (R7) | 4 SL, runtime |
 | LATE-02 | X4 Data quality | MUST |  | Facts arriving before their reference data | Tech check LATE-02 | 1 SL, 1 proposed, runtime |
-| LATE-04 | X4 Data quality | MUST |  | Time zones and business dates | Tech check LATE-04 | runtime, **gap** |
+| LATE-04 | X4 Data quality | MUST |  | Time zones and business dates | Tech check LATE-04 | 1 SL, runtime |
 | PUB-01 | X4 Data quality | MUST | yes | Derived tables pass their own checks before publish | New (deck decision) | 1 proposed, runtime, review |
 | QUAR-01 | X4 Data quality | MUST |  | A released row goes through the same checks again | New (deck decision) | runtime, **gap** |
 | SCD-04 | X4 Data quality | SHOULD |  | Facts joined to the right version of history | Tech check SCD-04 | runtime, review, **gap** |
@@ -59,9 +59,9 @@ Enforced by: shift-left checks (SL), proposed checks not in the bundle yet, the 
 | SEC-03 | X12 Privacy and personal data | MUST | yes | Retention and the right to be forgotten | Tech check SEC-03 | runtime, review, **gap** |
 | CAT-01 | X13 Governance, catalog and semantics | MUST |  | The catalog says what the metadata says | New (deck decision) | runtime, **gap** |
 | ML-01 | X13 Governance, catalog and semantics | MUST |  | A machine learning model is a data product | New (shape decision, ADR or DPC) | runtime, review, **gap** |
-| NAME-01 | X13 Governance, catalog and semantics | SHOULD |  | Table names follow one declared pattern | New (deck decision) | runtime, **gap** |
+| NAME-01 | X13 Governance, catalog and semantics | SHOULD |  | Table names follow one declared pattern | New (deck decision) | 1 SL, runtime |
 | SERV-04 | X13 Governance, catalog and semantics | MUST | yes | Business definitions live in one place | Tech check SERV-04 | 1 proposed, runtime, review |
-| SERV-06 | X13 Governance, catalog and semantics | MUST |  | Conversation interfaces and agents use certified metrics only | New (shape decision, ADR or DPC) | runtime, review, **gap** |
+| SERV-06 | X13 Governance, catalog and semantics | MUST |  | Conversation interfaces and agents use certified metrics only | New (shape decision, ADR or DPC) | 1 SL, runtime, review |
 | CFG-03 | X14 Audit and run log | MUST | yes | Every run records the configuration it ran under | New (reuse delta) | runtime, **gap** |
 | FILE-01 | X14 Audit and run log | MUST | yes | Every delivered file ends with a recorded outcome | New (deck decision) | runtime, **gap** |
 | OPS-03 | X14 Audit and run log | MUST | yes | Every run leaves a record | Tech check OPS-03 | runtime, **gap** |
@@ -73,7 +73,7 @@ Enforced by: shift-left checks (SL), proposed checks not in the bundle yet, the 
 | HIST-03 | X15 Replay, backfill and idempotency | MUST |  | Handing over from history load to incremental loads | Tech check HIST-03 | runtime, **gap** |
 | HIST-04 | X15 Replay, backfill and idempotency | MUST | yes | Reloading or backfilling a past period | Tech check HIST-04 | runtime, **gap** |
 | HIST-05 | X15 Replay, backfill and idempotency | MUST | yes | Corrections reach gold only through a backfill plan | New (shape decision, ADR or DPC) | runtime, review, **gap** |
-| IDEMP-01 | X15 Replay, backfill and idempotency | MUST | yes | Each layer declares what makes its write idempotent | New (deck decision) | runtime, **gap** |
+| IDEMP-01 | X15 Replay, backfill and idempotency | MUST | yes | Each layer declares what makes its write idempotent | New (deck decision) | 1 SL, runtime |
 | KEY-01 | X15 Replay, backfill and idempotency | MUST |  | Surrogate keys are the same on every rebuild | New (deck decision) | 1 proposed, runtime, review |
 | LATE-01 | X15 Replay, backfill and idempotency | MUST | yes | Late and corrected rows rebuild the right periods | Tech check LATE-01 | 1 SL, runtime |
 | ORCH-03 | X15 Replay, backfill and idempotency | MUST | yes | Restart after failing in the middle | Tech check ORCH-03 | runtime, **gap** |
@@ -85,7 +85,7 @@ Enforced by: shift-left checks (SL), proposed checks not in the bundle yet, the 
 | REL-03 | X16 Environments, CI/CD and release | MUST |  | Automated promotion of the same build | Tech check REL-03 | 1 SL, runtime |
 | REL-04 | X16 Environments, CI/CD and release | MUST |  | Configuration per environment, not in code | Tech check REL-04 | 2 SL, 1 proposed, runtime |
 | REL-06 | X16 Environments, CI/CD and release | SHOULD |  | Infrastructure defined as code | Tech check REL-06 | 1 SL, runtime |
-| PURE-01 | X17 Testing | MUST |  | Transform logic is separate from reads and writes | New (deck decision) | runtime, **gap** |
+| PURE-01 | X17 Testing | MUST |  | Transform logic is separate from reads and writes | New (deck decision) | 1 SL, runtime |
 | TEST-03 | X17 Testing | MUST |  | Automated tests run on every change | Tech check TEST-03 | 23 SL, runtime |
 | TEST-05 | X17 Testing | MUST | yes | Failure, rerun and recovery tested on purpose | Tech check TEST-05 | 2 SL, runtime |
 | ORCH-05 | X18 Resilience and recovery | MUST |  | Recovery time and data loss limits | Tech check ORCH-05 | runtime, review, **gap** |

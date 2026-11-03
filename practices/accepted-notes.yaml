@@ -18,10 +18,6 @@
 - practice: BP-065
   check: SL-TEST-02
   reason: The time-zone conversion is a pure function that must be unit-tested; the practice serves LATE-04.
-- practice: BP-105
-  check: SL-SEM-07
-  reason: A known-answer test is a precondition of certifying a metric (SERV-06); the bundle links SL-SEM-07 to TEST-03 only.
-    Bundle follow-up, link SERV-06 too.
 - practice: BP-041
   check: SL-TEST-09
   reason: SL-TEST-09 asks for the standard test cases of a known load pattern (full, incremental, reload); the practice
@@ -49,24 +45,9 @@
 - practice: BP-003
   check: SL-PURE-03
   reason: 'Bundle: non-repeatable values break deterministic logic (this principle); the check links only TEST-03 and TEST-05.'
-- practice: BP-006
-  check: SL-PURE-03
-  reason: 'Bundle: non-repeatable values break idempotent reruns; the check should also link IDEMP-01.'
-- practice: BP-005
-  check: SL-PURE-06
-  reason: 'Bundle: an action inside a logic function breaks purity; the check should also link PURE-01, not only COST-02.'
-- practice: BP-076
-  check: SL-PURE-06
-  reason: 'Bundle: the harness owning IO is PURE-01; the check should also link PURE-01, not only COST-02.'
-- practice: BP-024
-  check: SL-STYLE-04
-  reason: 'Bundle: a naming check should link NAME-01; it links REL-02 (code review) only.'
 - practice: BP-044
   check: SL-STYLE-04
   reason: 'Bundle: streams follow the same naming (NAME-01); the check links REL-02 only.'
-- practice: BP-065
-  check: SL-CLEAN-16
-  reason: 'Bundle: a timestamp without a time zone breaks LATE-04 (time zones and business dates); the check links LATE-01.'
 
 # ---- the check is cited for a side of it the bundle does not link
 - practice: BP-007

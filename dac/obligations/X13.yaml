@@ -59,11 +59,12 @@
   review_check: null
   origin: deck
   enforced_by:
-    shift_left: []
+    shift_left:
+    - SL-STYLE-04
     proposed: []
     runtime: true
     review: null
-    gap: 'No build-time check yet: found only by the runtime test.'
+    gap: null
 - id: SERV-04
   status: draft
   since: 0.1.0
@@ -168,7 +169,8 @@
   - SEC-02
   - GATE-02
   enforced_by:
-    shift_left: []
+    shift_left:
+    - SL-SEM-07
     proposed: []
     runtime: true
     review: Every conversation space and agent tool is reviewed to read certified metrics only.

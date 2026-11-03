@@ -226,11 +226,12 @@
   related:
   - DES-04
   enforced_by:
-    shift_left: []
+    shift_left:
+    - SL-CLEAN-16
     proposed: []
     runtime: true
     review: null
-    gap: 'No build-time check yet: found only by the runtime test.'
+    gap: null
 - id: PUB-01
   status: draft
   since: 0.1.0

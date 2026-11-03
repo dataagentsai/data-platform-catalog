@@ -231,11 +231,12 @@
   review_check: null
   origin: deck
   enforced_by:
-    shift_left: []
+    shift_left:
+    - SL-PURE-03
     proposed: []
     runtime: true
     review: null
-    gap: 'No build-time check yet: found only by the runtime test.'
+    gap: null
 - id: KEY-01
   status: draft
   since: 0.1.0
