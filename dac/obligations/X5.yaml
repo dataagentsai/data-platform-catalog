@@ -24,3 +24,9 @@
   related:
   - DQ-04
   review_check: null
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'

@@ -1,0 +1,195 @@
+# Practices: Metadata store and config. Normative: edit here.
+- id: BP-015
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Stored procedures are the only way into the store
+  why: A fixed set of entry points keeps the store consistent and lets us change its tables without breaking any
+    caller.
+  how:
+    binding: aws-databricks
+    text: Engines call `sp_get_dataset_config`, `sp_open_run`, `sp_log_step`, `sp_log_file`, `sp_log_error`, `sp_close_run`,
+      `sp_get_watermark`, `sp_set_watermark`, `sp_get_dq_rules` and `sp_log_dq_result`.
+  layers:
+  - platform
+  components:
+  - meta
+  - sec
+  enforced_by:
+  - proposed: SL-META-05
+  - runtime: Aurora PostgreSQL grants allow EXECUTE on procedures only, so a raw query is refused.
+  dac:
+  - CFG-04
+  adr:
+  - ADR-010
+- id: BP-016
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: 'Three schemas: config, dq and run'
+  why: Separating what we want (config), what we found (dq) and what happened (run) keeps each part simple to query
+    and to secure.
+  how:
+    binding: aws-databricks
+    text: '`config` holds platform_config, source_master, source_config, dataset_master, dataset_config, column_config,
+      settings_registry and contract; `dq` holds dq_rule, dq_result, dq_violation, recon_result; `run` holds master_run_log,
+      run_log, step_log, file_log, error_log, watermark.'
+  layers:
+  - platform
+  components:
+  - meta
+  - mon
+  - dq
+  enforced_by:
+  - review: Schema changes arrive as migrations in Git, reviewed in the pull request and applied by CI.
+  dac:
+  - CFG-04
+  - OPS-03
+  - REL-01
+  adr:
+  - ADR-010
+- id: BP-017
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: A settings registry catches typos
+  why: A misspelt setting key is silently ignored and the default applies, which is a hidden bug.
+  how:
+    binding: aws-databricks
+    text: '`settings_registry` lists every setting key with the level it may be set at, its allowed values and its
+      default.'
+  layers:
+  - platform
+  components:
+  - meta
+  - devops
+  enforced_by:
+  - proposed: SL-META-02
+  dac:
+  - CFG-05
+  adr:
+  - ADR-010
+- id: BP-018
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Four config levels that inherit
+  why: Set a value once at the widest level and override only where needed, so config stays short and consistent.
+  how:
+    binding: aws-databricks
+    text: Platform, then source, then dataset, then column; the most specific level that sets a key wins, and `sp_get_dataset_config`
+      returns the resolved settings.
+  layers:
+  - platform
+  components:
+  - meta
+  enforced_by:
+  - shift_left:
+    - SL-TEST-02
+  - proposed: SL-META-02
+  dac:
+  - CFG-03
+  - CFG-05
+  adr:
+  - ADR-010
+- id: BP-019
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Business keys live in metadata, agreed with owners
+  why: MERGE, duplicate removal, history and surrogate keys all depend on the business key; a wrong key corrupts
+    everything downstream.
+  how:
+    binding: aws-databricks
+    text: Each dataset's business primary key is recorded in `dataset_master` and agreed with the domain owner before
+      the first load.
+  layers:
+  - silver
+  - gold
+  components:
+  - meta
+  - model
+  enforced_by:
+  - proposed: SL-META-01
+  - runtime: Silver checks business-key uniqueness on every run.
+  - review: The domain owner agrees the key before the first load.
+  dac:
+  - DES-04
+  - DUP-03
+  adr: []
+- id: BP-020
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Sync descriptions, tags and keys to the data catalog
+  why: Conversational query tools, tag-based access policies and catalog search are only as good as the descriptions
+    and tags on the tables.
+  how:
+    binding: aws-databricks
+    text: The generator pushes table and column descriptions, owner, domain and PII class tags, and primary and
+      foreign keys from metadata to Unity Catalog.
+  layers:
+  - bronze
+  - silver
+  - gold
+  - semantic
+  components:
+  - meta
+  - gov
+  enforced_by:
+  - runtime: A daily drift check compares Unity Catalog with the metadata store and alerts on any difference.
+  dac:
+  - CAT-01
+  - SEC-01
+  adr: []
+- id: BP-021
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Data contracts as ODCS YAML
+  why: A contract tells the source team exactly what we expect and lets us stop a breaking change before it reaches
+    bronze.
+  how:
+    binding: aws-databricks
+    text: '`contracts/<dataset>.yaml` follows the Open Data Contract Standard (ODCS) and is loaded into the `contract`
+      table; the lander checks every file against it.'
+  layers:
+  - landing
+  - bronze
+  components:
+  - meta
+  - dq
+  - gov
+  enforced_by:
+  - proposed: SL-META-03
+  - runtime: The lander holds any file that breaks its contract.
+  dac:
+  - SERV-01
+  - SCH-01
+  - SCH-02
+  - ING-01
+  adr: []
+- id: BP-022
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Hard-coded settings in notebooks
+  why: Paths, thresholds and keys buried in code differ between copies, and nobody can see or audit them.
+  how:
+    binding: aws-databricks
+    text: The shared engines take every setting from `sp_get_dataset_config`; there is nowhere sensible to hard-code
+      a value.
+  instead: Put the value in YAML at the right level (platform, source, dataset or column) and read it from the metadata
+    store.
+  layers:
+  - platform
+  components:
+  - meta
+  enforced_by:
+  - shift_left:
+    - SL-CLEAN-07
+  - proposed: SL-CLEAN-33
+  dac:
+  - REL-04
+  - CFG-05
+  adr: []

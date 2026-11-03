@@ -22,9 +22,17 @@ obligations, and keeps the same ids, so a review finding and a failing platform 
 | Stayed review-only | 37 | It is about a project's estimate, plan, handover or a business decision, for example estimation (EST-*) or choosing which number the business trusts (REC-02). Each one's reason is in `triage.yaml`. |
 | New, no review check | 12 | Platform rules no contract format covers (REUSE.md section 3 and the rules R2 to R9 in PLAN.html): nothing passes by absence, a contract is never loosened to pass, agents propose and gates decide, data flows one way, every incident kind has a planted test, everything deployed was declared, concerns on by default, configuration fingerprint per run, reconciliation names the hop, lineage on every hop, profiling drift, self-healing through the same gates. |
 
-That gives **66 obligations, 39 of them core** (core means every platform owes it, whatever its shape). PLAN.html
+That gave **66 obligations, 39 of them core** (core means every platform owes it, whatever its shape). PLAN.html
 expected about 30 core; the extra nine are kept because each has a failure story from a real project behind it.
 Trimming is a question for the v0.1 gate review (DE-027).
+
+On 4 Nov 2026 (decision D12, goal G1) DAC became the single source of every "must be true", at runtime and at build
+time, and the best-practices page became a view generated from [../practices/](../practices/). Moving the page's
+134 cards in added **18 obligations from the client deck's design decisions** that nothing here covered
+(`origin: deck`): CFG-04, CFG-05, ENG-01, ING-01, PROJ-01, PUB-01, QUAR-01, SEV-01, ENC-01, PII-01, CAT-01,
+NAME-01, FILE-01, GOLD-01, IDEMP-01, KEY-01, RAW-01, PURE-01. Where a deck decision was already an obligation, the
+practice links that one instead (grain declared and unique: DES-04; recon per hop: REC-01 and REC-05; SCD2 as-of
+joins: SCD-04; no fact row dropped in a join: LATE-02). That gives **84 obligations, 49 of them core**.
 
 ## The record
 
@@ -49,8 +57,18 @@ Adopted from AAC's record, with the review fields that proved useful kept.
     - {standard: DAMA-DMBOK, ref: "Data Quality, chapter 13"}
   review_check: DUP-01       # the data-project-review Tech check it came from, or null
   plan_rule: R7              # optional: the PLAN.html rule a new obligation comes from
+  origin: deck               # optional: set on obligations added from the client deck's design decisions
   related: [DUP-02, REC-01]
+  enforced_by:               # how it is enforced (D12). Written by scripts/enforced_by.py
+    shift_left: [SL-SEM-04, SL-TEST-09]   # generated: bundle checks whose dac: names this id
+    proposed: []             # generated: practices/proposed-checks.yaml entries whose dac: names it
+    runtime: true            # hand-set: the `test` above runs against data or a running platform
+    review: null             # hand-set: what a person checks in design or pull-request review
+    gap: null                # what is not enforced yet; set to a default when there is no build-time check
 ```
+
+`enforced_by` is checked by `scripts/lint_practices.py`: the generated lists must match the bundle and the proposed
+checks, something must enforce every obligation, and one with no build-time check must say so in `gap`.
 
 Rules (checked by `scripts/lint.py`, tested by `tests/test_lint.py`):
 

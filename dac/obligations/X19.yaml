@@ -24,3 +24,14 @@
   related:
   - COST-04
   - SEC-03
+  enforced_by:
+    shift_left:
+    - SL-COST-CODE-09
+    - SL-COST-CODE-15
+    - SL-COST-CODE-16
+    - SL-COST-PLAN-04
+    proposed:
+    - SL-COST-CODE-26
+    runtime: true
+    review: null
+    gap: null

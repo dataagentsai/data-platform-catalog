@@ -21,3 +21,9 @@
   - GATE-03
   review_check: null
   plan_rule: R6
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: Design review of each automatic fix and its rollback before it is switched on.
+    gap: 'No build-time check yet: found only by the runtime test.'

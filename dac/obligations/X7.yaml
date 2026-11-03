@@ -28,6 +28,13 @@
   - LIN-01
   review_check: null
   plan_rule: R8
+  enforced_by:
+    shift_left: []
+    proposed:
+    - SL-LAYER-01
+    runtime: true
+    review: Design review of the inputs of every new dataset.
+    gap: null
 - id: LIN-01
   status: draft
   since: 0.1.0
@@ -53,3 +60,11 @@
   related:
   - FLOW-01
   review_check: null
+  enforced_by:
+    shift_left:
+    - SL-CLEAN-27
+    - SL-CLEAN-28
+    proposed: []
+    runtime: true
+    review: null
+    gap: null

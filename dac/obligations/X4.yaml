@@ -26,6 +26,13 @@
   review_check: DQ-01
   related:
   - DQ-02
+  enforced_by:
+    shift_left: []
+    proposed:
+    - SL-META-01
+    runtime: true
+    review: Each rule's owner and severity are agreed in the pull request that adds it.
+    gap: null
 - id: DQ-02
   status: draft
   since: 0.1.0
@@ -54,6 +61,12 @@
   - DQ-01
   - DQ-03
   - OPS-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: DQ-03
   status: draft
   since: 0.1.0
@@ -80,6 +93,12 @@
   related:
   - DQ-02
   - ORCH-02
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: DUP-03
   status: draft
   since: 0.1.0
@@ -106,6 +125,13 @@
   review_check: DUP-03
   related:
   - DES-04
+  enforced_by:
+    shift_left:
+    - SL-CLEAN-32
+    proposed: []
+    runtime: true
+    review: null
+    gap: null
 - id: GATE-01
   status: draft
   since: 0.1.0
@@ -130,6 +156,16 @@
   - DQ-04
   review_check: null
   plan_rule: R7
+  enforced_by:
+    shift_left:
+    - SL-CLEAN-04
+    - SL-CLEAN-13
+    - SL-CLEAN-19
+    - SL-SEM-01
+    proposed: []
+    runtime: true
+    review: null
+    gap: null
 - id: LATE-02
   status: draft
   since: 0.1.0
@@ -157,6 +193,14 @@
   - LATE-01
   - DQ-02
   - REC-01
+  enforced_by:
+    shift_left:
+    - SL-CLEAN-31
+    proposed:
+    - SL-GOLD-03
+    runtime: true
+    review: null
+    gap: null
 - id: LATE-04
   status: draft
   since: 0.1.0
@@ -181,6 +225,80 @@
   review_check: LATE-04
   related:
   - DES-04
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
+- id: PUB-01
+  status: draft
+  since: 0.1.0
+  title: Derived tables pass their own checks before publish
+  concern: X4
+  level: MUST
+  core: true
+  dimension: consistency
+  stages:
+  - gold
+  statement: A derived table MUST pass its own checks before a new version is published (grain unique, unmatched
+    reference rows under a declared limit, totals reconciled to its inputs, every input complete for the window);
+    on failure the last good version MUST stay published.
+  failure_mode: Silver checks were all green, but a join on a non-unique key doubled one plant's sales in gold;
+    the board pack went out with it because nothing checked gold itself.
+  test: Plant a duplicate grain key, an unmatched reference row above the limit and a missing input window in test;
+    each must block publish and leave the previous version in place.
+  evidence: Check results per publish, and a blocked publish in the log with the previous version still served.
+  cites:
+  - standard: ODCS
+    ref: quality[]
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  related:
+  - DES-04
+  - LATE-02
+  - REC-01
+  - ORCH-01
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed:
+    - SL-GOLD-04
+    runtime: true
+    review: The owner sets the unmatched-row limit and tolerance for each derived table.
+    gap: null
+- id: QUAR-01
+  status: draft
+  since: 0.1.0
+  title: A released row goes through the same checks again
+  concern: X4
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - silver
+  statement: A quarantined row released after a fix MUST re-enter through the same stages and rules as a new row,
+    and MUST NOT be written to silver directly.
+  failure_mode: A steward released a batch of quarantined orders straight into silver after fixing the date format;
+    the rows skipped de-duplication and three hundred orders were counted twice.
+  test: Quarantine rows, fix them and release them in test; they must pass every stage again, and a release that
+    still breaks a rule must go back to quarantine.
+  evidence: Released rows in the run log with the stages they passed, and their quarantine and release records linked.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  related:
+  - DQ-02
+  - SEV-01
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: SCD-04
   status: draft
   since: 0.1.0
@@ -206,3 +324,43 @@
   related:
   - SCD-02
   - SERV-04
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: Review of the join conditions for every dimension that keeps history.
+    gap: 'No build-time check yet: found only by the runtime test.'
+- id: SEV-01
+  status: draft
+  since: 0.1.0
+  title: A rule's severity decides what happens on failure
+  concern: X4
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - bronze
+  - silver
+  - gold
+  statement: Every quality rule MUST declare a severity, and the severity MUST decide the action on failure (record
+    and warn, quarantine the row, or block the batch and its successors), the same way in every pipeline.
+  failure_mode: Two pipelines ran the same not-null rule; one quarantined the rows and the other only warned, so
+    the same bad customer rows were missing from one report and present in the other.
+  test: Run one failing row for each severity through two different datasets; each severity must give the same action
+    in both, and a block must hold the next batch until it is cleared.
+  evidence: The severity-to-action table, and quality results showing the action taken per rule and run.
+  cites:
+  - standard: ODCS
+    ref: quality[].severity
+  related:
+  - DQ-01
+  - DQ-02
+  - QUAR-01
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'

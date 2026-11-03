@@ -1,0 +1,156 @@
+# Practices: Security and privacy. Normative: edit here.
+- id: BP-029
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Tokenise personal data at entry
+  why: Once personal data reaches bronze in clear text it spreads to every copy and replay.
+  how:
+    binding: aws-databricks
+    text: The lander replaces personal fields with tokens from a token vault before writing to bronze; only a small,
+      audited service can turn a token back into a value.
+  layers:
+  - landing
+  - bronze
+  components:
+  - sec
+  - ing
+  enforced_by:
+  - proposed: SL-META-01
+  - runtime: The lander tokenises before the first write; the token vault logs every lookup.
+  dac:
+  - PII-01
+  adr: []
+- id: BP-030
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: ABAC policies on tags
+  why: Writing grants table by table does not scale and misses new tables.
+  how:
+    binding: aws-databricks
+    text: Attribute-based access control (ABAC) policies in Unity Catalog act on tags such as PII class and domain,
+      which the generator syncs from metadata, so a new tagged table is protected at once.
+  layers:
+  - silver
+  - gold
+  - semantic
+  components:
+  - sec
+  - gov
+  enforced_by:
+  - proposed: SL-META-01
+  - runtime: A daily check lists tables with untagged columns.
+  dac:
+  - SEC-02
+  - SEC-01
+  adr: []
+- id: BP-031
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Row filters and column masks follow the user
+  why: A plant manager and a regional head may ask the same question but are allowed to see different rows.
+  how:
+    binding: aws-databricks
+    text: Unity Catalog row filters and column masks sit on the gold tables, so dashboards, Genie, agents and APIs
+      all return only what the asking user may see.
+  layers:
+  - gold
+  - semantic
+  components:
+  - sec
+  - sem
+  enforced_by:
+  - runtime: Integration tests query as test users of each role and compare what each may see.
+  - review: Every policy change is reviewed.
+  dac:
+  - SEC-02
+  adr: []
+- id: BP-032
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Erasure and retention flows (India DPDP)
+  why: India's Digital Personal Data Protection (DPDP) Act gives people the right to erasure and limits how long
+    data is kept.
+  how:
+    binding: aws-databricks
+    text: An erasure request removes the person's entry in the token vault, so every token in every layer stops
+      resolving; retention per dataset is set in metadata and applied by a scheduled job.
+  layers:
+  - bronze
+  - silver
+  - gold
+  components:
+  - sec
+  - gov
+  enforced_by:
+  - runtime: Erasure and retention runs are logged and reconciled.
+  - review: The data protection owner reviews the log.
+  dac:
+  - SEC-03
+  adr: []
+- id: BP-033
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: A content scanner checks landing for personal data
+  why: A source can start sending personal data in a column that the contract does not mark as personal.
+  how:
+    binding: aws-databricks
+    text: Amazon Macie scans the landing buckets for personal data and raises a finding when it appears where the
+      contract does not expect it.
+  layers:
+  - landing
+  components:
+  - sec
+  - dq
+  enforced_by:
+  - runtime: Macie findings go to on-call and hold the dataset until the contract is fixed.
+  dac:
+  - SEC-01
+  adr: []
+- id: BP-034
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Own storage and encryption key per catalog; private network
+  why: Separate keys limit the damage of any single mistake, and private links keep data off the public internet.
+  how:
+    binding: aws-databricks
+    text: Each catalog has its own S3 bucket and KMS key; workspaces reach AWS services and the Databricks control
+      plane through PrivateLink.
+  layers:
+  - platform
+  components:
+  - sec
+  - gov
+  enforced_by:
+  - proposed: SL-SEC-11
+  - review: The Terraform plan for buckets, keys and endpoints is reviewed in the pull request.
+  dac:
+  - ENC-01
+  adr:
+  - ADR-012
+- id: BP-035
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Personal data in clear text in bronze
+  why: Bronze is kept for a long time as the source for replays, so anything personal stored there in clear text
+    stays exposed.
+  how:
+    binding: aws-databricks
+    text: The lander tokenises before the first write; bronze never sees the clear value.
+  instead: Tokenise in the lander and keep the clear value only in the token vault.
+  layers:
+  - bronze
+  components:
+  - sec
+  - ing
+  enforced_by:
+  - runtime: The lander's contract check and Macie on landing hold any untokenised personal field.
+  dac:
+  - PII-01
+  adr: []

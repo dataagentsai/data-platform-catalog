@@ -1,0 +1,124 @@
+# Static checks the practices need that the shift-left bundle does not have yet. When the bundle ships one,
+# delete it here: the linter fails while an id is in both places.
+- id: SL-CLEAN-33
+  title: Storage path or table name written into pipeline code
+  stage: commit
+  catches: Literal storage paths (including landing bucket paths) and fully qualified table names in pipeline code,
+    where the value should come from configuration
+  dac:
+  - REL-04
+  - ING-01
+- id: SL-COST-CODE-26
+  title: Hand-picked partitions or hand-written table upkeep
+  stage: commit
+  catches: PARTITIONED BY or partitionBy in table definitions and writes, or OPTIMIZE and VACUUM jobs written by
+    hand, where clustering and automatic upkeep should be used
+  dac:
+  - PERF-05
+- id: SL-GOLD-01
+  title: Append write to a gold table
+  stage: commit
+  catches: An append write (append mode or INSERT INTO) to a gold table, where a rerun would double-count; gold
+    must replace a window or MERGE on the grain key
+  dac:
+  - GOLD-01
+- id: SL-GOLD-02
+  title: Identity or sequence surrogate key
+  stage: commit
+  catches: An identity or sequence column in gold table definitions, where the key must be a hash of source and
+    business key
+  dac:
+  - KEY-01
+- id: SL-GOLD-03
+  title: Inner join from a fact to a dimension
+  stage: commit
+  catches: An inner join to a dim_ table in fact code, which silently drops fact rows whose dimension has not arrived
+  dac:
+  - LATE-02
+- id: SL-GOLD-04
+  title: Table type not allowed for its job
+  stage: pr
+  catches: A materialized view with more than one input, or a fact declared with a table type the table-type rules
+    do not allow
+  dac:
+  - PUB-01
+  - COST-02
+- id: SL-GOLD-05
+  title: Conformed dimension defined twice
+  stage: pr
+  catches: A second dataset or module that defines a conformed dimension (date, plant, material, customer, dealer)
+    already defined elsewhere
+  dac:
+  - SERV-04
+- id: SL-JOB-01
+  title: Job allows overlapping runs
+  stage: predeploy
+  catches: A job definition with queueing off or with more than one concurrent run allowed
+  dac:
+  - ORCH-04
+- id: SL-JOB-02
+  title: Silver or gold job started by the clock only
+  stage: predeploy
+  catches: A silver or gold job whose only trigger is a time schedule, instead of a data-ready trigger (table update,
+    file arrival or batch-ready marker)
+  dac:
+  - ORCH-01
+- id: SL-LAYER-01
+  title: Layers skipped or mixed in pipeline code
+  stage: pr
+  catches: A job that reads one layer and writes a layer that is not the next one (for example bronze straight to
+    gold), or silver code that reads more than one bronze table
+  dac:
+  - FLOW-01
+- id: SL-LAYER-02
+  title: Platform table written outside the shared engines
+  stage: pr
+  catches: Code outside the shared ingestion, bronze-to-silver and gold engines that writes to a bronze, silver
+    or gold table
+  dac:
+  - ENG-01
+- id: SL-META-01
+  title: Dataset metadata missing a required field
+  stage: commit
+  catches: Dataset YAML without owner, domain, description, business key, a PII class and handling method on every
+    column, quality rules, or (for a fact) a grain key
+  dac:
+  - DES-04
+  - SEC-01
+  - CFG-02
+  - DQ-01
+- id: SL-META-02
+  title: Setting not allowed by the settings registry
+  stage: commit
+  catches: Unknown setting key, a key set at a level it may not be set at, a value outside the allowed list, or
+    an unknown quality rule name or parameter
+  dac:
+  - CFG-05
+- id: SL-META-03
+  title: Contract invalid or out of step with column config
+  stage: commit
+  catches: A contract file that does not validate against the Open Data Contract Standard schema, or column config
+    naming columns the contract does not have
+  dac:
+  - SERV-01
+  - PROJ-01
+- id: SL-META-04
+  title: Job or pipeline not generated from metadata
+  stage: pr
+  catches: A hand-written job or pipeline definition, or generated job and pipeline files that differ from what
+    the generator produces from current metadata
+  dac:
+  - CFG-01
+- id: SL-META-05
+  title: Raw SQL against the metadata store
+  stage: commit
+  catches: Engine code that sends SQL to the metadata store tables instead of calling one of its stored procedures
+  dac:
+  - CFG-04
+- id: SL-SEC-11
+  title: Unsafe storage in infrastructure code
+  stage: pr
+  catches: A bucket that can be public, a bucket not encrypted with its own key, or a landing bucket without an
+    expiry rule, in infrastructure code
+  dac:
+  - ENC-01

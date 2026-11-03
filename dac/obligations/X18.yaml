@@ -22,6 +22,12 @@
   review_check: ORCH-05
   related:
   - REL-07
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: Recovery targets are agreed with the business owner per dataset.
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: ORCH-06
   status: draft
   since: 0.1.0
@@ -48,6 +54,12 @@
   related:
   - DUP-04
   - ORCH-03
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: REL-07
   status: draft
   since: 0.1.0
@@ -72,3 +84,10 @@
   related:
   - REL-03
   - ORCH-05
+  enforced_by:
+    shift_left:
+    - SL-COST-CODE-20
+    proposed: []
+    runtime: true
+    review: null
+    gap: null

@@ -29,6 +29,15 @@
   - DUP-02
   - DUP-03
   - REC-01
+  enforced_by:
+    shift_left:
+    - SL-SEM-04
+    - SL-TEST-07
+    - SL-TEST-09
+    proposed: []
+    runtime: true
+    review: null
+    gap: null
 - id: DUP-02
   status: draft
   since: 0.1.0
@@ -57,6 +66,12 @@
   - DUP-01
   - ORCH-03
   - TEST-05
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: DUP-04
   status: draft
   since: 0.1.0
@@ -83,6 +98,44 @@
   - DUP-02
   - ORCH-06
   - LATE-03
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
+- id: GOLD-01
+  status: draft
+  since: 0.1.0
+  title: Derived tables are replaced by window, never appended
+  concern: X15
+  level: MUST
+  core: true
+  dimension: uniqueness
+  stages:
+  - gold
+  statement: A write to a derived table MUST replace the affected window or merge on the grain key; an append write
+    to a derived table MUST NOT be used.
+  failure_mode: The daily sales fact appended its output; a retry after a timeout doubled one day's revenue, and
+    the rerun the next morning tripled it.
+  test: Run the same window twice and once with a late input; the table must equal a single clean run each time.
+  evidence: The write mode per derived table, and the rerun test result.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Warehousing and Business Intelligence, chapter 11
+  related:
+  - DUP-02
+  - LATE-01
+  - IDEMP-01
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed:
+    - SL-GOLD-01
+    runtime: true
+    review: null
+    gap: null
 - id: HIST-03
   status: draft
   since: 0.1.0
@@ -109,6 +162,12 @@
   related:
   - DUP-01
   - REC-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: HIST-04
   status: draft
   since: 0.1.0
@@ -136,6 +195,81 @@
   related:
   - DUP-02
   - LATE-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
+- id: IDEMP-01
+  status: draft
+  since: 0.1.0
+  title: Each layer declares what makes its write idempotent
+  concern: X15
+  level: MUST
+  core: true
+  dimension: uniqueness
+  stages:
+  - landing
+  - bronze
+  - silver
+  - gold
+  - semantic
+  statement: Each layer MUST declare the key that makes its writes safe to repeat (file fingerprint, batch id, business
+    key with change order, window or grain key, definition version), and every write MUST use it.
+  failure_mode: Bronze guarded against resent files but silver merged on a key without change order; a replay applied
+    old changes over new ones and history went backwards.
+  test: Repeat one delivery through every layer; each layer must reject or absorb the repeat by its declared key.
+  evidence: The declared key per layer, and the replay test result per layer.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  related:
+  - DUP-01
+  - DUP-02
+  - GOLD-01
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
+- id: KEY-01
+  status: draft
+  since: 0.1.0
+  title: Surrogate keys are the same on every rebuild
+  concern: X15
+  level: MUST
+  core: false
+  dimension: consistency
+  stages:
+  - gold
+  statement: A surrogate key MUST be computed from the source and the business key (and the validity start for kept
+    history), so a rebuild in any environment gives every row the same key; reserved keys MUST mark unknown and
+    not applicable members.
+  failure_mode: Keys came from a sequence; a rebuild renumbered every customer, and saved filters and extracts that
+    held old keys now pointed at different customers.
+  test: Build a table twice in two environments from the same input; every key must match, and an unmatched reference
+    must get the reserved unknown key.
+  evidence: The key rule per table, and a comparison of two builds.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Warehousing and Business Intelligence, chapter 11
+  related:
+  - DES-04
+  - LATE-02
+  - SCD-04
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed:
+    - SL-GOLD-02
+    runtime: true
+    review: Review of the key rule of every new derived table.
+    gap: null
 - id: LATE-01
   status: draft
   since: 0.1.0
@@ -163,6 +297,13 @@
   - LATE-02
   - HIST-04
   - REC-01
+  enforced_by:
+    shift_left:
+    - SL-CLEAN-16
+    proposed: []
+    runtime: true
+    review: null
+    gap: null
 - id: ORCH-03
   status: draft
   since: 0.1.0
@@ -190,6 +331,46 @@
   - DUP-02
   - TEST-05
   - ORCH-04
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
+- id: RAW-01
+  status: draft
+  since: 0.1.0
+  title: The first kept layer holds every record as delivered
+  concern: X15
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - landing
+  - bronze
+  statement: The first kept layer MUST hold every record as delivered, append-only and unchanged apart from personal-data
+    protection, so every later layer can be rebuilt by replay.
+  failure_mode: Bronze dropped duplicates on load; a de-duplication bug removed real repeat orders, and since bronze
+    no longer held them no replay could bring them back.
+  test: Deliver a batch with duplicates and odd values; bronze must hold them all, unchanged, and a later delivery
+    must not update or delete them.
+  evidence: Write rights on bronze limited to append by the entry process, and a replay that rebuilds silver from
+    it.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  related:
+  - DUP-01
+  - PII-01
+  - FLOW-01
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: SCD-02
   status: draft
   since: 0.1.0
@@ -215,3 +396,10 @@
   related:
   - DUP-02
   - SCD-04
+  enforced_by:
+    shift_left:
+    - SL-TEST-09
+    proposed: []
+    runtime: true
+    review: null
+    gap: null

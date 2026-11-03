@@ -1,0 +1,132 @@
+# Practices: Cost and performance. Normative: edit here.
+- id: BP-129
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Cost per data product
+  why: Owners can only manage what they can see.
+  how:
+    binding: aws-databricks
+    text: Databricks billing system tables and the AWS Cost and Usage Report (AWS CUR) are joined on tags, and shared
+      compute is split by dataset using the run log.
+  layers:
+  - platform
+  components:
+  - cost
+  enforced_by:
+  - shift_left:
+    - SL-COST-CONFIG-03
+  - runtime: The ops dashboard shows cost per data product each day from billing tables joined on tags.
+  dac:
+  - COST-03
+  adr: []
+- id: BP-130
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Budget policies
+  why: Spend must be capped before the bill arrives.
+  how:
+    binding: aws-databricks
+    text: Databricks budget policies tag serverless usage per team and data product, with AWS budgets on the account;
+      each has an owner and a monthly limit.
+  layers:
+  - platform
+  components:
+  - cost
+  enforced_by:
+  - runtime: An alert goes to the owner at 80% of the limit.
+  - review: Each policy has a named owner, set in Terraform and reviewed.
+  dac:
+  - COST-02
+  adr: []
+- id: BP-131
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: A waste and anomaly finder reads the bills
+  why: Waste often hides in idle clusters, skew and repeated work.
+  how:
+    binding: aws-databricks
+    text: CostSherlock, our open-source waste and anomaly finder, reads billing system tables and job metrics and
+      flags idle compute, skewed tasks, repeated full scans and sudden cost jumps per dataset.
+  layers:
+  - platform
+  components:
+  - cost
+  - mon
+  enforced_by:
+  - runtime: CostSherlock reads billing system tables and job metrics and flags waste per dataset.
+  - review: Findings are reviewed weekly with the data product owner.
+  dac:
+  - COST-04
+  - COST-02
+  adr: []
+- id: BP-132
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Serverless and the fast engine by default
+  why: Fast start-up and faster engines cut both waiting and cost.
+  how:
+    binding: aws-databricks
+    text: Serverless compute and Photon for jobs, pipelines and SQL warehouses; any classic cluster that remains
+      is right-sized from its usage in system tables.
+  layers:
+  - platform
+  components:
+  - cost
+  enforced_by:
+  - shift_left:
+    - SL-COST-CONFIG-02
+    - SL-COST-CONFIG-04
+    - SL-COST-CONFIG-07
+  - review: Monthly right-sizing review of any classic cluster.
+  dac:
+  - COST-04
+  - COST-02
+  adr: []
+- id: BP-133
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Automatic clustering and automatic table upkeep
+  why: Tables need upkeep, but writing maintenance jobs is waste.
+  how:
+    binding: aws-databricks
+    text: Liquid clustering instead of partitioning; predictive optimization runs OPTIMIZE, VACUUM and ANALYZE on
+      managed tables.
+  layers:
+  - bronze
+  - silver
+  - gold
+  components:
+  - cost
+  enforced_by:
+  - proposed: SL-COST-CODE-26
+  dac:
+  - PERF-05
+  adr:
+  - ADR-011
+- id: BP-134
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Partitioning and hand-written OPTIMIZE jobs
+  why: Partitions picked by hand often create many small files, and maintenance jobs are extra code to run.
+  how:
+    binding: aws-databricks
+    text: Tables use liquid clustering; predictive optimization handles upkeep.
+  instead: Use automatic clustering and leave upkeep to the platform's automatic optimization.
+  layers:
+  - bronze
+  - silver
+  - gold
+  components:
+  - cost
+  enforced_by:
+  - proposed: SL-COST-CODE-26
+  dac:
+  - PERF-05
+  adr:
+  - ADR-011

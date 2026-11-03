@@ -1,0 +1,101 @@
+# Practices: Monitoring and observability. Normative: edit here.
+- id: BP-124
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: One id per piece of work
+  why: A master run, its runs, steps and files must link together to trace a problem.
+  how:
+    binding: aws-databricks
+    text: Ids for master run, run, step and file are passed through every engine and logged.
+  layers:
+  - platform
+  components:
+  - mon
+  enforced_by:
+  - runtime: The engines fail if a parent id is missing.
+  dac:
+  - OPS-03
+  adr: []
+- id: BP-125
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: The ops builder runs every 15 minutes
+  why: Run logs, platform metrics and cloud logs live in different places.
+  how:
+    binding: aws-databricks
+    text: The ops builder joins the run log with Databricks system tables and CloudWatch into `<env>_ops` Delta
+      tables for ops dashboards.
+  layers:
+  - platform
+  components:
+  - mon
+  - cost
+  enforced_by:
+  - runtime: The ops builder's own freshness is monitored.
+  dac:
+  - OPS-03
+  - COST-03
+  adr: []
+- id: BP-126
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Freshness and SLOs from bookmarks
+  why: Users care whether data is up to date, not whether a job ran.
+  how:
+    binding: aws-databricks
+    text: Freshness per dataset comes from input bookmarks and is compared with its service level objective.
+  layers:
+  - silver
+  - gold
+  components:
+  - mon
+  enforced_by:
+  - runtime: SQL alerts fire on SLO breaches.
+  dac:
+  - PERF-02
+  - SERV-02
+  adr: []
+- id: BP-127
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Alerts routed to on-call
+  why: An alert nobody receives is no alert.
+  how:
+    binding: aws-databricks
+    text: Databricks SQL alerts on the `<env>_ops` tables (failed runs, held files, SLO breaches, quality blocks)
+      publish to SNS topics that reach the on-call team.
+  layers:
+  - platform
+  components:
+  - mon
+  enforced_by:
+  - runtime: A test alert is sent on every deploy to prove each route.
+  dac:
+  - OPS-01
+  adr: []
+- id: BP-128
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: A sweeper for stuck runs
+  why: A run that never closes blocks the queue and hides a failure.
+  how:
+    binding: aws-databricks
+    text: The sweeper finds open runs past their time limit, marks them failed and alerts.
+  layers:
+  - platform
+  components:
+  - mon
+  - orch
+  enforced_by:
+  - shift_left:
+    - SL-COST-CONFIG-08
+  - runtime: The sweeper marks open runs past their time limit as failed and alerts.
+  dac:
+  - OPS-01
+  - ORCH-03
+  adr: []

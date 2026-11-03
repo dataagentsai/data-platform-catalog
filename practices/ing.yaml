@@ -1,0 +1,295 @@
+# Practices: Ingestion. Normative: edit here.
+- id: BP-036
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: One ingestion framework, one pipeline per source type
+  why: Most sources differ only in settings, so one tested pipeline per type covers almost all of them.
+  how:
+    binding: aws-databricks
+    text: 'Our PySpark ingestion framework has three pipelines: Database, Files and API. A new source is a `sources/<source>.yaml`
+      file, not new code.'
+  layers:
+  - landing
+  - bronze
+  components:
+  - ing
+  enforced_by:
+  - shift_left:
+    - SL-CPLX-05
+  - review: Review rejects source-specific ingestion code.
+  dac:
+  - ENG-01
+  - ING-01
+  adr: []
+- id: BP-037
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Push or pull, chosen per source
+  why: Some sources can only send files out; others are safer and simpler to read directly.
+  how:
+    binding: aws-databricks
+    text: 'Push: the source side writes files to S3 landing (an extractor at the source site, AWS DMS for full load
+      and CDC, AppFlow for SAP OData and SaaS, Transfer Family for SFTP). Pull: the puller reads the source directly
+      over JDBC, REST or OData with no landing.'
+  layers:
+  - landing
+  - bronze
+  components:
+  - ing
+  enforced_by:
+  - proposed: SL-META-02
+  dac:
+  - ING-01
+  adr:
+  - ADR-002
+- id: BP-038
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: 'Landing contract: unique file names, a manifest, a fixed folder'
+  why: Without unique names and a manifest we cannot tell a new file from a resend, or a full delivery from half
+    of one.
+  how:
+    binding: aws-databricks
+    text: Every file has a unique name and is listed in a manifest; formats are CSV, JSON, Parquet, XML or Avro;
+      files go to `s3://<env>-landing/<source>/<dataset>/dt=YYYY-MM-DD/`.
+  layers:
+  - landing
+  components:
+  - ing
+  - dq
+  enforced_by:
+  - runtime: The lander checks the manifest and file names before reading and holds any file that does not match.
+  dac:
+  - DUP-01
+  - FILE-01
+  - DQ-04
+  adr: []
+- id: BP-039
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: The lander runs fixed steps in a fixed order
+  why: A fixed order means every file gets every check, and a failure always stops at a known point.
+  how:
+    binding: aws-databricks
+    text: Read settings and watermark; check manifest and contract; tokenise personal data; mass-delete guard; append
+      to bronze; log to Aurora and set the watermark; write the batch-ready marker.
+  layers:
+  - landing
+  - bronze
+  components:
+  - ing
+  - mon
+  enforced_by:
+  - runtime: Each step writes to `step_log`; a failure stops at a known step, covered by integration tests that
+      fail each step on purpose.
+  dac:
+  - ING-01
+  - TEST-05
+  adr:
+  - ADR-002
+- id: BP-040
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Mass-delete guard
+  why: A broken extract that sends an empty or tiny file can look like the source deleted most of its records.
+  how:
+    binding: aws-databricks
+    text: Before appending, the lander compares the row count and delete count with recent loads; above the dataset's
+      limit the batch is held for review.
+  layers:
+  - bronze
+  components:
+  - ing
+  - dq
+  enforced_by:
+  - runtime: Row and delete counts are compared with recent loads; above the dataset's limit the batch is held and
+      on-call is alerted.
+  dac:
+  - DQ-04
+  - DEL-01
+  adr: []
+- id: BP-041
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: 'Three load types: full, incremental, reload'
+  why: First loads, daily loads and repairs need different handling, and mixing them up causes gaps or duplicates.
+  how:
+    binding: aws-databricks
+    text: Full load for the first load, read in segments; incremental by watermark or CDC; reload of one table or
+      one time window. The watermark moves only through `sp_set_watermark` after a successful append.
+  layers:
+  - bronze
+  components:
+  - ing
+  - orch
+  enforced_by:
+  - shift_left:
+    - SL-TEST-09
+  - runtime: The load type is recorded in `run_log`; the watermark moves only after a successful append.
+  dac:
+  - HIST-03
+  - HIST-04
+  adr: []
+- id: BP-042
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Managed connectors only for SaaS without personal data
+  why: The platform's managed connectors are quick, but they bypass our lander's tokenising, file log and contract
+    checks.
+  how:
+    binding: aws-databricks
+    text: Use Lakeflow Connect only for SaaS sources that carry no personal data; everything else goes through our
+      lander.
+  layers:
+  - bronze
+  components:
+  - ing
+  - sec
+  enforced_by:
+  - proposed: SL-META-02
+  - review: Design review per source.
+  dac:
+  - ING-01
+  - PII-01
+  adr: []
+- id: BP-043
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Landing is short-lived and private to the lander
+  why: Raw files are uncontrolled copies of source data; keeping them longer than needed adds risk and storage cost.
+  how:
+    binding: aws-databricks
+    text: An S3 lifecycle rule deletes landing files hours after load; bronze keeps the records. Only the lander's
+      role can read landing.
+  layers:
+  - landing
+  components:
+  - ing
+  - sec
+  - cost
+  enforced_by:
+  - proposed: SL-SEC-11
+  - runtime: The S3 lifecycle rule deletes landing files; the bucket policy lets only the lander read.
+  dac:
+  - ENC-01
+  - ING-01
+  adr: []
+- id: BP-044
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Streaming is a separate flow
+  why: Sensor and event streams need low delay and never-ending runs, which do not fit the batch lander.
+  how:
+    binding: aws-databricks
+    text: Kinesis and IoT SiteWise feed Databricks streaming tables in their own flow, with the same naming, tagging
+      and monitoring as batch.
+  layers:
+  - bronze
+  - silver
+  components:
+  - ing
+  - orch
+  enforced_by:
+  - shift_left:
+    - SL-COST-CONFIG-05
+    - SL-STYLE-04
+  - review: Design review of each streaming source.
+  dac:
+  - LATE-03
+  - DUP-04
+  - ORCH-06
+  adr: []
+- id: BP-045
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Overwriting a file of the same name in landing
+  why: If a resend overwrites a file, we cannot tell what was loaded, and a replay gives a different answer.
+  how:
+    binding: aws-databricks
+    text: The landing contract requires unique file names; the file log records the checksum of every file.
+  instead: Give every delivery a unique name, list it in the manifest, and send corrections as new files.
+  layers:
+  - landing
+  components:
+  - ing
+  enforced_by:
+  - runtime: The lander rejects a name it has already seen with a different checksum.
+  dac:
+  - DUP-01
+  - RAW-01
+  adr: []
+- id: BP-046
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Reading landing files from anything but the lander
+  why: A job that reads raw files skips tokenising, contract checks and the file log, so its output has no lineage.
+  how:
+    binding: aws-databricks
+    text: Bucket policies allow only the lander's role to read landing.
+  instead: Read bronze, which holds every record as received with full provenance.
+  layers:
+  - landing
+  - bronze
+  components:
+  - ing
+  - gov
+  enforced_by:
+  - proposed: SL-CLEAN-33
+  - runtime: The bucket policy lets only the lander's role read landing.
+  dac:
+  - ING-01
+  - FLOW-01
+  adr: []
+- id: BP-054
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Bronze is append-only, every record as received
+  why: Bronze is the replay source; if it is changed, a rebuild can never reproduce what the source sent.
+  how:
+    binding: aws-databricks
+    text: The lander appends each batch once, keyed by batch id, to a Delta table that is source-aligned and liquid
+      clustered by `_ingest_date`, with long retention.
+  layers:
+  - bronze
+  components:
+  - ing
+  - b2s
+  enforced_by:
+  - runtime: Only the lander's service principal can write bronze; a batch id already present is refused.
+  dac:
+  - RAW-01
+  - DUP-01
+  adr: []
+- id: BP-055
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Keep JSON whole in a semi-structured column
+  why: API payloads change shape often; flattening at bronze loses fields we may need later.
+  how:
+    binding: aws-databricks
+    text: JSON payloads are stored whole in a VARIANT column; silver flattens only the listed paths.
+  layers:
+  - bronze
+  components:
+  - ing
+  - b2s
+  enforced_by:
+  - runtime: The lander's contract check accepts the payload whole.
+  - review: Review of the generated bronze table definition.
+  dac:
+  - RAW-01
+  - SCH-01
+  adr: []

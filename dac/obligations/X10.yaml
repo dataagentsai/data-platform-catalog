@@ -25,6 +25,43 @@
   - COST-03
   - COST-04
   - ENV-02
+  enforced_by:
+    shift_left:
+    - SL-COST-CODE-01
+    - SL-COST-CODE-02
+    - SL-COST-CODE-03
+    - SL-COST-CODE-04
+    - SL-COST-CODE-05
+    - SL-COST-CODE-07
+    - SL-COST-CODE-08
+    - SL-COST-CODE-10
+    - SL-COST-CODE-11
+    - SL-COST-CODE-13
+    - SL-COST-CODE-14
+    - SL-COST-CODE-16
+    - SL-COST-CODE-17
+    - SL-COST-CODE-18
+    - SL-COST-CODE-19
+    - SL-COST-CODE-22
+    - SL-COST-CODE-24
+    - SL-COST-CODE-25
+    - SL-COST-CONFIG-02
+    - SL-COST-CONFIG-04
+    - SL-COST-CONFIG-07
+    - SL-COST-CONFIG-08
+    - SL-COST-CONFIG-09
+    - SL-COST-CONFIG-10
+    - SL-COST-PLAN-01
+    - SL-COST-PLAN-02
+    - SL-COST-PLAN-03
+    - SL-COST-PLAN-05
+    - SL-COST-PLAN-06
+    - SL-PURE-06
+    proposed:
+    - SL-GOLD-04
+    runtime: true
+    review: Each budget has a named owner who reviews its alerts.
+    gap: null
 - id: COST-03
   status: draft
   since: 0.1.0
@@ -48,6 +85,13 @@
   related:
   - COST-02
   - OPS-03
+  enforced_by:
+    shift_left:
+    - SL-COST-CONFIG-03
+    proposed: []
+    runtime: true
+    review: null
+    gap: null
 - id: COST-04
   status: draft
   since: 0.1.0
@@ -71,3 +115,14 @@
   related:
   - COST-02
   - PERF-05
+  enforced_by:
+    shift_left:
+    - SL-COST-CODE-06
+    - SL-COST-CONFIG-01
+    - SL-COST-CONFIG-02
+    - SL-COST-CONFIG-05
+    - SL-COST-CONFIG-06
+    proposed: []
+    runtime: true
+    review: null
+    gap: null

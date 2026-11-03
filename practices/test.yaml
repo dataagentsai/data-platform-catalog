@@ -1,0 +1,167 @@
+# Practices: Testing. Normative: edit here.
+- id: BP-113
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Pre-commit hooks
+  why: Formatting and simple errors should never reach a reviewer.
+  how:
+    binding: aws-databricks
+    text: Pre-commit runs Ruff, YAML checks and secret scanning on every commit.
+  layers:
+  - platform
+  components:
+  - test
+  - devops
+  enforced_by:
+  - shift_left:
+    - SL-SETUP-01
+    - SL-SETUP-04
+    - SL-STYLE-01
+    - SL-STYLE-02
+    - SL-SECRET-01
+  dac:
+  - REL-02
+  - REL-05
+  adr: []
+- id: BP-114
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: A shift-left check bundle in CI
+  why: Many engine and platform mistakes can be found without running anything.
+  how:
+    binding: aws-databricks
+    text: 137 static checks for PySpark, SQL, notebooks, job settings, metric views, secrets and libraries (purity,
+      cost, security, clean code, tests) run at commit, on every pull request, before deploy and nightly. Checks
+      this page still needs are marked as proposed.
+  layers:
+  - platform
+  components:
+  - test
+  - devops
+  enforced_by:
+  - shift_left:
+    - SL-SETUP-02
+    - SL-SETUP-05
+    - SL-SETUP-06
+    - SL-TEST-01
+  dac:
+  - TEST-03
+  - REL-02
+  adr: []
+- id: BP-115
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Table-driven unit tests of pure functions
+  why: One table of cases is easy to read and easy to extend.
+  how:
+    binding: aws-databricks
+    text: 'Each stage and each build() has a table of named cases: late dimension, SCD2 change mid-window, duplicate
+      input, reprocessing the same window.'
+  layers:
+  - silver
+  - gold
+  components:
+  - test
+  - b2s
+  - s2g
+  enforced_by:
+  - shift_left:
+    - SL-CLEAN-21
+    - SL-TEST-02
+    - SL-TEST-06
+    - SL-TEST-09
+  dac:
+  - TEST-03
+  adr: []
+- id: BP-116
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Integration tests on a local engine and table format
+  why: The engines' read and write paths must be tested end to end, but not on paid clusters for every change.
+  how:
+    binding: aws-databricks
+    text: The ingestion framework, bronze-to-silver engine and gold harness are each tested once on local Spark
+      with Delta.
+  layers:
+  - bronze
+  - silver
+  - gold
+  components:
+  - test
+  enforced_by:
+  - shift_left:
+    - SL-SETUP-08
+    - SL-SETUP-02
+  dac:
+  - TEST-03
+  - TEST-05
+  adr: []
+- id: BP-117
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Simulation scenarios in a data twin
+  why: 'Real trouble comes from sequences: late files, resends, schema changes, outages.'
+  how:
+    binding: aws-databricks
+    text: DataTwin replays scripted scenarios through the platform and checks the expected outcome.
+  layers:
+  - platform
+  components:
+  - test
+  enforced_by:
+  - runtime: The scenario suite runs scripted late files, resends, schema changes and outages before each release.
+  dac:
+  - SIM-01
+  - TEST-05
+  adr: []
+- id: BP-118
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Parallel run on shallow clones as a release gate
+  why: A change must give the same answers on real data, or the expected differences.
+  how:
+    binding: aws-databricks
+    text: The new version runs against shallow clones of prod tables, and outputs are compared with the current
+      version.
+  layers:
+  - silver
+  - gold
+  components:
+  - test
+  - devops
+  enforced_by:
+  - runtime: Outputs of the new and current versions are compared on shallow clones of prod tables.
+  - review: Any difference must be explained before release.
+  dac:
+  - REL-03
+  - TEST-03
+  adr: []
+- id: BP-119
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Testing only on a cluster against prod data
+  why: It is slow, costly, risky and cannot reproduce edge cases.
+  how:
+    binding: aws-databricks
+    text: Pure functions are tested locally; integration tests use local Spark.
+  instead: Write table-driven unit tests first, then integration tests on a local engine.
+  layers:
+  - platform
+  components:
+  - test
+  enforced_by:
+  - shift_left:
+    - SL-TEST-04
+    - SL-TEST-01
+    - SL-TEST-02
+  dac:
+  - TEST-03
+  - PURE-01
+  adr: []

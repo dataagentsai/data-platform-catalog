@@ -1,0 +1,115 @@
+# Practices: Semantic layer. Normative: edit here.
+- id: BP-094
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Business logic in BI tools or views
+  why: The same metric gets computed differently in each dashboard, and nobody can test it.
+  how:
+    binding: aws-databricks
+    text: Measures are defined once in metric views; dashboards only select them.
+  instead: Put calculations in gold build() or in the semantic layer's metric definitions.
+  layers:
+  - gold
+  - semantic
+  components:
+  - sem
+  - model
+  enforced_by:
+  - review: Review of dashboard definitions; certified metrics are flagged in the catalog.
+  dac:
+  - SERV-04
+  adr: []
+- id: BP-103
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Metric definitions in YAML, deployed to the catalog
+  why: Metric definitions must be versioned and reviewed like code.
+  how:
+    binding: aws-databricks
+    text: Metric views (prefix `mv_`) are YAML files in Git deployed to Unity Catalog; each version is a versioned
+      definition, so redeploying is idempotent.
+  layers:
+  - semantic
+  components:
+  - sem
+  - meta
+  enforced_by:
+  - shift_left:
+    - SL-SEM-01
+    - SL-SEM-02
+    - SL-SEM-03
+    - SL-SEM-04
+  dac:
+  - SERV-04
+  - REL-01
+  adr: []
+- id: BP-105
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Certified and owned metrics
+  why: Users need to know which numbers they can trust.
+  how:
+    binding: aws-databricks
+    text: Each metric view has a named owner and a certified tag once the business owner signs it off.
+  layers:
+  - semantic
+  components:
+  - sem
+  - gov
+  enforced_by:
+  - shift_left:
+    - SL-SEM-06
+    - SL-SEM-07
+  - review: The business owner signs off before the certified tag is set through the pipeline.
+  dac:
+  - SERV-04
+  - SERV-01
+  - GATE-02
+  adr:
+  - ADR-022
+- id: BP-106
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: One layer serves dashboards, conversational query, agents and APIs
+  why: Every channel must give the same number for the same question.
+  how:
+    binding: aws-databricks
+    text: AI/BI dashboards, Genie, agents and APIs all query metric views and gold, never silver.
+  layers:
+  - semantic
+  components:
+  - sem
+  enforced_by:
+  - runtime: 'Grants: consumers can read gold and metric views only.'
+  dac:
+  - SERV-04
+  - FLOW-01
+  adr:
+  - ADR-022
+- id: BP-107
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Pointing a conversational query tool at raw silver tables
+  why: The tool then guesses joins and meanings and gives plausible but wrong answers.
+  how:
+    binding: aws-databricks
+    text: Genie spaces are built on metric views and gold tables with synced descriptions.
+  instead: Point it at metric definitions and described gold tables.
+  layers:
+  - silver
+  - semantic
+  components:
+  - sem
+  - gov
+  enforced_by:
+  - review: Review of every Genie space.
+  dac:
+  - FLOW-01
+  - SERV-04
+  adr:
+  - ADR-022

@@ -1,4 +1,33 @@
 # DAC obligations for X17, Testing. Normative: edit here.
+- id: PURE-01
+  status: draft
+  since: 0.1.0
+  title: Transform logic is separate from reads and writes
+  concern: X17
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - silver
+  - gold
+  statement: Every transform MUST be callable on in-memory inputs and return its output, with table reads and writes
+    only at the edges of the engine that runs it, so it can be tested without a running platform.
+  failure_mode: A fact read four tables, transformed them and wrote the result in one notebook; it could only be
+    run against production, so it was never tested, and a join change broke margin for a month.
+  test: Call each transform with small in-memory inputs in a unit test with no platform connection; it must run
+    and return its output.
+  evidence: The purity report per module, and unit tests that run without a platform.
+  cites: []
+  related:
+  - TEST-03
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: TEST-03
   status: draft
   since: 0.1.0
@@ -21,6 +50,35 @@
   review_check: TEST-03
   related:
   - REL-02
+  enforced_by:
+    shift_left:
+    - SL-CLEAN-08
+    - SL-CLEAN-21
+    - SL-CLEAN-23
+    - SL-DEP-05
+    - SL-PURE-01
+    - SL-PURE-02
+    - SL-PURE-03
+    - SL-PURE-04
+    - SL-PURE-05
+    - SL-PURE-07
+    - SL-SEM-07
+    - SL-SETUP-02
+    - SL-SETUP-03
+    - SL-SETUP-08
+    - SL-TEST-01
+    - SL-TEST-02
+    - SL-TEST-03
+    - SL-TEST-04
+    - SL-TEST-05
+    - SL-TEST-06
+    - SL-TEST-07
+    - SL-TEST-08
+    - SL-TEST-09
+    proposed: []
+    runtime: true
+    review: null
+    gap: null
 - id: TEST-05
   status: draft
   since: 0.1.0
@@ -44,3 +102,11 @@
   - DUP-02
   - ORCH-03
   - SCH-02
+  enforced_by:
+    shift_left:
+    - SL-COST-CODE-21
+    - SL-PURE-03
+    proposed: []
+    runtime: true
+    review: null
+    gap: null

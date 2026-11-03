@@ -1,0 +1,364 @@
+# Practices: The canon: principles every layer follows. Normative: edit here.
+- id: BP-001
+  status: draft
+  since: 0.1.0
+  kind: principle
+  title: 'Metadata driven: low code, no code'
+  why: A new source or dataset should be added by writing configuration, not a new pipeline, so the platform grows
+    without the code growing.
+  how:
+    binding: aws-databricks
+    text: Sources, datasets, columns, quality rules and contracts are described in YAML; the shared ingestion, bronze-to-silver
+      and gold engines read their settings from the Aurora PostgreSQL metadata store at run time.
+  layers:
+  - platform
+  components:
+  - meta
+  - ing
+  - b2s
+  - s2g
+  enforced_by:
+  - proposed: SL-META-01
+  - proposed: SL-META-02
+  - review: Review rejects pipelines that hard-code what metadata should hold.
+  dac:
+  - CFG-01
+  - ENG-01
+  - CFG-05
+  adr:
+  - ADR-010
+- id: BP-002
+  status: draft
+  since: 0.1.0
+  kind: principle
+  title: Config as code
+  why: Settings that live only in a database or a UI cannot be reviewed, versioned or rolled back.
+  how:
+    binding: aws-databricks
+    text: '`platform.yaml`, `sources/<source>.yaml`, `datasets/<dataset>.yaml`, `dq/<dataset>.yaml` and `contracts/<dataset>.yaml`
+      live in GitHub; after CI passes, a generator upserts them into the metadata store, which is always a loaded
+      copy of Git.'
+  layers:
+  - platform
+  components:
+  - meta
+  - devops
+  enforced_by:
+  - proposed: SL-META-02
+  - runtime: Only the generator may write config tables, so a hand edit in the store is refused.
+  dac:
+  - REL-01
+  - CFG-01
+  adr:
+  - ADR-010
+- id: BP-003
+  status: draft
+  since: 0.1.0
+  kind: principle
+  title: Deterministic first, agents with care
+  why: Data pipelines must give the same answer every time; an AI agent is used only where a fixed rule cannot do
+    the job.
+  how:
+    binding: aws-databricks
+    text: Loads, transforms, checks and alerts are plain code and rules. Agents are limited to guarded tasks such
+      as proposing a fix or restarting a stuck run, from an allowed list of actions.
+  layers:
+  - platform
+  components:
+  - mon
+  - orch
+  enforced_by:
+  - shift_left:
+    - SL-PURE-03
+  - review: Every agent use case passes design review and acts only from an allowed list of actions.
+  - runtime: Agents act through the same stored procedures and job APIs as people, and every action is written to
+      the run log.
+  dac:
+  - GATE-03
+  - HEAL-01
+  adr:
+  - ADR-023
+- id: BP-004
+  status: draft
+  since: 0.1.0
+  kind: principle
+  title: Build once, reuse
+  why: One engine maintained well beats fifty pipelines maintained badly, and a fix lands everywhere at once.
+  how:
+    binding: aws-databricks
+    text: One ingestion framework with one pipeline per source type, one bronze-to-silver engine for every table,
+      one common pipeline for one-to-one gold tables and one harness for modelled facts.
+  layers:
+  - platform
+  components:
+  - ing
+  - b2s
+  - s2g
+  enforced_by:
+  - shift_left:
+    - SL-CPLX-05
+  - proposed: SL-LAYER-02
+  - review: Review rejects new per-table pipelines.
+  dac:
+  - ENG-01
+  adr:
+  - ADR-003
+  - ADR-007
+- id: BP-005
+  status: draft
+  since: 0.1.0
+  kind: principle
+  title: Pure functions, IO at the edges
+  why: Logic that takes a DataFrame and returns a DataFrame can be tested in seconds without a cluster and reused
+    anywhere.
+  how:
+    binding: aws-databricks
+    text: The bronze-to-silver engine reads bronze and writes silver only at its edges, with 13 pure stage functions
+      in between; each gold fact supplies only a pure `build(inputs)` function.
+  layers:
+  - platform
+  components:
+  - b2s
+  - s2g
+  - test
+  enforced_by:
+  - shift_left:
+    - SL-PURE-02
+    - SL-PURE-04
+    - SL-PURE-06
+    - SL-PURE-07
+    - SL-TEST-04
+  dac:
+  - PURE-01
+  - TEST-03
+  adr:
+  - ADR-013
+- id: BP-006
+  status: draft
+  since: 0.1.0
+  kind: principle
+  title: Idempotent at every layer
+  why: 'Re-running any step after a failure must give the same result: no duplicates, no gaps.'
+  how:
+    binding: aws-databricks
+    text: Landing by file checksum, bronze by batch id appended once, silver by MERGE on business key plus change
+      order, gold by replacing a window by key, semantic by versioned definition.
+  layers:
+  - landing
+  - bronze
+  - silver
+  - gold
+  - semantic
+  components:
+  - ing
+  - b2s
+  - s2g
+  - orch
+  enforced_by:
+  - shift_left:
+    - SL-PURE-03
+    - SL-TEST-09
+  - runtime: The file log refuses a checksum that is already loaded; a batch id already in bronze is refused.
+  dac:
+  - IDEMP-01
+  - DUP-01
+  - DUP-02
+  adr: []
+- id: BP-007
+  status: draft
+  since: 0.1.0
+  kind: principle
+  title: Fail fast at every stage (shift left)
+  why: A problem caught in the editor costs minutes; the same problem found on a gold dashboard costs days and trust.
+  how:
+    binding: aws-databricks
+    text: Pre-commit hooks and the shift-left check bundle run before merge; contract and manifest checks run before
+      bronze; quality rules run before silver is written and before gold is published.
+  layers:
+  - platform
+  components:
+  - test
+  - devops
+  - dq
+  enforced_by:
+  - shift_left:
+    - SL-SETUP-01
+    - SL-SETUP-02
+    - SL-SETUP-05
+    - SL-SETUP-06
+  - runtime: Contract, manifest and quality checks stop a batch before it is written.
+  dac:
+  - TEST-03
+  - GATE-01
+  - SCH-02
+  - REL-02
+  adr: []
+- id: BP-010
+  status: draft
+  since: 0.1.0
+  kind: principle
+  title: 'Separation of concerns: each layer has one job'
+  why: When a layer does two jobs, a fault in one hides inside the other and replays stop being possible.
+  how:
+    binding: aws-databricks
+    text: Landing holds files as sent, bronze keeps every record as received, silver cleans and keeps history per
+      source, gold models by business domain, semantic defines metrics. No layer is skipped.
+  layers:
+  - landing
+  - bronze
+  - silver
+  - gold
+  - semantic
+  components:
+  - model
+  enforced_by:
+  - proposed: SL-LAYER-01
+  - review: Design review of every new dataset.
+  dac:
+  - FLOW-01
+  - RAW-01
+  adr:
+  - ADR-001
+- id: BP-011
+  status: draft
+  since: 0.1.0
+  kind: principle
+  title: Observable by default
+  why: If a run cannot be traced, a missing number on a dashboard cannot be explained.
+  how:
+    binding: aws-databricks
+    text: Every shared engine opens a run, logs steps, files and errors through stored procedures, and closes the
+      run, so a new dataset is monitored with no extra code.
+  layers:
+  - platform
+  components:
+  - mon
+  enforced_by:
+  - shift_left:
+    - SL-CLEAN-04
+  - runtime: The engines open and close every run themselves; the sweeper flags runs that never closed.
+  dac:
+  - OPS-03
+  - CFG-02
+  - GATE-01
+  adr: []
+- id: BP-012
+  status: draft
+  since: 0.1.0
+  kind: principle
+  title: Security and privacy by design
+  why: Personal data is hardest to protect once it has spread; control must start at the point of entry.
+  how:
+    binding: aws-databricks
+    text: The lander tokenises personal data before bronze; each catalog has its own S3 bucket and KMS key; access
+      is only through Unity Catalog grants, ABAC policies, row filters and column masks.
+  layers:
+  - platform
+  components:
+  - sec
+  - gov
+  enforced_by:
+  - shift_left:
+    - SL-SECRET-01
+    - SL-SECRET-03
+    - SL-SEC-07
+    - SL-SEC-08
+  - proposed: SL-META-01
+  - runtime: Macie scans landing for personal data the contract does not expect.
+  - review: Access is reviewed regularly from system tables.
+  dac:
+  - PII-01
+  - SEC-01
+  - SEC-02
+  - REL-05
+  adr: []
+- id: BP-013
+  status: draft
+  since: 0.1.0
+  kind: principle
+  title: Cross-cutting concerns are not afterthoughts
+  why: Quality, lineage, monitoring and cost tracking added later are always incomplete.
+  how:
+    binding: aws-databricks
+    text: The shared engines log runs, apply quality rules, sync tags and descriptions to Unity Catalog and tag
+      compute with the dataset, so every new dataset gets all of these from day one.
+  layers:
+  - platform
+  components:
+  - dq
+  - gov
+  - mon
+  - cost
+  enforced_by:
+  - shift_left:
+    - SL-COST-CONFIG-03
+  - proposed: SL-META-01
+  dac:
+  - CFG-02
+  - COST-03
+  adr: []
+- id: BP-014
+  status: draft
+  since: 0.1.0
+  kind: principle
+  title: Domain knowledge drives the model
+  why: A model built from source tables answers the source system's questions, not the business's.
+  how:
+    binding: aws-databricks
+    text: 'Each gold model starts from how it will be read: who asks, at what grain, with which filters. Each domain
+      pairs a data modeller with its business owner, who agree grain, keys and metrics.'
+  layers:
+  - gold
+  - semantic
+  components:
+  - model
+  enforced_by:
+  - review: Design review signs off grain, keys and owner with the business owner before any build.
+  dac:
+  - DES-04
+  - SERV-01
+  adr: []
+- id: BP-057
+  status: draft
+  since: 0.1.0
+  kind: principle
+  title: One standard engine for every bronze table
+  why: Silver logic is the same kind of work for every source, so it should be one engine, tested once, driven by
+    metadata.
+  how:
+    binding: aws-databricks
+    text: One PySpark engine reads its settings per dataset and runs the same stages for every table. It holds no
+      domain-specific logic; that belongs in gold.
+  layers:
+  - silver
+  components:
+  - b2s
+  enforced_by:
+  - shift_left:
+    - SL-CPLX-05
+  - proposed: SL-META-02
+  - review: Review rejects per-table silver code.
+  dac:
+  - ENG-01
+  adr:
+  - ADR-007
+- id: BP-104
+  status: draft
+  since: 0.1.0
+  kind: principle
+  title: One definition per metric
+  why: If OTIF (on time, in full) has two definitions, the business will have two answers.
+  how:
+    binding: aws-databricks
+    text: Each metric, such as OTIF, is defined once in a metric view and reused by every consumer.
+  layers:
+  - semantic
+  components:
+  - sem
+  - model
+  enforced_by:
+  - shift_left:
+    - SL-SEM-05
+  dac:
+  - SERV-04
+  adr: []

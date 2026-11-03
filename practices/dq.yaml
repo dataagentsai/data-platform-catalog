@@ -1,0 +1,132 @@
+# Practices: Data expectation services (data quality). Normative: edit here.
+- id: BP-099
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Quality checks only in silver
+  why: Joins and aggregates create their own errors (orphans, double counts) that silver checks can never see.
+  how:
+    binding: aws-databricks
+    text: The harness runs gold checks before every publish.
+  instead: Check grain, orphan rate, reconciliation and completeness in gold too.
+  layers:
+  - gold
+  components:
+  - dq
+  - s2g
+  enforced_by:
+  - runtime: The harness runs grain, orphan, reconciliation and completeness checks before every publish; results
+      in `dq_result`.
+  dac:
+  - PUB-01
+  adr: []
+- id: BP-108
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Checks at every layer
+  why: Each layer can break data in its own way, so each needs its own check.
+  how:
+    binding: aws-databricks
+    text: Contract and manifest at landing; counts and mass-delete guard at bronze; row rules and quarantine in
+      silver; reconciliation and completeness in gold; profiling and drift with Lakehouse Monitoring.
+  layers:
+  - landing
+  - bronze
+  - silver
+  - gold
+  - semantic
+  components:
+  - dq
+  enforced_by:
+  - runtime: The shared engines run the checks at each layer; results go to `dq_result`.
+  dac:
+  - CFG-02
+  - DQ-01
+  - REC-01
+  adr: []
+- id: BP-109
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: A rule library, configured per dataset
+  why: Writing rules from scratch per dataset leads to gaps and differences.
+  how:
+    binding: aws-databricks
+    text: A library of standard rules (not null, range, allowed values, referential, freshness) is set per dataset
+      in `dq/<dataset>.yaml` and loaded into `dq_rule`.
+  layers:
+  - silver
+  - gold
+  components:
+  - dq
+  - meta
+  enforced_by:
+  - proposed: SL-META-02
+  dac:
+  - DQ-01
+  - CFG-05
+  adr: []
+- id: BP-110
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Bad-row limit blocks the next batches
+  why: Loading more batches on top of a broken one spreads the damage.
+  how:
+    binding: aws-databricks
+    text: When the bad-row share in a batch exceeds the dataset's limit, its next batches wait until a steward clears
+      it.
+  layers:
+  - silver
+  components:
+  - dq
+  - orch
+  enforced_by:
+  - runtime: Runtime check against the limit from metadata; a steward clears the block.
+  dac:
+  - SEV-01
+  - DQ-02
+  adr:
+  - ADR-009
+- id: BP-111
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Profiling and drift monitoring
+  why: Some problems are not rule breaks but slow shifts, such as a share of nulls creeping up.
+  how:
+    binding: aws-databricks
+    text: Lakehouse Monitoring profiles key silver and gold tables and flags drift.
+  layers:
+  - silver
+  - gold
+  components:
+  - dq
+  - mon
+  enforced_by:
+  - runtime: Drift alerts route to the data owner.
+  dac:
+  - PROF-01
+  adr: []
+- id: BP-112
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Reconcile gold to silver
+  why: A join or aggregation bug shows up first as totals that do not match.
+  how:
+    binding: aws-databricks
+    text: Gold totals (quantity, value) per window are compared with silver within a tolerance set in metadata.
+  layers:
+  - gold
+  components:
+  - dq
+  - s2g
+  enforced_by:
+  - runtime: Results in `recon_result`; a failure keeps the last good window.
+  dac:
+  - REC-01
+  - REC-03
+  - REC-05
+  adr: []

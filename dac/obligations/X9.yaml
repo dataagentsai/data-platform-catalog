@@ -24,6 +24,12 @@
   related:
   - OPS-01
   - DQ-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: LATE-03
   status: draft
   since: 0.1.0
@@ -51,6 +57,12 @@
   - LATE-01
   - DUP-04
   - PERF-02
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: The lateness limit is agreed with consumers from measured arrival times.
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: PERF-02
   status: draft
   since: 0.1.0
@@ -77,6 +89,15 @@
   review_check: PERF-02
   related:
   - SERV-02
+  enforced_by:
+    shift_left:
+    - SL-COST-CODE-23
+    - SL-COST-CONFIG-05
+    - SL-COST-CONFIG-06
+    proposed: []
+    runtime: true
+    review: null
+    gap: null
 - id: SERV-02
   status: draft
   since: 0.1.0
@@ -103,3 +124,9 @@
   - ORCH-01
   - PERF-02
   - OPS-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'

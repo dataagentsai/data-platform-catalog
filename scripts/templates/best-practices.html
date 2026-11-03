@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Engineering best practices</title>
+<style>
+:root{
+  --accent:#1f6feb; --accent-soft:#eaf2fe; --ink:#1f2328; --muted:#5b6470; --line:#d8dde3;
+  --bg:#ffffff; --panel:#f7f9fb; --aws:#b35c00; --dbx:#c4321f;
+  --panel-w:300px;
+}
+*{box-sizing:border-box}
+html{font-size:16px}
+body{margin:0;background:#fff;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+html.present{font-size:19px}
+button{font:inherit;color:inherit;cursor:pointer}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.86em;background:#f1f3f5;border:1px solid #e6e9ed;border-radius:4px;padding:0 .3em;white-space:nowrap}
+
+/* ---------- filter panel ---------- */
+aside{position:fixed;top:0;left:0;bottom:0;width:var(--panel-w);overflow-y:auto;background:var(--panel);border-right:1px solid var(--line);padding:18px 16px 28px;z-index:10}
+.panel-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.panel-top h2{font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+.linkbtn{background:none;border:0;color:var(--accent);font-size:.85rem;padding:2px 0}
+.linkbtn:hover{text-decoration:underline}
+#search{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font:inherit;font-size:.92rem;background:#fff;color:var(--ink)}
+#search:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+.group{margin-top:18px}
+.group h3{font-size:.78rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;font-size:.84rem;line-height:1.25;text-align:left}
+.chip .n{font-size:.75rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.chip:hover{border-color:var(--accent)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip.on .n{color:#dbe8fd}
+.chip.zero{opacity:.45}
+.group.comp .chips{flex-direction:column;align-items:stretch}
+.group.comp .chip{border-radius:6px;justify-content:space-between}
+.panel-foot{margin-top:22px;font-size:.78rem;color:var(--muted)}
+.panel-foot code{white-space:normal}
+
+/* slim bar in present mode */
+#slim{display:none;position:fixed;top:0;left:0;bottom:0;width:52px;background:var(--panel);border-right:1px solid var(--line);z-index:9;flex-direction:column;align-items:center;padding-top:14px;gap:10px}
+#slim button{writing-mode:vertical-rl;transform:rotate(180deg);background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px 6px;font-size:.8rem;color:var(--ink)}
+#slim button:hover{border-color:var(--accent);color:var(--accent)}
+#slim .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);display:none}
+#slim .dot.show{display:block}
+body.present aside{display:none;box-shadow:4px 0 18px rgba(0,0,0,.12)}
+body.present #slim{display:flex}
+body.present.panel-open aside{display:block;left:52px}
+
+/* ---------- main ---------- */
+main{margin-left:var(--panel-w);padding:26px 34px 60px;max-width:2000px}
+body.present main{margin-left:52px;padding:22px 30px 60px}
+header{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:8px}
+.hrow{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap}
+h1{font-size:1.9rem;margin:0;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:4px 0 0;font-size:1.05rem}
+.for{font-size:.82rem;color:var(--muted);margin-top:2px}
+.tools{display:flex;gap:8px;align-items:center}
+.btn{border:1px solid var(--line);background:#fff;border-radius:6px;padding:7px 12px;font-size:.88rem}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.legend{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:14px;font-size:.92rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.status{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:12px 0 4px}
+#count{font-weight:600;font-variant-numeric:tabular-nums}
+#active{display:flex;flex-wrap:wrap;gap:6px}
+.af{font-size:.8rem;border:1px solid var(--accent);color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 9px}
+.af b{font-weight:600}
+
+/* kinds */
+.kind{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:2px 7px;white-space:nowrap;border:1px solid transparent}
+.k-P{background:var(--accent);color:#fff}
+.k-B{background:#fff;color:var(--accent);border-color:var(--accent)}
+.k-A{background:var(--ink);color:#fff}
+
+/* sections + cards */
+section.grp{margin-top:26px}
+section.grp>h2{font-size:1.05rem;margin:0 0 10px;display:flex;align-items:baseline;gap:10px}
+section.grp>h2 .n{font-size:.85rem;color:var(--muted);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:14px}
+body.present .grid{grid-template-columns:repeat(auto-fill,minmax(32rem,1fr))}
+.card{border:1px solid var(--line);border-radius:8px;padding:13px 16px 11px;background:#fff;display:flex;flex-direction:column;gap:7px;border-top:3px solid var(--line)}
+.card.P{border-top-color:var(--accent)}
+.card.B{border-top-color:#9ec0f7}
+.card.A{border-top-color:var(--ink)}
+.chead{display:flex;align-items:center;gap:10px}
+.chead h4{margin:0;font-size:1.04rem;line-height:1.3;font-weight:650}
+.row{font-size:.93rem;margin:0}
+.row .lbl{font-weight:650;color:var(--ink);margin-right:4px}
+.row.why{color:#2c333a}
+.enf{display:flex;flex-direction:column;gap:5px;font-size:.9rem;margin:0}
+.enf .lbl{font-weight:650;color:var(--ink)}
+.slrow{display:flex;flex-wrap:wrap;gap:5px}
+.sl{display:inline-flex;align-items:baseline;gap:5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.76rem;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;background:#fff;white-space:nowrap;cursor:help}
+.sl small{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.eline{display:flex;align-items:baseline;gap:7px;line-height:1.4}
+.ek{flex:none;font-size:.68rem;font-weight:650;letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);border-radius:4px;padding:1px 6px;color:var(--muted);background:#f7f9fb;white-space:nowrap}
+.ek.rt{color:var(--ink);border-color:#c9d1da}
+.ek.rv{color:var(--muted)}
+.eline.gap{border:1px dashed #9aa4af;border-radius:6px;padding:4px 8px;background:#fff}
+.ek.gap{border-style:dashed;border-color:#9aa4af;background:#fff;color:var(--ink)}
+.eline.gap .gid{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.76rem;color:var(--muted);white-space:nowrap;margin-right:4px}
+.summary{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:12px;font-size:.92rem;color:var(--ink)}
+.summary b{font-variant-numeric:tabular-nums}
+.summary .sep{color:#b5bdc6}
+.summary .lead{color:var(--muted)}
+.chead .bp{margin-left:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.72rem;color:var(--muted);white-space:nowrap}
+.dacrow{display:flex;flex-wrap:wrap;align-items:baseline;gap:5px;font-size:.9rem}
+.dacrow .lbl{font-weight:650;color:var(--ink);margin-right:2px}
+.dac{display:inline-flex;align-items:baseline;gap:4px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.76rem;color:var(--ink);border:1px solid #c9d1da;border-radius:4px;padding:1px 6px;background:#f7f9fb;white-space:nowrap;cursor:help}
+.dac small{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;font-size:.64rem;color:var(--muted);letter-spacing:.03em}
+.instead{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;padding:6px 10px}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:auto;padding-top:6px;border-top:1px dashed #e6e9ed}
+.tag{font-size:.74rem;color:var(--muted);border:1px solid #e3e7ec;border-radius:999px;padding:1px 8px;background:#fff}
+.tag.layer{color:var(--ink);border-color:#c9d1da}
+.tag:hover{border-color:var(--accent);color:var(--accent);cursor:pointer}
+.aws{color:var(--aws);font-weight:600}
+.dbx{color:var(--dbx);font-weight:600}
+.empty{padding:40px 0;color:var(--muted);font-size:1.05rem}
+mark{background:#fff3b0;color:inherit;padding:0}
+
+@media (max-width:900px){
+  aside{position:static;width:auto;border-right:0;border-bottom:1px solid var(--line)}
+  main{margin-left:0;padding:18px 16px}
+  .grid{grid-template-columns:1fr}
+  .card{min-width:0}
+  code,.sl,.dac{white-space:normal;overflow-wrap:anywhere}
+  body.present main{margin-left:52px}
+}
+@media print{aside,#slim,.tools{display:none!important}main{margin-left:0}.card{break-inside:avoid}}
+</style>
+</head>
+<body>
+
+<aside id="panel" aria-label="Filters">
+  <div class="panel-top">
+    <h2>Filters</h2>
+    <button class="linkbtn" id="clear">Clear all</button>
+  </div>
+  <input id="search" type="search" placeholder="Search, e.g. SCD2, OTIF" aria-label="Search">
+  <div class="group" id="g-kind"><h3>Kind</h3><div class="chips"></div></div>
+  <div class="group" id="g-layer"><h3>Layer</h3><div class="chips"></div></div>
+  <div class="group comp" id="g-comp"><h3>Component</h3><div class="chips"></div></div>
+  <div class="group" id="g-enf"><h3>Enforced by</h3><div class="chips"></div></div>
+  <div class="panel-foot">
+    Filters are combined: within a group any chip matches, across groups all must match.
+    Share a view with the page address, e.g. <code>#layer=Gold&amp;kind=Anti-pattern</code> or <code>#enforced=gap</code>.
+    Press <b>P</b> for present mode (or add <code>&amp;present=1</code>), <b>/</b> to search.
+    Search also finds a DAC id, e.g. <code>#q=GOLD-01</code>.
+  </div>
+  <div class="panel-foot">
+    Generated from the data platform catalog (<code>practices/</code>, <code>dac/</code> and the shift-left
+    bundle) by <code>scripts/build_practices_page.py</code>. Do not edit this page; edit the catalog.
+  </div>
+</aside>
+<div id="slim"><button id="slimbtn" title="Show filters">Filters</button><span class="dot" id="slimdot"></span></div>
+
+<main>
+  <header>
+    <div class="hrow">
+      <div>
+        <h1>Engineering best practices</h1>
+        <p class="sub">Data platform on AWS and Databricks · the canon every layer follows</p>
+        <div class="for">Prepared for Apollo Tyres</div>
+      </div>
+      <div class="tools">
+        <button class="btn" id="present" title="Larger text, filter panel folded away (key: P)">Present</button>
+      </div>
+    </div>
+    <div class="legend">
+      <span><span class="kind k-P">Principle</span> the canon: a rule every layer and every component follows</span>
+      <span><span class="kind k-B">Best practice</span> how we apply the canon in a specific place</span>
+      <span><span class="kind k-A">Anti-pattern</span> a common mistake we block, and what to do instead</span>
+    </div>
+    <div class="summary" id="summary"></div>
+  </header>
+  <div class="status"><span id="count"></span><span id="active"></span></div>
+  <div id="cards"></div>
+</main>
+
+<script>
+/*@DATA@*/
+</script>
+<script>
+/* ===================== page logic (no need to edit below) ===================== */
+const LAYERS = [["L","Landing"],["B","Bronze"],["S","Silver"],["G","Gold"],["M","Semantic"],["X","Cross-cutting"]];
+const COMPONENTS = [
+  ["meta","Metadata store and config"],["ing","Ingestion"],["orch","Orchestration"],
+  ["b2s","Bronze to silver"],["s2g","Silver to gold"],["model","Data modelling"],
+  ["sem","Semantic layer"],["dq","Data expectation services (data quality)"],
+  ["gov","Governance and lineage"],["sec","Security and privacy"],["test","Testing"],
+  ["devops","DevOps and CI/CD"],["mon","Monitoring and observability"],["cost","Cost and performance"]];
+const KINDS = [["P","Principle"],["B","Best practice"],["A","Anti-pattern"]];
+const ENF = [["sl","Shift-left check"],["runtime","Runtime check"],["review","Review"],["gap","Gap (proposed check)"]];
+const ENF_CODE = {"shift-left":"sl",runtime:"runtime",review:"review",gap:"gap"};
+const STAGE = {commit:"commit",pr:"PR",predeploy:"pre-deploy",nightly:"nightly"};
+const GROUPS = {kind:{list:KINDS,field:"k",el:"g-kind",key:"kind",name:"Kind"},
+                layer:{list:LAYERS,field:"l",el:"g-layer",key:"layer",name:"Layer"},
+                comp:{list:COMPONENTS,field:"c",el:"g-comp",key:"component",name:"Component"},
+                enf:{list:ENF,el:"g-enf",key:"enforced",name:"Enforced by",short:true}};
+const ALIASES = {kind:{"principle (canon)":"P","canon":"P","principles":"P","best practices":"B","anti-patterns":"A","antipattern":"A","anti pattern":"A"},
+                 comp:{"data quality":"dq","data expectation services":"dq"}, layer:{},
+                 enf:{"shift-left":"sl","shift left":"sl","shiftleft":"sl","rt":"runtime","rv":"review","proposed":"gap","proposed check":"gap","gap":"gap"}};
+const label = (list,code)=> (list.find(x=>x[0]===code)||[code,code])[1];
+
+function enfText(e){
+  if (e.type==="shift-left") return e.ids.map(i=>i+" "+((CHECKS[i]||[""])[0])).join(" ");
+  if (e.type==="gap") return "proposed check "+e.id+" "+e.text+" "+((GAPS[e.id]||["","",""])[2]);
+  return e.text;
+}
+const DATA = ENTRIES.map((e,i)=>({...e, idx:i, L:e.l.split(/\s+/), C:e.c.split(/\s+/), K:[e.k],
+  EN:[...new Set(e.enforced.map(x=>ENF_CODE[x.type]))],
+  hay:[e.id,e.t,e.w,e.h,e.i||"",e.enforced.map(enfText).join(" "),e.d.map(x=>x+" "+((DAC[x]||[""])[0])).join(" "),e.l.split(/\s+/).map(x=>label(LAYERS,x)).join(" "),
+       e.c.split(/\s+/).map(x=>label(COMPONENTS,x)).join(" "),label(KINDS,e.k)].join(" ").toLowerCase()}));
+const vals = (d,g)=> g==="layer"? d.L : g==="comp"? d.C : g==="enf"? d.EN : d.K;
+
+const state = {layer:new Set(), comp:new Set(), kind:new Set(), enf:new Set(), q:""};
+
+/* summary strip, computed from the data */
+(function(){
+  const n = t => DATA.filter(d=>d.EN.includes(t)).length;
+  const ids = new Set(), gaps = new Set();
+  ENTRIES.forEach(e=>e.enforced.forEach(x=>{ if (x.type==="shift-left") x.ids.forEach(i=>ids.add(i)); if (x.type==="gap") gaps.add(x.id); }));
+  const link = (code,txt)=> `<button class="linkbtn" data-g="enf" data-v="${code}">${txt}</button>`;
+  const sep = '<span class="sep">·</span>';
+  document.getElementById("summary").innerHTML = [
+    `<span class="lead"><b>${DATA.length}</b> practices</span>`,
+    `<span class="lead">serving <b>${new Set(ENTRIES.flatMap(e=>e.d)).size}</b> DAC obligations</span>`,
+    link("sl",`<b>${n("sl")}</b> enforced by shift-left checks (${ids.size} distinct checks)`),
+    link("runtime",`<b>${n("runtime")}</b> by runtime checks`),
+    link("review",`<b>${n("review")}</b> by review`),
+    link("gap",`<b>${gaps.size}</b> proposed checks`)].join(sep);
+})();
+
+/* product name colouring */
+const AWS = ["Aurora PostgreSQL","AWS DMS","AWS CUR","AppFlow","Transfer Family","EventBridge","Kinesis","IoT SiteWise","Amazon Macie","Macie","CloudTrail","CloudWatch","SNS","PrivateLink","KMS","S3","AWS"];
+const DBX = ["Unity Catalog","Lakeflow Jobs","Lakeflow Connect","Declarative Pipelines","Declarative Pipeline","AUTO CDC","Lakehouse Federation","Lakehouse Monitoring","Genie","AI/BI dashboards","Databricks Asset Bundles","Asset Bundles","metric views","metric view","predictive optimization","liquid clustering AUTO","liquid clustering","liquid clustered","Photon","Databricks SQL alerts","budget policies","system tables","DQX","Delta change data feed","Delta","VARIANT","streaming tables","Databricks"];
+const TERM_CLASS = {}; AWS.forEach(t=>TERM_CLASS[t]="aws"); DBX.forEach(t=>TERM_CLASS[t]="dbx");
+const TERM_RE = new RegExp("(?<![\\w-])(" + Object.keys(TERM_CLASS).sort((a,b)=>b.length-a.length)
+  .map(t=>t.replace(/[.*+?^${}()|[\]\\\/]/g,"\\$&")).join("|") + ")(?![\\w-])","g");
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function rich(s){
+  return s.split("`").map((part,i)=> i%2 ? "<code>"+esc(part)+"</code>"
+    : esc(part).replace(TERM_RE,m=>`<span class="${TERM_CLASS[m]}">${m}</span>`)).join("");
+}
+
+/* filtering */
+function matches(d, skip){
+  for (const g of Object.keys(GROUPS)){
+    if (g===skip) continue;
+    const s = state[g];
+    if (s.size && !vals(d,g).some(v=>s.has(v))) return false;
+  }
+  if (state.q){
+    for (const w of state.q.toLowerCase().split(/\s+/).filter(Boolean)) if (!d.hay.includes(w)) return false;
+  }
+  return true;
+}
+
+function renderChips(){
+  for (const [g,cfg] of Object.entries(GROUPS)){
+    const box = document.querySelector("#"+cfg.el+" .chips");
+    const pool = DATA.filter(d=>matches(d,g));
+    box.innerHTML = cfg.list.map(([code,name])=>{
+      const n = pool.filter(d=>vals(d,g).includes(code)).length;
+      const on = state[g].has(code);
+      return `<button class="chip${on?" on":""}${!n&&!on?" zero":""}" data-g="${g}" data-v="${code}" aria-pressed="${on}">`
+        + `<span>${esc(name)}</span><span class="n">${n}</span></button>`;
+    }).join("");
+  }
+}
+
+function enfHTML(d){
+  const ids = d.enforced.filter(x=>x.type==="shift-left").flatMap(x=>x.ids);
+  let h = `<div class="row enf"><span class="lbl">Enforced by</span>`;
+  if (ids.length) h += `<div class="slrow">` + ids.map(i=>{
+      const [t,st] = CHECKS[i] || ["",""];
+      return `<span class="sl" title="${esc(i+": "+t+" (checked at "+(STAGE[st]||st)+")")}">${i}<small>${STAGE[st]||st}</small></span>`;
+    }).join("") + `</div>`;
+  for (const x of d.enforced){
+    if (x.type==="runtime") h += `<div class="eline"><span class="ek rt">Runtime</span><span>${rich(x.text)}</span></div>`;
+    else if (x.type==="review") h += `<div class="eline"><span class="ek rv">Review</span><span>${rich(x.text)}</span></div>`;
+    else if (x.type==="gap"){
+      const [,st,what] = GAPS[x.id] || ["","",""];
+      h += `<div class="eline gap" title="${esc("Catches: "+what+". Not in the shift-left bundle yet; suggested stage: "+(STAGE[st]||st)+".")}"><span class="ek gap">Proposed check</span>`
+         + `<span><span class="gid">${x.id}</span>${rich(x.text)}</span></div>`;
+    }
+  }
+  return h + `</div>`;
+}
+
+function dacHTML(d){
+  return `<div class="dacrow"><span class="lbl">Serves DAC</span>` + d.d.map(i=>{
+    const [t,lv] = DAC[i] || ["",""];
+    return `<span class="dac" title="${esc(i+" ("+lv+"): "+t)}">${i}<small>${lv}</small></span>`;
+  }).join("") + `</div>`;
+}
+
+function cardHTML(d){
+  const kindName = label(KINDS,d.k);
+  const tags = d.L.map(x=>`<span class="tag layer" data-g="layer" data-v="${x}">${label(LAYERS,x)}</span>`).join("")
+             + d.C.map(x=>`<span class="tag" data-g="comp" data-v="${x}">${esc(label(COMPONENTS,x))}</span>`).join("");
+  return `<article class="card ${d.k}">
+    <div class="chead"><span class="kind k-${d.k}">${kindName}</span><h4>${rich(d.t)}</h4><span class="bp">${d.id}</span></div>
+    <p class="row why"><span class="lbl">Why</span>${rich(d.w)}</p>
+    <p class="row"><span class="lbl">${d.k==="A"?"How we prevent it":"How we do it"}</span>${rich(d.h)}</p>
+    ${enfHTML(d)}
+    ${d.i?`<p class="row instead"><span class="lbl">Do this instead</span>${rich(d.i)}</p>`:""}
+    ${dacHTML(d)}
+    <div class="tags">${tags}</div>
+  </article>`;
+}
+
+function render(){
+  renderChips();
+  const shown = DATA.filter(d=>matches(d,null));
+  document.getElementById("count").textContent = `Showing ${shown.length} of ${DATA.length}`;
+  const groups = [["canon","The canon: principles every layer follows"], ...COMPONENTS];
+  let html = "";
+  for (const [key,name] of groups){
+    const items = shown.filter(d=>(d.g || (d.k==="P" ? "canon" : d.C[0]))===key);
+    if (!items.length) continue;
+    html += `<section class="grp"><h2>${esc(name)}<span class="n">${items.length}</span></h2><div class="grid">${items.map(cardHTML).join("")}</div></section>`;
+  }
+  document.getElementById("cards").innerHTML = html || `<div class="empty">No entries match these filters. <button class="linkbtn" onclick="clearAll()">Clear all filters</button></div>`;
+  // active filter summary
+  const af = [];
+  for (const [g,cfg] of Object.entries(GROUPS))
+    for (const v of state[g]) af.push(`<button class="af" data-g="${g}" data-v="${v}" title="Remove">${cfg.name}: <b>${esc(label(cfg.list,v))}</b> ×</button>`);
+  if (state.q) af.push(`<button class="af" data-q="1" title="Remove">Search: <b>${esc(state.q)}</b> ×</button>`);
+  document.getElementById("active").innerHTML = af.join("");
+  document.getElementById("slimdot").classList.toggle("show", af.length>0);
+  writeHash();
+}
+
+/* hash: #layer=Gold,Silver&component=Silver to gold&kind=Anti-pattern&q=scd2 */
+function resolve(g, raw){
+  const v = raw.trim().toLowerCase(); if (!v) return null;
+  const list = GROUPS[g].list;
+  if (ALIASES[g][v]) return ALIASES[g][v];
+  for (const [code,name] of list){
+    const n = name.toLowerCase();
+    if (v===code.toLowerCase() || v===n || v===n.replace(/\s*\(.*\)$/,"")) return code;
+  }
+  const pre = list.filter(([,name])=>name.toLowerCase().startsWith(v));
+  return pre.length===1 ? pre[0][0] : null;
+}
+function readHash(){
+  const p = new URLSearchParams(location.hash.replace(/^#/,""));
+  for (const [g,cfg] of Object.entries(GROUPS)){
+    state[g] = new Set();
+    const raw = p.get(cfg.key) || (g==="comp" ? p.get("comp") : null);
+    if (raw) raw.split(",").forEach(x=>{ const c = resolve(g,x); if (c) state[g].add(c); });
+  }
+  state.q = p.get("q") || "";
+  document.getElementById("search").value = state.q;
+  if (p.has("present")) setPresent(p.get("present")!=="0", true);
+}
+function writeHash(){
+  const parts = [];
+  for (const [g,cfg] of Object.entries(GROUPS))
+    if (state[g].size) parts.push(cfg.key+"="+[...state[g]].map(v=>encodeURIComponent(cfg.short ? v : label(cfg.list,v))).join(","));
+  if (state.q) parts.push("q="+encodeURIComponent(state.q));
+  if (document.body.classList.contains("present")) parts.push("present=1");
+  const h = parts.length ? "#"+parts.join("&") : "";
+  if (h !== location.hash && !(h==="" && location.hash==="")) {
+    try { history.replaceState(null,"",location.pathname+location.search+h); } catch(e) {}
+  }
+}
+
+function toggle(g,v){ state[g].has(v) ? state[g].delete(v) : state[g].add(v); render(); }
+function clearAll(){ for (const g in GROUPS) state[g].clear(); state.q=""; document.getElementById("search").value=""; render(); }
+
+document.addEventListener("click", ev=>{
+  const t = ev.target.closest("[data-g],[data-q]");
+  if (!t) return;
+  if (t.dataset.q){ state.q=""; document.getElementById("search").value=""; render(); return; }
+  toggle(t.dataset.g, t.dataset.v);
+});
+document.getElementById("clear").onclick = clearAll;
+let qTimer; document.getElementById("search").addEventListener("input", e=>{
+  clearTimeout(qTimer); qTimer = setTimeout(()=>{ state.q = e.target.value.trim(); render(); }, 120);
+});
+function setPresent(on, quiet){
+  document.body.classList.toggle("present", on);
+  document.documentElement.classList.toggle("present", on);
+  document.body.classList.remove("panel-open");
+  document.getElementById("present").classList.toggle("on", on);
+  document.getElementById("present").textContent = on ? "Exit present" : "Present";
+  if (!quiet) writeHash();
+}
+document.getElementById("present").onclick = ()=> setPresent(!document.body.classList.contains("present"));
+document.getElementById("slimbtn").onclick = ()=> document.body.classList.toggle("panel-open");
+document.addEventListener("keydown", e=>{
+  if (e.target.matches("input,textarea")) { if (e.key==="Escape") e.target.blur(); return; }
+  if (e.key==="p"||e.key==="P") setPresent(!document.body.classList.contains("present"));
+  if (e.key==="Escape") document.body.classList.remove("panel-open");
+  if (e.key==="/") { e.preventDefault(); if (document.body.classList.contains("present")) document.body.classList.add("panel-open"); document.getElementById("search").focus(); }
+});
+window.addEventListener("hashchange", ()=>{ readHash(); render(); });
+readHash(); render();
+</script>
+</body>
+</html>

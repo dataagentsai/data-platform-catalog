@@ -22,6 +22,14 @@
   related:
   - ENV-02
   - REL-04
+  enforced_by:
+    shift_left:
+    - SL-COST-CONFIG-07
+    - SL-DEP-05
+    proposed: []
+    runtime: true
+    review: null
+    gap: null
 - id: REL-01
   status: draft
   since: 0.1.0
@@ -47,6 +55,17 @@
   - REL-02
   - REL-03
   - REL-06
+  enforced_by:
+    shift_left:
+    - SL-DEP-01
+    - SL-DEP-02
+    - SL-DEP-04
+    - SL-DEP-06
+    - SL-SETUP-09
+    proposed: []
+    runtime: true
+    review: null
+    gap: null
 - id: REL-02
   status: draft
   since: 0.1.0
@@ -70,6 +89,36 @@
   related:
   - REL-01
   - TEST-03
+  enforced_by:
+    shift_left:
+    - SL-CLEAN-01
+    - SL-CLEAN-02
+    - SL-CLEAN-03
+    - SL-CLEAN-05
+    - SL-CLEAN-06
+    - SL-CLEAN-09
+    - SL-CLEAN-10
+    - SL-CLEAN-11
+    - SL-CLEAN-12
+    - SL-CLEAN-14
+    - SL-CLEAN-15
+    - SL-CLEAN-17
+    - SL-CLEAN-20
+    - SL-CLEAN-22
+    - SL-CLEAN-25
+    - SL-CLEAN-26
+    - SL-SETUP-01
+    - SL-SETUP-05
+    - SL-SETUP-07
+    - SL-SETUP-09
+    - SL-STYLE-01
+    - SL-STYLE-02
+    - SL-STYLE-03
+    - SL-STYLE-04
+    proposed: []
+    runtime: true
+    review: Every change to the main branch is reviewed by someone other than its author.
+    gap: null
 - id: REL-03
   status: draft
   since: 0.1.0
@@ -95,6 +144,13 @@
   - REL-01
   - REL-04
   - REL-07
+  enforced_by:
+    shift_left:
+    - SL-DEP-02
+    proposed: []
+    runtime: true
+    review: null
+    gap: null
 - id: REL-04
   status: draft
   since: 0.1.0
@@ -119,6 +175,15 @@
   - REL-03
   - REL-05
   - ENV-01
+  enforced_by:
+    shift_left:
+    - SL-CLEAN-07
+    - SL-SECRET-03
+    proposed:
+    - SL-CLEAN-33
+    runtime: true
+    review: null
+    gap: null
 - id: REL-06
   status: draft
   since: 0.1.0
@@ -142,3 +207,10 @@
   related:
   - REL-01
   - ENV-01
+  enforced_by:
+    shift_left:
+    - SL-SETUP-06
+    proposed: []
+    runtime: true
+    review: null
+    gap: null

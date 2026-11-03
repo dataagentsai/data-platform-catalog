@@ -1,0 +1,43 @@
+# Cards from the page that were not kept, each with the reason. Ids are never reused.
+- id: BP-008
+  status: draft
+  since: 0.1.0
+  kind: principle
+  title: Code to interfaces (ports and adapters)
+  why: Vendors and services change; the core logic should not have to.
+  how:
+    binding: aws-databricks
+    text: Every outside system (source connectors, token vault, metadata store, alert channel) sits behind a port
+      with an adapter, so a swap is a new adapter plus a config binding, not a rewrite.
+  layers:
+  - platform
+  components:
+  - test
+  - ing
+  - devops
+  enforced_by:
+  - shift_left:
+    - SL-PURE-04
+  - review: Review checks every outside system sits behind a port, with contract tests run against each adapter.
+  dropped: An architecture rule, not something a running platform can be tested for. It is owned by ADR-015 (kernel,
+    ports, adapters and realms), ADR-020 (every adapter passes its port's contract test) and the DPC ports in dpc/ports.yaml.
+- id: BP-009
+  status: draft
+  since: 0.1.0
+  kind: principle
+  title: Best use of the platform before building
+  why: Every component we build is one we must run and maintain; Databricks and AWS already solve much of the problem.
+  how:
+    binding: aws-databricks
+    text: Unity Catalog for governance and lineage, AUTO CDC for history, predictive optimization for table upkeep,
+      Lakeflow Jobs for orchestration, metric views for meaning. We build only the gap, such as the lander and the
+      run recorder.
+  layers:
+  - platform
+  components:
+  - cost
+  - gov
+  enforced_by:
+  - review: Design review asks what the platform already does before any new component is approved.
+  dropped: A design-review habit (reuse first, build only the gap), not a property of the platform. It belongs in
+    the ADRs' 'options considered' sections and in the charter, not in DAC.

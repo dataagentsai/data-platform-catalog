@@ -23,3 +23,9 @@
   - HEAL-01
   review_check: null
   plan_rule: R6
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: Every agent use case passes design review, with its allowed actions listed.
+    gap: 'No build-time check yet: found only by the runtime test.'

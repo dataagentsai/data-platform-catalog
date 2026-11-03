@@ -1,0 +1,16 @@
+# The components a practice can belong to (from the AWS and Databricks client deck). Code: name.
+# A practice's first component decides its section on the generated page; principles go in "the canon".
+meta: Metadata store and config
+ing: Ingestion
+orch: Orchestration
+b2s: Bronze to silver
+s2g: Silver to gold
+model: Data modelling
+sem: Semantic layer
+dq: Data expectation services (data quality)
+gov: Governance and lineage
+sec: Security and privacy
+test: Testing
+devops: DevOps and CI/CD
+mon: Monitoring and observability
+cost: Cost and performance

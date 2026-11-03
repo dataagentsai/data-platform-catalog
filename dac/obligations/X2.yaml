@@ -26,6 +26,13 @@
   related:
   - ORCH-02
   - SERV-02
+  enforced_by:
+    shift_left: []
+    proposed:
+    - SL-JOB-02
+    runtime: true
+    review: null
+    gap: null
 - id: ORCH-02
   status: draft
   since: 0.1.0
@@ -52,6 +59,12 @@
   - ORCH-01
   - DQ-03
   - OPS-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: ORCH-04
   status: draft
   since: 0.1.0
@@ -77,3 +90,10 @@
   review_check: ORCH-04
   related:
   - ORCH-03
+  enforced_by:
+    shift_left: []
+    proposed:
+    - SL-JOB-01
+    runtime: true
+    review: null
+    gap: null

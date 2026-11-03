@@ -1,0 +1,150 @@
+# Practices: Governance and lineage. Normative: edit here.
+- id: BP-023
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: One metastore per region, catalogs per environment and layer
+  why: The same shape in every environment means code moves between them by changing one prefix, and binding stops
+    cross-environment access.
+  how:
+    binding: aws-databricks
+    text: One Unity Catalog metastore in ap-south-1 (Mumbai); catalogs `<env>_bronze`, `<env>_silver`, `<env>_gold`,
+      `<env>_ops` for dev, test and prod, each bound only to its own environment's workspace.
+  layers:
+  - platform
+  components:
+  - gov
+  - sec
+  enforced_by:
+  - review: The Terraform plan for catalogs and workspace bindings is reviewed in the pull request.
+  - runtime: Workspace bindings refuse access to another environment's catalogs.
+  dac:
+  - ENV-01
+  adr:
+  - ADR-012
+- id: BP-024
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Names and schemas follow one pattern
+  why: Predictable names let people and tools find a table without asking, and keep generated code simple.
+  how:
+    binding: aws-databricks
+    text: '`<env>_<layer>.<schema>.<table>` in lower snake_case; a schema per source in bronze and silver, a schema
+      per business domain in gold; `fact_` and `dim_` in gold, `mv_` for metric views. The generator creates catalogs,
+      schemas and tables from metadata.'
+  layers:
+  - bronze
+  - silver
+  - gold
+  - semantic
+  components:
+  - gov
+  - model
+  - meta
+  enforced_by:
+  - shift_left:
+    - SL-STYLE-04
+  dac:
+  - NAME-01
+  adr:
+  - ADR-012
+- id: BP-025
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Lineage from source file to dashboard
+  why: When a number is questioned, we must show which source file it came from and every step it passed through.
+  how:
+    binding: aws-databricks
+    text: Our file log records each source file and batch; provenance columns carry run id, file and record hash
+      into silver; Unity Catalog lineage carries it from table to table and on to dashboards and Genie.
+  layers:
+  - landing
+  - bronze
+  - silver
+  - gold
+  - semantic
+  components:
+  - gov
+  - mon
+  enforced_by:
+  - runtime: The engine's output check fails a silver write without provenance columns; Unity Catalog records table
+      lineage.
+  dac:
+  - LIN-01
+  - OPS-03
+  adr: []
+- id: BP-026
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Owners, glossary and data products with contracts
+  why: Data without a named owner and an agreed meaning is not trusted, so it is not used.
+  how:
+    binding: aws-databricks
+    text: Every gold table and metric view has an owner tag and a glossary term; a data product bundles tables and
+      metric views with a contract that states grain, freshness and quality.
+  layers:
+  - gold
+  - semantic
+  components:
+  - gov
+  - sem
+  enforced_by:
+  - shift_left:
+    - SL-SEM-06
+  - proposed: SL-META-01
+  dac:
+  - SERV-01
+  - SERV-04
+  adr: []
+- id: BP-027
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Audit from the platform's own access logs and the cloud's logs
+  why: We must be able to answer who read or changed what, and when, without building our own audit trail.
+  how:
+    binding: aws-databricks
+    text: Databricks audit and access system tables cover data access and permission changes; CloudTrail covers
+      AWS actions on buckets, keys and network.
+  layers:
+  - platform
+  components:
+  - gov
+  - sec
+  - mon
+  enforced_by:
+  - runtime: Ops dashboards over the audit system tables and CloudTrail.
+  - review: Regular access review.
+  dac:
+  - SEC-04
+  adr: []
+- id: BP-028
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Developing or hot-fixing in prod
+  why: A change made by hand in prod is untested, unreviewed and lost on the next deploy.
+  how:
+    binding: aws-databricks
+    text: Developers have no write grants on `prod_` catalogs; only the deployment service principal does.
+  instead: Work in your own schema in a `dev_` catalog, open a pull request, and let CI promote the change through
+    test to prod.
+  layers:
+  - platform
+  components:
+  - gov
+  - devops
+  - sec
+  enforced_by:
+  - shift_left:
+    - SL-SEC-08
+    - SL-SETUP-05
+  - runtime: Developers have no write grants on prod catalogs; only the deployment service principal does.
+  dac:
+  - ENV-01
+  - REL-03
+  - ENV-02
+  adr: []

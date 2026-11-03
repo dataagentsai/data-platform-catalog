@@ -25,6 +25,15 @@
   related:
   - DUP-03
   - SERV-01
+  enforced_by:
+    shift_left:
+    - SL-CLEAN-31
+    - SL-CLEAN-32
+    proposed:
+    - SL-META-01
+    runtime: true
+    review: The domain owner agrees the grain and the key before the first load.
+    gap: null
 - id: GATE-02
   status: draft
   since: 0.1.0
@@ -53,6 +62,84 @@
   - SERV-04
   review_check: null
   plan_rule: R6
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: The named owner approves every change to a contract or metric definition.
+    gap: 'No build-time check yet: found only by the runtime test.'
+- id: ING-01
+  status: draft
+  since: 0.1.0
+  title: Every way into bronze passes the same entry steps
+  concern: X3
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - landing
+  - bronze
+  statement: Every delivery, whether pushed as files or pulled straight from the source, MUST pass the same entry
+    steps before its first write to bronze (contract check, personal-data protection, volume guard and delivery
+    log), and nothing else MAY read the raw delivery.
+  failure_mode: A team added a direct database pull for one urgent source; it skipped the contract check and the
+    tokenising step, and customer phone numbers sat in clear text in bronze for three months.
+  test: Run one delivery through each ingestion path (pushed file, direct pull, change feed) with a contract break
+    and a personal field; each path must hold the batch and protect the field before bronze.
+  evidence: The entry steps logged per batch for every path, and access rules that let only the entry process read
+    raw deliveries.
+  cites:
+  - standard: ODCS
+    ref: schema[]
+  - standard: DAMA-DMBOK
+    ref: Data Integration and Interoperability, chapter 8
+  related:
+  - SCH-01
+  - SCH-02
+  - PII-01
+  - DQ-04
+  - FILE-01
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed:
+    - SL-CLEAN-33
+    runtime: true
+    review: null
+    gap: null
+- id: PROJ-01
+  status: draft
+  since: 0.1.0
+  title: Every contract column reaches silver unless a selection is declared
+  concern: X3
+  level: MUST
+  core: false
+  dimension: completeness
+  stages:
+  - silver
+  statement: Silver MUST carry every column the contract declares unless the dataset declares a narrower selection;
+    a contract column MUST NOT be dropped without being declared.
+  failure_mode: A hand-written select list in silver left out a discount column the contract added later; gold margin
+    ignored discounts for two quarters.
+  test: Add a column to a contract and its source in test; after one run, the column must be in silver, or the dataset's
+    declared selection must name it as excluded.
+  evidence: A comparison of contract columns with silver columns per dataset, with every difference declared.
+  cites:
+  - standard: ODCS
+    ref: schema[].properties[]
+  related:
+  - SCH-01
+  - SERV-01
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed:
+    - SL-META-03
+    runtime: true
+    review: null
+    gap: null
 - id: SCH-01
   status: draft
   since: 0.1.0
@@ -78,6 +165,13 @@
   review_check: SCH-01
   related:
   - SCH-02
+  enforced_by:
+    shift_left:
+    - SL-COST-CODE-12
+    proposed: []
+    runtime: true
+    review: null
+    gap: null
 - id: SCH-02
   status: draft
   since: 0.1.0
@@ -105,6 +199,13 @@
   - SCH-01
   - DQ-01
   - OPS-01
+  enforced_by:
+    shift_left:
+    - SL-CLEAN-29
+    proposed: []
+    runtime: true
+    review: null
+    gap: null
 - id: SERV-01
   status: draft
   since: 0.1.0
@@ -132,3 +233,10 @@
   related:
   - DES-04
   - SERV-04
+  enforced_by:
+    shift_left: []
+    proposed:
+    - SL-META-03
+    runtime: true
+    review: The owner and the main consumers agree the contract before first publish.
+    gap: null

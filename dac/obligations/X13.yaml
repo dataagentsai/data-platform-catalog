@@ -1,4 +1,69 @@
 # DAC obligations for X13, Governance, catalog and semantics. Normative: edit here.
+- id: CAT-01
+  status: draft
+  since: 0.1.0
+  title: The catalog says what the metadata says
+  concern: X13
+  level: MUST
+  core: false
+  dimension: consistency
+  stages:
+  - bronze
+  - silver
+  - gold
+  - semantic
+  statement: Table and column descriptions, owners, classifications and keys in the data catalog MUST match the
+    declared metadata, and any difference MUST be reported.
+  failure_mode: An owner was changed in metadata but not in the catalog; access policies keyed on the owner tag
+    kept granting the old team, and the search tool kept describing a dropped column.
+  test: Change a description and a classification in metadata, deploy, and compare the catalog; then change the
+    catalog by hand, and the drift check must report it.
+  evidence: The daily drift report between metadata and catalog, empty or with each difference owned.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Metadata Management, chapter 12
+  related:
+  - SEC-01
+  - SERV-01
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
+- id: NAME-01
+  status: draft
+  since: 0.1.0
+  title: Table names follow one declared pattern
+  concern: X13
+  level: SHOULD
+  core: false
+  dimension: null
+  stages:
+  - bronze
+  - silver
+  - gold
+  - semantic
+  statement: Every table and view name SHOULD follow the declared pattern for its environment, layer and domain,
+    so a table can be found and its layer read from its name.
+  failure_mode: Gold held "sales_final", "sales_final_v2" and "fct_sales"; analysts used the wrong one for months.
+  test: Compare every deployed name with the pattern; each name that does not match is a finding.
+  evidence: The naming pattern, and a check over deployed names with no findings.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Metadata Management, chapter 12
+  related:
+  - CAT-01
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: SERV-04
   status: draft
   since: 0.1.0
@@ -24,3 +89,10 @@
   related:
   - SERV-01
   - SCD-04
+  enforced_by:
+    shift_left: []
+    proposed:
+    - SL-GOLD-05
+    runtime: true
+    review: The business owner signs off a metric before it is marked certified.
+    gap: null

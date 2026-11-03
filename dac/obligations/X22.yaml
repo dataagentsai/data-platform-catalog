@@ -20,3 +20,9 @@
   - TEST-05
   review_check: null
   plan_rule: R9
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'

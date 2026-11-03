@@ -1,0 +1,149 @@
+# Practices: Orchestration. Normative: edit here.
+- id: BP-047
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: One job per source
+  why: Each source has its own schedule and its own failures; one clock per source keeps them independent.
+  how:
+    binding: aws-databricks
+    text: One Lakeflow Jobs job per source runs a for-each over its datasets in parallel.
+  layers:
+  - bronze
+  components:
+  - orch
+  enforced_by:
+  - proposed: SL-META-04
+  dac:
+  - CFG-01
+  adr: []
+- id: BP-048
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Triggered by schedule or by events
+  why: Polling on a timer wastes compute and adds delay when the source could simply tell us it is ready.
+  how:
+    binding: aws-databricks
+    text: A job starts on a schedule or on an event via EventBridge, such as S3 file arrival or AppFlow finished.
+  layers:
+  - landing
+  - bronze
+  components:
+  - orch
+  enforced_by:
+  - shift_left:
+    - SL-COST-CONFIG-06
+  - proposed: SL-META-02
+  dac:
+  - ORCH-01
+  - COST-04
+  adr: []
+- id: BP-049
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Runs queue, never overlap
+  why: Two runs of the same job writing at once can double-load or interleave watermarks.
+  how:
+    binding: aws-databricks
+    text: Lakeflow Jobs queueing is on and concurrent runs are limited to one per job.
+  layers:
+  - bronze
+  - silver
+  - gold
+  components:
+  - orch
+  enforced_by:
+  - proposed: SL-JOB-01
+  dac:
+  - ORCH-04
+  adr: []
+- id: BP-050
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: One failed dataset never stops the rest
+  why: A bad file from one dataset should not delay twenty healthy ones from the same source.
+  how:
+    binding: aws-databricks
+    text: Each dataset is its own for-each iteration or pipeline flow; a failure is logged to `error_log` and alerted
+      while the others carry on.
+  layers:
+  - bronze
+  - silver
+  components:
+  - orch
+  - mon
+  enforced_by:
+  - runtime: A failure is logged to `error_log` and alerted while the other datasets carry on; an integration test
+      fails one dataset on purpose.
+  - review: Review checks each dataset runs as its own iteration or flow.
+  dac:
+  - DQ-03
+  - OPS-01
+  adr: []
+- id: BP-051
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Every file is accounted for
+  why: A file that silently disappears is the hardest kind of data loss to find.
+  how:
+    binding: aws-databricks
+    text: Every file in the manifest ends as loaded, rejected or held in `file_log`, each with a reason.
+  layers:
+  - landing
+  - bronze
+  components:
+  - orch
+  - mon
+  - dq
+  enforced_by:
+  - runtime: The ops builder compares manifests with the file log and alerts on any file with no outcome.
+  dac:
+  - FILE-01
+  adr: []
+- id: BP-052
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: A batch-ready marker starts bronze to silver
+  why: Silver should start when bronze is ready, not at a time we guess.
+  how:
+    binding: aws-databricks
+    text: The lander writes a batch-ready marker; a Lakeflow job with a table update trigger starts one Declarative
+      Pipeline update per source.
+  layers:
+  - bronze
+  - silver
+  components:
+  - orch
+  - b2s
+  enforced_by:
+  - proposed: SL-JOB-02
+  - runtime: The lander writes the batch-ready marker only after a successful append.
+  dac:
+  - ORCH-01
+  adr: []
+- id: BP-053
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Chaining layers by clock time
+  why: Starting silver at 03:00 because bronze usually ends by 02:30 breaks the first night bronze runs late, and
+    nobody notices.
+  how:
+    binding: aws-databricks
+    text: Downstream work starts from the batch-ready marker, table update triggers or input bookmarks.
+  instead: 'Trigger on data readiness: the batch-ready marker for silver, input bookmarks for gold.'
+  layers:
+  - silver
+  - gold
+  components:
+  - orch
+  enforced_by:
+  - proposed: SL-JOB-02
+  dac:
+  - ORCH-01
+  adr: []

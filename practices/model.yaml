@@ -1,0 +1,86 @@
+# Practices: Data modelling. Normative: edit here.
+- id: BP-081
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Kimball star schemas per domain, shared dimensions built once
+  why: Shared dimensions make numbers from different domains line up.
+  how:
+    binding: aws-databricks
+    text: Each domain has star schemas; conformed dimensions (date, plant, material, customer, dealer) are built
+      once and used by all. Facts keep business keys next to surrogate keys.
+  layers:
+  - gold
+  components:
+  - model
+  - s2g
+  enforced_by:
+  - proposed: SL-GOLD-05
+  - review: Review by the domain modeller.
+  dac:
+  - SERV-04
+  - DES-04
+  adr: []
+- id: BP-082
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Grain declared in metadata
+  why: Without a stated grain, nobody can say whether a duplicate is a bug.
+  how:
+    binding: aws-databricks
+    text: Each fact's grain (for example one row per invoice line per day) is declared as its grain key in metadata.
+  layers:
+  - gold
+  components:
+  - model
+  - s2g
+  - dq
+  enforced_by:
+  - proposed: SL-META-01
+  - runtime: Grain uniqueness is checked before every publish.
+  dac:
+  - DES-04
+  adr: []
+- id: BP-093
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Undeclared grain
+  why: Nobody can tell a duplicate from a valid row, and measures get summed twice.
+  how:
+    binding: aws-databricks
+    text: Grain is a required field in fact metadata.
+  instead: Declare the grain in metadata and check uniqueness before publish.
+  layers:
+  - gold
+  components:
+  - model
+  - s2g
+  enforced_by:
+  - proposed: SL-META-01
+  - runtime: Grain uniqueness is checked before publish.
+  dac:
+  - DES-04
+  adr: []
+- id: BP-102
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: One wide table as the only gold
+  why: A single wide table repeats dimension values, is hard to change, and hides grain.
+  how:
+    binding: aws-databricks
+    text: Star schemas are the base; wide views may be built on top for one use case.
+  instead: Build a star schema; add a wide view or a semantic-layer view on top when a use case needs it.
+  layers:
+  - gold
+  - semantic
+  components:
+  - model
+  - sem
+  enforced_by:
+  - review: Design review.
+  dac:
+  - DES-04
+  adr: []

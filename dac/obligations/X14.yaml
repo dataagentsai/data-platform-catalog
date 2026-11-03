@@ -22,6 +22,45 @@
   related:
   - OPS-03
   review_check: null
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
+- id: FILE-01
+  status: draft
+  since: 0.1.0
+  title: Every delivered file ends with a recorded outcome
+  concern: X14
+  level: MUST
+  core: true
+  dimension: completeness
+  stages:
+  - landing
+  - bronze
+  statement: Every file or batch a source delivers MUST end with a recorded outcome (loaded, rejected or held) and
+    a reason, and a delivery with no outcome MUST raise an alert.
+  failure_mode: One file of five in a delivery failed to parse and was skipped without a record; the day looked
+    complete and stores in one region showed no sales.
+  test: Deliver a manifest of five files with one unreadable and one missing; each must have an outcome, and the
+    missing one must alert.
+  evidence: The delivery log, with an outcome and reason for every file in every manifest.
+  cites:
+  - standard: OpenLineage
+    ref: RunEvent
+  related:
+  - DQ-04
+  - OPS-03
+  - ING-01
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: OPS-03
   status: draft
   since: 0.1.0
@@ -51,6 +90,12 @@
   - REC-01
   - OPS-01
   - COST-03
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: SEC-04
   status: draft
   since: 0.1.0
@@ -74,3 +119,9 @@
   related:
   - SEC-02
   - OPS-03
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'

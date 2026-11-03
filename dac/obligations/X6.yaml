@@ -25,6 +25,12 @@
   related:
   - DEL-03
   - REC-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: DEL-03
   status: draft
   since: 0.1.0
@@ -52,6 +58,12 @@
   - DEL-01
   - LATE-01
   - REC-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: REC-01
   status: draft
   since: 0.1.0
@@ -82,6 +94,13 @@
   related:
   - REC-03
   - DUP-01
+  enforced_by:
+    shift_left:
+    - SL-CLEAN-30
+    proposed: []
+    runtime: true
+    review: null
+    gap: null
 - id: REC-03
   status: draft
   since: 0.1.0
@@ -104,6 +123,12 @@
   review_check: REC-03
   related:
   - REC-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: The named owner signs off differences inside the tolerance.
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: REC-05
   status: draft
   since: 0.1.0
@@ -129,3 +154,9 @@
   - REC-01
   - REC-03
   review_check: null
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'

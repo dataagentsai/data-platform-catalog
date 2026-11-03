@@ -21,3 +21,9 @@
   review_check: OPS-01
   related:
   - DQ-04
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'

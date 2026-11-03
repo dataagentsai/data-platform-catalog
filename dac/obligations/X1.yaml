@@ -22,6 +22,14 @@
   - CFG-03
   review_check: null
   plan_rule: R2
+  enforced_by:
+    shift_left:
+    - SL-SETUP-06
+    proposed:
+    - SL-META-04
+    runtime: true
+    review: null
+    gap: null
 - id: CFG-02
   status: draft
   since: 0.1.0
@@ -45,3 +53,109 @@
   - CFG-01
   review_check: null
   plan_rule: R5
+  enforced_by:
+    shift_left: []
+    proposed:
+    - SL-META-01
+    runtime: true
+    review: Every waiver needs a named approver and an expiry.
+    gap: null
+- id: CFG-04
+  status: draft
+  since: 0.1.0
+  title: The control plane is changed only through its declared operations
+  concern: X1
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - platform
+  statement: Configuration, run records and watermarks in the control plane MUST be read and written only through
+    its declared operations; a direct write to its tables MUST be refused.
+  failure_mode: A job wrote its watermark with its own SQL, skipped the check that the load had succeeded, and the
+    next run started after a day that was never loaded.
+  test: Try a direct insert and update on each control-plane table with a pipeline identity; each must be refused,
+    and the same change through the declared operation must succeed.
+  evidence: Grants that allow only the declared operations, and a test run showing a direct write refused.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Metadata Management, chapter 12
+  related:
+  - CFG-03
+  - OPS-03
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed:
+    - SL-META-05
+    runtime: true
+    review: null
+    gap: null
+- id: CFG-05
+  status: draft
+  since: 0.1.0
+  title: An unknown or misplaced setting is rejected, never ignored
+  concern: X1
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - platform
+  statement: Every configuration key MUST be in a registry that names the level it may be set at and its allowed
+    values; a key that is unknown, set at the wrong level or out of range MUST be rejected before deploy.
+  failure_mode: A dataset set "quarantine_treshold" with a typo; the key was ignored, the default of zero applied,
+    and every batch with one bad row was blocked for a week before anyone looked.
+  test: Validate a manifest with a misspelt key, a key at the wrong level and a value outside its list; each must
+    fail validation with the key named.
+  evidence: The settings registry, and the validator's run in the pipeline that blocks the merge.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Metadata Management, chapter 12
+  related:
+  - CFG-01
+  - CFG-03
+  - REL-04
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed:
+    - SL-META-02
+    runtime: true
+    review: null
+    gap: null
+- id: ENG-01
+  status: draft
+  since: 0.1.0
+  title: Platform tables are written only by the shared engines
+  concern: X1
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - bronze
+  - silver
+  - gold
+  statement: Every write to a bronze, silver or gold table MUST be made by the shared engine for that layer, driven
+    by the dataset's declared metadata; code written for one dataset MUST NOT write a platform table itself.
+  failure_mode: Fifty hand-written silver pipelines each fixed duplicates in their own way; a fix to the time zone
+    rule reached eleven of them, and the other thirty-nine kept the bug for a year.
+  test: List every writer of each platform table from the run log and lineage; any writer that is not a shared engine
+    is a finding.
+  evidence: Lineage showing each platform table written only by its layer's engine, and the list of findings, empty.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Integration and Interoperability, chapter 8
+  related:
+  - CFG-01
+  - FLOW-01
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed:
+    - SL-LAYER-02
+    runtime: true
+    review: Review rejects code written for one dataset that writes a platform table.
+    gap: null

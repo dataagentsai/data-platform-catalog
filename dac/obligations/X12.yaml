@@ -1,4 +1,39 @@
 # DAC obligations for X12, Privacy and personal data. Normative: edit here.
+- id: PII-01
+  status: draft
+  since: 0.1.0
+  title: Personal data is protected before it is first stored
+  concern: X12
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - landing
+  - bronze
+  statement: Every field classified as personal MUST be tokenised, hashed or masked before its first write to a
+    kept layer, so no kept layer and no replay holds it in clear text.
+  failure_mode: Bronze kept clear-text phone numbers because masking happened in silver; every replay and every
+    copy of bronze for testing carried them.
+  test: Load a delivery with each personal field class; read bronze and every later layer, and no clear value may
+    be found.
+  evidence: A scan of bronze and later layers for personal values, and the protection step logged per batch.
+  cites:
+  - standard: ODCS
+    ref: schema[].properties[].classification
+  - standard: DAMA-DMBOK
+    ref: Data Security, chapter 7
+  related:
+  - SEC-01
+  - SEC-03
+  - ING-01
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: 'No build-time check yet: found only by the runtime test.'
 - id: SEC-01
   status: draft
   since: 0.1.0
@@ -28,6 +63,15 @@
   related:
   - SEC-02
   - SEC-03
+  enforced_by:
+    shift_left:
+    - SL-SEC-07
+    - SL-SEC-09
+    proposed:
+    - SL-META-01
+    runtime: true
+    review: null
+    gap: null
 - id: SEC-03
   status: draft
   since: 0.1.0
@@ -57,3 +101,9 @@
   related:
   - SEC-01
   - PERF-05
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: The data protection owner reviews the erasure and retention log.
+    gap: 'No build-time check yet: found only by the runtime test.'

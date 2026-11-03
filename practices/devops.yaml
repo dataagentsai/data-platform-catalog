@@ -1,0 +1,92 @@
+# Practices: DevOps and CI/CD. Normative: edit here.
+- id: BP-120
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Infrastructure as code for the cloud and the data platform
+  why: Infrastructure made by hand cannot be reviewed or rebuilt.
+  how:
+    binding: aws-databricks
+    text: Terraform defines buckets, KMS keys, networking, workspaces, catalogs and grants.
+  layers:
+  - platform
+  components:
+  - devops
+  - sec
+  enforced_by:
+  - shift_left:
+    - SL-SETUP-06
+    - SL-SEC-08
+    - SL-SECRET-03
+  - proposed: SL-SEC-11
+  - review: The plan is reviewed in the pull request; apply runs only from CI.
+  dac:
+  - REL-06
+  adr: []
+- id: BP-121
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Deployment bundles generated from metadata
+  why: Jobs and pipelines should follow the metadata, not be written by hand.
+  how:
+    binding: aws-databricks
+    text: The generator writes Databricks Asset Bundles for jobs and pipelines from metadata.
+  layers:
+  - platform
+  components:
+  - devops
+  - orch
+  enforced_by:
+  - shift_left:
+    - SL-SETUP-06
+  - proposed: SL-META-04
+  dac:
+  - CFG-01
+  - REL-01
+  adr: []
+- id: BP-122
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: CI promotes every change through the environments
+  why: Every change must follow the same path to prod.
+  how:
+    binding: aws-databricks
+    text: GitHub Actions run checks and tests, then deploy dev, test and prod in order.
+  layers:
+  - platform
+  components:
+  - devops
+  enforced_by:
+  - shift_left:
+    - SL-SETUP-05
+    - SL-SETUP-02
+  - review: Prod deploys need approval.
+  dac:
+  - REL-02
+  - REL-03
+  - TEST-03
+  adr: []
+- id: BP-123
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Creating jobs and pipelines in the UI
+  why: UI-made jobs differ by environment and disappear on the next deploy.
+  how:
+    binding: aws-databricks
+    text: Jobs only come from bundles.
+  instead: Add metadata and let the generator write the bundle.
+  layers:
+  - platform
+  components:
+  - devops
+  - orch
+  enforced_by:
+  - proposed: SL-META-04
+  - runtime: An ops check lists jobs not owned by the deployment service principal.
+  dac:
+  - CFG-01
+  - REL-01
+  adr: []

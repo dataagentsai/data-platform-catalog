@@ -1,4 +1,36 @@
 # DAC obligations for X11, Security and access. Normative: edit here.
+- id: ENC-01
+  status: draft
+  since: 0.1.0
+  title: Data at rest is encrypted with separate keys and never public
+  concern: X11
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - platform
+  statement: Every store of platform data MUST be encrypted with a key separate for each environment and layer,
+    MUST NOT be reachable from a public network, and raw landing copies MUST expire after a declared time.
+  failure_mode: One shared key protected every bucket; a role granted for a test copy could decrypt production,
+    and raw source files from two years earlier were still sitting in landing.
+  test: Inspect the infrastructure definition and the deployed stores; any store without its own key, reachable
+    publicly or without an expiry on landing is a finding.
+  evidence: The infrastructure definition, and a scan of deployed stores with no findings.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Security, chapter 7
+  related:
+  - ENV-01
+  - SEC-02
+  review_check: null
+  origin: deck
+  enforced_by:
+    shift_left: []
+    proposed:
+    - SL-SEC-11
+    runtime: true
+    review: null
+    gap: null
 - id: ENV-02
   status: draft
   since: 0.1.0
@@ -24,6 +56,13 @@
   - ENV-01
   - SEC-02
   - REL-05
+  enforced_by:
+    shift_left:
+    - SL-SEC-08
+    proposed: []
+    runtime: true
+    review: null
+    gap: null
 - id: REL-05
   status: draft
   since: 0.1.0
@@ -47,6 +86,17 @@
   related:
   - REL-04
   - ENV-02
+  enforced_by:
+    shift_left:
+    - SL-SEC-06
+    - SL-SECRET-01
+    - SL-SECRET-02
+    - SL-SECRET-03
+    - SL-SETUP-04
+    proposed: []
+    runtime: true
+    review: null
+    gap: null
 - id: SEC-02
   status: draft
   since: 0.1.0
@@ -75,3 +125,16 @@
   - SEC-01
   - ENV-02
   - SEC-04
+  enforced_by:
+    shift_left:
+    - SL-SEC-01
+    - SL-SEC-02
+    - SL-SEC-03
+    - SL-SEC-04
+    - SL-SEC-05
+    - SL-SEC-08
+    - SL-SEC-10
+    proposed: []
+    runtime: true
+    review: Access is reviewed regularly against roles.
+    gap: null

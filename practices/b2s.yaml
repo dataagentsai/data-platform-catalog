@@ -1,0 +1,403 @@
+# Practices: Bronze to silver. Normative: edit here.
+- id: BP-056
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Cleaning or removing duplicates in bronze
+  why: A cleaned bronze no longer shows what the source sent, so a cleaning bug can never be undone by replay.
+  how:
+    binding: aws-databricks
+    text: The lander does not transform values beyond tokenising personal data.
+  instead: Keep bronze raw and do every cleaning step in the bronze-to-silver engine.
+  layers:
+  - bronze
+  components:
+  - b2s
+  - ing
+  enforced_by:
+  - review: Review; the lander has no transform steps to configure.
+  dac:
+  - RAW-01
+  adr: []
+- id: BP-058
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Thirteen pure stages between two IO edges
+  why: Pure stages can each be unit-tested in seconds and switched on or off by config.
+  how:
+    binding: aws-databricks
+    text: Read bronze, then 13 functions that each take a DataFrame and return one, then write silver. No stage
+      reads or writes a table.
+  layers:
+  - silver
+  components:
+  - b2s
+  - test
+  enforced_by:
+  - shift_left:
+    - SL-PURE-01
+    - SL-PURE-02
+    - SL-PURE-05
+    - SL-TEST-02
+  dac:
+  - PURE-01
+  - TEST-03
+  adr:
+  - ADR-007
+  - ADR-013
+- id: BP-059
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Read only new bronze batches
+  why: Re-reading the whole bronze table every run grows slower and costlier every day.
+  how:
+    binding: aws-databricks
+    text: The engine keeps a bookmark of the last bronze batch processed and reads only newer batches.
+  layers:
+  - silver
+  components:
+  - b2s
+  - cost
+  enforced_by:
+  - shift_left:
+    - SL-TEST-09
+  - runtime: The bookmark is logged per run; a rerun with no new batch reads nothing.
+  dac:
+  - DUP-02
+  - COST-04
+  adr: []
+- id: BP-060
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Pipelines defined in a loop from metadata
+  why: A table definition per dataset would be hundreds of near-copies.
+  how:
+    binding: aws-databricks
+    text: Each source's Declarative Pipeline defines its tables in a loop over the dataset metadata; logs are written
+      back to the metadata store.
+  layers:
+  - silver
+  components:
+  - b2s
+  - orch
+  enforced_by:
+  - shift_left:
+    - SL-CPLX-05
+  - review: Review rejects a pipeline source file that defines a single named table.
+  dac:
+  - CFG-01
+  - ENG-01
+  adr: []
+- id: BP-061
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: 'Stage 1: contract check and schema evolution'
+  why: A new, renamed or retyped column must be handled on purpose, never by accident.
+  how:
+    binding: aws-databricks
+    text: The incoming schema is compared with the contract; the dataset's schema evolution rule decides whether
+      to add the column, hold the batch or fail.
+  layers:
+  - silver
+  components:
+  - b2s
+  - dq
+  enforced_by:
+  - runtime: The incoming schema is compared with the contract; held batches alert the data owner.
+  dac:
+  - SCH-01
+  - SCH-02
+  adr:
+  - ADR-007
+- id: BP-062
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: 'Stage 2: projection, renaming and JSON flattening'
+  why: Silver should carry clear names and only the paths we agreed, while not dropping columns by accident.
+  how:
+    binding: aws-databricks
+    text: All columns by default, or a selected list; renames from column config; API payloads flattened on listed
+      paths only, and arrays of child records become their own silver table.
+  layers:
+  - silver
+  components:
+  - b2s
+  enforced_by:
+  - proposed: SL-META-03
+  dac:
+  - PROJ-01
+  adr:
+  - ADR-007
+  - ADR-008
+- id: BP-063
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: 'Stages 3 and 6: hygiene and standard values'
+  why: Stray spaces, empty strings and local codes break joins and filters later.
+  how:
+    binding: aws-databricks
+    text: Hygiene trims and normalises text as configured; standardising maps values such as units and codes to
+      one agreed set from metadata.
+  layers:
+  - silver
+  components:
+  - b2s
+  enforced_by:
+  - shift_left:
+    - SL-TEST-02
+    - SL-CLEAN-21
+  - runtime: Unmapped values are counted in `dq_result`.
+  dac:
+  - DQ-01
+  - PROF-01
+  adr:
+  - ADR-007
+- id: BP-064
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: 'Stage 4: parse and type, never a silent NULL'
+  why: A value that fails to convert and quietly becomes NULL is data loss nobody sees.
+  how:
+    binding: aws-databricks
+    text: Formats come from column config; any row whose cast fails goes to quarantine with the reason, by default.
+  layers:
+  - silver
+  components:
+  - b2s
+  - dq
+  enforced_by:
+  - runtime: Failed casts are counted per column in `dq_result` and the rows quarantined with the reason.
+  dac:
+  - SCH-02
+  - DQ-02
+  adr:
+  - ADR-007
+- id: BP-065
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: 'Stage 5: time in UTC plus plant local time'
+  why: Plants work in local shifts, while reports across plants need one clock.
+  how:
+    binding: aws-databricks
+    text: Every timestamp is stored in UTC alongside the plant's local time, using the time zone held in metadata.
+  layers:
+  - silver
+  components:
+  - b2s
+  - model
+  enforced_by:
+  - shift_left:
+    - SL-CLEAN-16
+    - SL-TEST-02
+  dac:
+  - LATE-04
+  adr:
+  - ADR-007
+- id: BP-066
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: 'Stage 7: personal data tokenised, hashed or masked'
+  why: Any personal field the lander did not tokenise must still be protected before silver.
+  how:
+    binding: aws-databricks
+    text: Column config sets tokenise, hash or mask per column from its PII class.
+  layers:
+  - silver
+  components:
+  - b2s
+  - sec
+  enforced_by:
+  - proposed: SL-META-01
+  dac:
+  - PII-01
+  adr:
+  - ADR-007
+- id: BP-067
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: 'Stage 8: row filter on declared conditions only'
+  why: Rows removed for unstated reasons cannot be explained or reproduced.
+  how:
+    binding: aws-databricks
+    text: Only filter conditions declared in dataset config are applied, and the count of removed rows is logged.
+  layers:
+  - silver
+  components:
+  - b2s
+  enforced_by:
+  - review: Filter conditions are reviewed in the pull request.
+  - runtime: The count of removed rows is written to `step_log`.
+  dac:
+  - REC-01
+  adr:
+  - ADR-007
+- id: BP-068
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: 'Stage 9: quality rules and quarantine'
+  why: A bad row should be set aside with a reason, not dropped and not allowed into silver.
+  how:
+    binding: aws-databricks
+    text: Rules from `dq_rule` run as DQX checks or pipeline expectations; failing rows go to quarantine with the
+      reason, and a data steward releases them once fixed.
+  layers:
+  - silver
+  components:
+  - b2s
+  - dq
+  enforced_by:
+  - runtime: Results go to `dq_result`; a bad-row share above the limit blocks the dataset's next batches.
+  dac:
+  - DQ-01
+  - DQ-02
+  - SEV-01
+  - QUAR-01
+  adr:
+  - ADR-007
+  - ADR-009
+- id: BP-069
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: 'Stages 10 and 11: duplicates and business keys'
+  why: Duplicates in silver become double counts in every gold fact.
+  how:
+    binding: aws-databricks
+    text: Duplicates are removed per business key, keeping the latest by change order; the business key from metadata
+      is then built and checked for nulls.
+  layers:
+  - silver
+  components:
+  - b2s
+  enforced_by:
+  - shift_left:
+    - SL-CLEAN-32
+  - runtime: Key uniqueness and null checks after every run.
+  dac:
+  - DUP-03
+  - DES-04
+  adr:
+  - ADR-007
+- id: BP-070
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: 'Stage 12: history by dataset kind, with soft deletes'
+  why: Some data needs full history, some only the current value; both must survive replays.
+  how:
+    binding: aws-databricks
+    text: Append, SCD type 1, SCD type 2 or snapshot, set per dataset kind, applied with AUTO CDC as a MERGE on
+      business key and change order. Deletes are flags, not removed rows. Silver is liquid clustered by business
+      key and date.
+  layers:
+  - silver
+  components:
+  - b2s
+  - model
+  enforced_by:
+  - shift_left:
+    - SL-TEST-09
+  dac:
+  - SCD-02
+  - DEL-01
+  - DEL-03
+  adr:
+  - ADR-007
+  - ADR-016
+- id: BP-071
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: 'Stage 13: provenance on every row'
+  why: Every silver row must be traceable back to its run and source file.
+  how:
+    binding: aws-databricks
+    text: The engine adds run id, source file and a record hash to every row.
+  layers:
+  - silver
+  components:
+  - b2s
+  - gov
+  enforced_by:
+  - runtime: The output check fails a write without provenance columns.
+  dac:
+  - OPS-03
+  - LIN-01
+  adr:
+  - ADR-007
+- id: BP-072
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Free-form SQL in bronze to silver
+  why: Hand-written SQL per table brings back the copy-paste pipelines the engine replaced, and it cannot be unit-tested.
+  how:
+    binding: aws-databricks
+    text: 'The engine accepts only declared settings: columns, formats, mappings, filters, rules and keys.'
+  instead: Declare the need as a setting; if no setting fits, add a tested stage option to the engine for everyone.
+  layers:
+  - silver
+  components:
+  - b2s
+  enforced_by:
+  - proposed: SL-META-02
+  - review: 'Review: a new need becomes a tested stage option, not table SQL.'
+  dac:
+  - ENG-01
+  adr:
+  - ADR-007
+- id: BP-073
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Silently dropping or nulling bad values
+  why: Rows that vanish quietly make gold totals wrong with no trace of why.
+  how:
+    binding: aws-databricks
+    text: Failed casts and failed rules go to quarantine with the reason.
+  instead: Quarantine the row with its reason and let a steward release it once fixed.
+  layers:
+  - silver
+  components:
+  - b2s
+  - dq
+  enforced_by:
+  - runtime: Quarantine counts are reconciled with input counts every run.
+  dac:
+  - DQ-02
+  - REC-01
+  - QUAR-01
+  adr: []
+- id: BP-074
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Joining sources or adding business logic in silver
+  why: Silver is source-aligned; mixing sources there blurs ownership and breaks replays per source.
+  how:
+    binding: aws-databricks
+    text: The engine reads one bronze table and writes its own silver table(s), nothing else.
+  instead: Combine sources in gold, inside a fact's pure build() function.
+  layers:
+  - silver
+  components:
+  - b2s
+  - model
+  enforced_by:
+  - proposed: SL-LAYER-01
+  - review: Review of silver changes.
+  dac:
+  - FLOW-01
+  adr:
+  - ADR-001

@@ -1,0 +1,515 @@
+# Practices: Silver to gold. Normative: edit here.
+- id: BP-075
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Two kinds of gold pipeline
+  why: Most gold tables are simple; a few are real models. Each needs the right amount of code.
+  how:
+    binding: aws-databricks
+    text: (A) One-to-one tables (dimensions from master data, simple facts) use one common metadata-driven pipeline.
+      (B) Modelled facts with joins and aggregates are per-fact code inside a common harness.
+  layers:
+  - gold
+  components:
+  - s2g
+  enforced_by:
+  - review: Review checks the declared kind, and that kind A tables carry no code.
+  dac:
+  - ENG-01
+  adr:
+  - ADR-003
+- id: BP-076
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: The harness owns IO; the fact owns build()
+  why: Read, change detection, key lookup, write and checks are the same for every fact and must not be re-coded
+    each time.
+  how:
+    binding: aws-databricks
+    text: The harness reads inputs, finds changed windows, looks up surrogate keys, writes and checks quality; the
+      fact supplies only a pure `build(inputs) -> DataFrame`.
+  layers:
+  - gold
+  components:
+  - s2g
+  - test
+  enforced_by:
+  - shift_left:
+    - SL-PURE-02
+    - SL-PURE-04
+    - SL-PURE-06
+  dac:
+  - PURE-01
+  - TEST-03
+  adr:
+  - ADR-003
+  - ADR-013
+- id: BP-077
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Left join with unknown members
+  why: A fact row whose dimension has not arrived yet must still be counted.
+  how:
+    binding: aws-databricks
+    text: Facts left join to dimensions; a missing match gets surrogate key -1 (unknown), -2 means not applicable.
+      The orphan rate is measured, and rows are re-keyed on the next recompute.
+  layers:
+  - gold
+  components:
+  - s2g
+  - model
+  enforced_by:
+  - shift_left:
+    - SL-CLEAN-31
+  - runtime: The orphan rate is checked before publish against the dataset's limit.
+  dac:
+  - LATE-02
+  - PUB-01
+  adr:
+  - ADR-004
+- id: BP-078
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Find changes incrementally, rebuild windows whole
+  why: Incremental reading is cheap, but a fact built from partial inputs is wrong.
+  how:
+    binding: aws-databricks
+    text: Changed windows and keys come from each input's bookmark or Delta change data feed; every input is then
+      read in full for those windows, dimensions in full, and each changed window is rebuilt whole.
+  layers:
+  - gold
+  components:
+  - s2g
+  - cost
+  enforced_by:
+  - shift_left:
+    - SL-TEST-09
+  - runtime: An integration test compares an incremental run with a full rebuild.
+  dac:
+  - LATE-01
+  - DUP-02
+  adr:
+  - ADR-006
+- id: BP-079
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Deterministic hash surrogate keys
+  why: Identity columns give different keys on every rebuild and in every environment.
+  how:
+    binding: aws-databricks
+    text: Surrogate key = hash of source + business key (+ `valid_from` for SCD type 2), so the same row always
+      gets the same key.
+  layers:
+  - gold
+  components:
+  - s2g
+  - model
+  enforced_by:
+  - proposed: SL-GOLD-02
+  - runtime: Key uniqueness is checked before publish.
+  dac:
+  - KEY-01
+  adr:
+  - ADR-004
+- id: BP-080
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: SCD1 joins on business key, SCD2 joins as of the event
+  why: A sale must be tied to the customer's attributes as they were on the day of the sale.
+  how:
+    binding: aws-databricks
+    text: SCD type 1 dimensions join on business key; SCD type 2 dimensions join where event time falls between
+      `valid_from` and `valid_to`.
+  layers:
+  - gold
+  components:
+  - s2g
+  - model
+  enforced_by:
+  - shift_left:
+    - SL-TEST-09
+  - review: Review of the join conditions in the harness.
+  dac:
+  - SCD-04
+  adr:
+  - ADR-005
+- id: BP-083
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: The right table type for each job
+  why: Each table type has different refresh and cost behaviour.
+  how:
+    binding: aws-databricks
+    text: Dimensions are Delta tables; multi-input facts are Delta tables written by the window recompute job, the
+      only writer of each fact (queued); materialized views only for simple single-input aggregates; plain views
+      only for security or presentation; business meaning lives in metric views.
+  layers:
+  - gold
+  - semantic
+  components:
+  - s2g
+  - model
+  - cost
+  enforced_by:
+  - shift_left:
+    - SL-COST-CONFIG-09
+    - SL-COST-CODE-22
+    - SL-COST-CODE-23
+  - proposed: SL-GOLD-04
+  - review: Design review of the table type.
+  dac:
+  - PUB-01
+  - COST-02
+  adr:
+  - ADR-006
+- id: BP-084
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Gold is replaced, never appended
+  why: Appending means a rerun double-counts.
+  how:
+    binding: aws-databricks
+    text: Facts are written with `replaceWhere` on the window or MERGE on the grain key; gold tables use liquid
+      clustering AUTO.
+  layers:
+  - gold
+  components:
+  - s2g
+  enforced_by:
+  - shift_left:
+    - SL-TEST-09
+  - proposed: SL-GOLD-01
+  dac:
+  - GOLD-01
+  - DUP-02
+  adr:
+  - ADR-006
+- id: BP-085
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Quality checks before publish
+  why: A wrong number on a dashboard does far more harm than a late one.
+  how:
+    binding: aws-databricks
+    text: Grain uniqueness, orphan rate, reconciliation of gold totals to silver, and completeness (every input
+      past the window end). On failure the window keeps its last good version and an alert fires.
+  layers:
+  - gold
+  components:
+  - s2g
+  - dq
+  enforced_by:
+  - runtime: Results go to `dq_result` and `recon_result`; publish is blocked on failure and the window keeps its
+      last good version.
+  dac:
+  - PUB-01
+  - REC-01
+  adr: []
+- id: BP-086
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Completeness and late data are tracked per window
+  why: Users need to know when a day's numbers are final, and when a final number changed.
+  how:
+    binding: aws-databricks
+    text: A window is complete when every input bookmark has passed its end; late data restates the window and is
+      logged as a restatement.
+  layers:
+  - gold
+  components:
+  - s2g
+  - mon
+  enforced_by:
+  - runtime: Freshness SLOs and restatement counts on the ops dashboard.
+  dac:
+  - SERV-02
+  - LATE-01
+  adr:
+  - ADR-018
+- id: BP-087
+  status: draft
+  since: 0.1.0
+  kind: practice
+  title: Corrections through a table and a backfill plan
+  why: A hand fix is lost on the next rebuild and leaves no record of why the number changed.
+  how:
+    binding: aws-databricks
+    text: Corrections are rows in a corrections table, reviewed, then applied by a backfill plan that recomputes
+      the affected windows.
+  layers:
+  - gold
+  components:
+  - s2g
+  - gov
+  enforced_by:
+  - runtime: Only the recompute job has write grants on gold.
+  - review: Corrections need approval in the pull request.
+  dac:
+  - HIST-04
+  - LATE-01
+  adr:
+  - ADR-017
+- id: BP-088
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Inner join from fact to dimension
+  why: Rows whose dimension has not arrived simply vanish, and totals quietly drop.
+  how:
+    binding: aws-databricks
+    text: The harness's key lookup is a left join.
+  instead: Left join, give missing matches surrogate key -1, measure the orphan rate and re-key on the next recompute.
+  layers:
+  - gold
+  components:
+  - s2g
+  - model
+  enforced_by:
+  - shift_left:
+    - SL-CLEAN-31
+  - proposed: SL-GOLD-03
+  - runtime: The orphan rate is checked before publish.
+  dac:
+  - LATE-02
+  adr:
+  - ADR-004
+- id: BP-089
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Joining incremental to incremental
+  why: Joining only the new rows of one input to only the new rows of another misses every match that arrived in
+    a different batch.
+  how:
+    binding: aws-databricks
+    text: The harness uses increments only to find changed windows, then reads inputs in full for those windows.
+  instead: Detect changed windows incrementally, then read every input in full for those windows.
+  layers:
+  - gold
+  components:
+  - s2g
+  enforced_by:
+  - shift_left:
+    - SL-TEST-09
+  - review: Review of how the fact reads its inputs.
+  dac:
+  - LATE-01
+  adr:
+  - ADR-006
+- id: BP-090
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Appending to gold facts
+  why: Every retry or late file double-counts.
+  how:
+    binding: aws-databricks
+    text: The harness writes with `replaceWhere` or MERGE only.
+  instead: Replace the whole window, or MERGE on the grain key.
+  layers:
+  - gold
+  components:
+  - s2g
+  enforced_by:
+  - proposed: SL-GOLD-01
+  dac:
+  - GOLD-01
+  adr:
+  - ADR-006
+- id: BP-091
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Identity or sequence surrogate keys
+  why: Keys change on every rebuild and differ between environments, breaking joins and comparisons.
+  how:
+    binding: aws-databricks
+    text: The harness generates hash keys.
+  instead: Hash of source + business key (+ valid_from for SCD type 2).
+  layers:
+  - gold
+  components:
+  - s2g
+  - model
+  enforced_by:
+  - proposed: SL-GOLD-02
+  dac:
+  - KEY-01
+  adr:
+  - ADR-004
+- id: BP-092
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Joining an SCD2 dimension to its current row only
+  why: Last year's sales get this year's customer region, so history is rewritten.
+  how:
+    binding: aws-databricks
+    text: The harness does an as-of join for SCD type 2 dimensions.
+  instead: Join where event time is between valid_from and valid_to.
+  layers:
+  - gold
+  components:
+  - s2g
+  - model
+  enforced_by:
+  - shift_left:
+    - SL-TEST-09
+  - review: Review of SCD type 2 join conditions.
+  dac:
+  - SCD-04
+  adr:
+  - ADR-005
+- id: BP-095
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: One giant SQL notebook mixing IO and logic
+  why: It cannot be unit-tested, reused or reviewed in parts.
+  how:
+    binding: aws-databricks
+    text: Facts are pure build() functions inside the harness.
+  instead: Write a pure build(inputs) function and let the harness do reads and writes.
+  layers:
+  - gold
+  components:
+  - s2g
+  - test
+  enforced_by:
+  - shift_left:
+    - SL-CLEAN-08
+    - SL-PURE-02
+    - SL-CPLX-03
+    - SL-CPLX-07
+  dac:
+  - PURE-01
+  - TEST-03
+  adr:
+  - ADR-013
+- id: BP-096
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: A copy-pasted pipeline per table
+  why: A fix must be made fifty times, and the copies drift apart.
+  how:
+    binding: aws-databricks
+    text: One common pipeline for one-to-one gold tables, one harness for facts, one engine for silver.
+  instead: Add the table as metadata to the common pipeline or harness.
+  layers:
+  - silver
+  - gold
+  components:
+  - s2g
+  - b2s
+  enforced_by:
+  - shift_left:
+    - SL-CPLX-05
+  - review: Review.
+  dac:
+  - ENG-01
+  adr:
+  - ADR-003
+  - ADR-007
+- id: BP-097
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Materialized views for everything
+  why: Multi-input materialized views give no control over windows, completeness or quality, and can cost more to
+    refresh.
+  how:
+    binding: aws-databricks
+    text: Materialized views are allowed only for simple single-input aggregates.
+  instead: Use a table written by the window recompute job.
+  layers:
+  - gold
+  components:
+  - s2g
+  - cost
+  enforced_by:
+  - shift_left:
+    - SL-COST-CODE-23
+    - SL-COST-CONFIG-09
+  - proposed: SL-GOLD-04
+  dac:
+  - PUB-01
+  - COST-02
+  adr:
+  - ADR-006
+- id: BP-098
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Publishing before inputs are complete
+  why: Users see half a day and make decisions on it.
+  how:
+    binding: aws-databricks
+    text: The completeness check uses input bookmarks.
+  instead: Publish a window only when every input bookmark has passed its end.
+  layers:
+  - gold
+  components:
+  - s2g
+  - dq
+  enforced_by:
+  - runtime: The publish gate blocks a window until every input bookmark has passed its end.
+  dac:
+  - ORCH-01
+  - SERV-02
+  adr:
+  - ADR-018
+- id: BP-100
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Fixing data by hand in gold
+  why: The fix is overwritten on the next rebuild and leaves no audit trail.
+  how:
+    binding: aws-databricks
+    text: Only the recompute job can write gold.
+  instead: Add a row to the corrections table and run the backfill plan.
+  layers:
+  - gold
+  components:
+  - s2g
+  - gov
+  enforced_by:
+  - runtime: 'Unity Catalog grants: only the recompute job can write gold.'
+  dac:
+  - ENV-02
+  - HIST-04
+  adr:
+  - ADR-017
+- id: BP-101
+  status: draft
+  since: 0.1.0
+  kind: anti-pattern
+  title: Dropping business keys from facts
+  why: Without them, re-keying orphans and tracing a row back to the source are impossible.
+  how:
+    binding: aws-databricks
+    text: The harness keeps business keys next to surrogate keys.
+  instead: Keep both the business key and the surrogate key.
+  layers:
+  - gold
+  components:
+  - s2g
+  - model
+  enforced_by:
+  - runtime: The harness's output schema check fails a fact without its business keys.
+  dac:
+  - LATE-02
+  - OPS-03
+  adr:
+  - ADR-004
