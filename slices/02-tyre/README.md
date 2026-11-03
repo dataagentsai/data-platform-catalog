@@ -39,8 +39,8 @@ test, the cloud stack for the client demo. Only the binding names products.
 | 6 | resend | The same file re-sent under a new name | DUP-01 | DPC-0024, DPC-0023, DPC-0038 |
 | 7 | schema change | The lab system renames defect_code in one plant's files | SCH-02 | DPC-0008 |
 | 8 | out of order | An old promised-date change arrives after a newer one | SCD-02 | DPC-0025, DPC-0026 |
-| 9 | mass delete | The material full copy comes back 40% short | DQ-04 | DPC-0054 |
-| 10 | correction | Twelve lines were always promised a day later; a backfill plan applies it | HIST-04 | DPC-0082 |
+| 9 | mass delete | The material full copy comes back 40% short | DEL-04 | DPC-0054 |
+| 10 | correction | Twelve lines were always promised a day later; a backfill plan applies it | HIST-05 | DPC-0082 |
 | 11 | late dimension | Orders for a new dealer arrive two days before the dealer does | LATE-02 | DPC-0046 |
 | 12 | recon mismatch | The change feed silently skips seven deliveries | REC-05 | DPC-0052, DPC-0015 |
 | 13 | out of order | The stream replays 45 minutes after a restart | DUP-04 | DPC-0086, DPC-0096 |

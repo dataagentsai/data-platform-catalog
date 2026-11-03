@@ -32,6 +32,8 @@ def render():
             src = f"Tech check {r['review_check']}"
         elif r.get("origin") == "deck":
             src = "New (deck decision)"
+        elif r.get("origin") == "shape":
+            src = "New (shape decision, ADR or DPC)"
         else:
             src = f"New ({r.get('plan_rule') or 'reuse delta'})"
         out.append(f"| {r['id']} | {r['concern']} {names[r['concern']]['name']} | {r['level']} | "

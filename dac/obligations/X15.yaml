@@ -403,3 +403,40 @@
     runtime: true
     review: null
     gap: null
+- id: HIST-05
+  status: draft
+  since: 0.1.0
+  title: Corrections reach gold only through a backfill plan
+  concern: X15
+  level: MUST
+  core: true
+  dimension: accuracy
+  stages:
+  - silver
+  - gold
+  statement: A correction MUST NOT change silver, which keeps what the source said; it MUST change gold only for
+    the windows named by the backfill plan that activates it, and every such change MUST be logged as a restatement.
+  failure_mode: A sales manager fixed twelve promised dates directly in gold; the next rebuild overwrote the fix,
+    and nobody could explain why the on-time figure moved twice in one week.
+  test: In test, record a correction for lines in one past window and activate it with a backfill plan; silver must
+    be unchanged, only the windows the plan names may be rebuilt, gold must equal the corrected truth, and a restatement
+    must be logged with the plan's id.
+  evidence: Corrections kept as rows with who, why and the period they apply to; backfill plans naming their windows;
+    write access to gold only for the window recompute; a restatement log entry per rebuilt window.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Quality, chapter 13
+  - standard: ISO-25012
+    ref: traceability
+  review_check: null
+  origin: shape
+  related:
+  - HIST-04
+  - LATE-01
+  - GOLD-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: A correction and the backfill plan that activates it are approved in the pull request.
+    gap: 'No build-time check yet: found only by the runtime test.'

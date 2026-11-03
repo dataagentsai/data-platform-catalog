@@ -6,7 +6,7 @@ decision-makers: [platform owner]
 consulted: [session A (practices), deck reviewers]
 concerns: [X13, X9]
 dpc: [DPC-0077, DPC-0050, DPC-0061]
-dac: [CFG-03, LIN-01, PERF-02]
+dac: [CFG-03, LIN-01, PERF-02, ML-01]
 plan: [D16]
 source: ["PLAN.html D16"]
 ---

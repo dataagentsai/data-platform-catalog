@@ -34,7 +34,7 @@ bindings:
     gap: Lakeflow Connect writes straight into tables and skips the lander steps (tokenising, mass-delete guard, file log), so it is not used in v1.
     gap_filled_by: {approach: in-house, adapter: "dataplatform.puller + dataplatform.lander (LakeIngestionFramework connectors)"}
     metadata_keys: [extraction_mode, watermark_column, segment_size_rows, rest_endpoint_path, pagination_style]
-    proves: [SCH-02, HIST-04, DEL-01]
+    proves: [SCH-02, HIST-04, DEL-01, DEL-04]
   table_writer:
     approach: platform
     adapter: Lakeflow Declarative Pipelines AUTO CDC (SCD type 1 and 2, SEQUENCE BY, apply_as_deletes), append with txnAppId/txnVersion for bronze, replaceWhere for gold windows
@@ -114,7 +114,7 @@ bindings:
     gap: Materialized views refresh themselves but cannot apply corrections, completeness or checks before publish.
     gap_filled_by: {approach: in-house, adapter: dataplatform.gold.harness}
     metadata_keys: [gold.grain, gold.window, gold.inputs, gold.build, gold.materialize]
-    proves: [LATE-01, DUP-02, LATE-02, SCD-04]
+    proves: [LATE-01, DUP-02, LATE-02, SCD-04, HIST-05]
   semantic_layer:
     approach: platform
     adapter: Unity Catalog metric views, generated from the manifest's metric files
@@ -137,7 +137,7 @@ bindings:
     approach: platform
     adapter: a Genie space over certified metric views, sample questions from the metric files
     coverage: full
-    proves: [SERV-04, SEC-02]
+    proves: [SERV-04, SEC-02, SERV-06]
   data_api:
     approach: platform
     adapter: SQL Statement Execution API on a serverless SQL warehouse
@@ -161,19 +161,19 @@ bindings:
     approach: platform
     adapter: Unity Catalog feature tables with point-in-time lookups
     coverage: full
-    proves: [SCD-04, LIN-01]
+    proves: [SCD-04, LIN-01, ML-01]
   model_registry:
     approach: platform
     adapter: MLflow models in Unity Catalog, model card fields as tags
     coverage: partial
     gap: The model card and the promotion gate are not MLflow concepts.
     gap_filled_by: {approach: in-house, adapter: "dataplatform.ml (card from the manifest, gate in CI)"}
-    proves: [CFG-03, REL-03]
+    proves: [CFG-03, REL-03, ML-01]
   model_server:
     approach: platform
     adapter: Mosaic AI Model Serving and inference tables, with Lakehouse Monitoring on them
     coverage: full
-    proves: [PERF-02, SEC-02]
+    proves: [PERF-02, SEC-02, ML-01]
   orchestrator:
     approach: platform
     adapter: Lakeflow Jobs generated from metadata and deployed by Asset Bundles; table-update triggers on batch-ready markers; queued runs, max concurrent runs 1
@@ -192,7 +192,7 @@ bindings:
     gap: Freshness against the contract and alert noise rules are not built in.
     gap_filled_by: {approach: in-house, adapter: "dataplatform.ops (ops builder, heartbeat, alert rules as config)"}
     metadata_keys: [sla_freshness_hours, sla_freshness_error_hours]
-    proves: [OPS-01, PERF-02]
+    proves: [OPS-01, PERF-02, OPS-06]
   evidence:
     approach: in-house
     adapter: evidence view joining run_log, check_results, lineage and cost by run id
@@ -355,6 +355,7 @@ profiles:
     accepted_gaps:
       - {obligation: SCH-01, reason: "New columns are reported but not kept in bronze yet (load.new_columns: hold_in_bronze is not built).", owner: platform-lead, review: "2026-12-01"}
       - {obligation: OPS-01, reason: "Freshness is not measured against the contract's latency and no alert is sent in slice 1.", owner: platform-lead, review: "2026-12-01"}
+      - {obligation: OPS-06, reason: "No alert is sent in slice 1, so there is no alert noise to control yet.", owner: platform-lead, review: "2026-12-01"}
       - {obligation: ENV-02, reason: "Free Edition has no SSO, SCIM or account console, so groups and service principals cannot be shown.", owner: platform-lead, review: "2026-12-15"}
       - {obligation: COST-02, reason: "Free Edition has no budget policies; usage is readable from system.billing.usage only.", owner: platform-lead, review: "2026-12-15"}
       - {obligation: ORCH-05, reason: "Free Edition offers no disaster recovery; recovery is shown locally on open-source engines.", owner: platform-lead, review: "2026-12-15"}

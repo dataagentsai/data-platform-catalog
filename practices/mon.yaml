@@ -76,6 +76,7 @@
   - runtime: A test alert is sent on every deploy to prove each route.
   dac:
   - OPS-01
+  - OPS-06
   adr: []
 - id: BP-128
   status: draft

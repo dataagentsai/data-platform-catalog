@@ -50,6 +50,7 @@
   failure_mode: The same failed rule raised an alert every fifteen minutes; on-call muted the channel.
   discharges:
   - OPS-01
+  - OPS-06
   realization_policy: own
   see_also: []
 - id: DPC-0057

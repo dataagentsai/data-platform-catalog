@@ -183,3 +183,26 @@ def test_real_ports_archetypes_and_capabilities_are_clean():
     assert lint.lint_archetypes(VOCAB) == []
     assert lint.lint_ports(ports, VOCAB, DAC_IDS) == []
     assert lint.lint_capabilities(lint.load_capabilities(), VOCAB, DAC_IDS, {p["port"] for p in ports}) == []
+
+
+# The five DAC obligations session B proposed (Goal 1b): each sits in its concern file, is discharged by the
+# capabilities named in the proposal, and is cited by the ADR named there.
+SHAPE_CASES = [
+    # (id, concern, level, capabilities that discharge it, ADRs that cite it)
+    ("DEL-04", "X6", "MUST", ["DPC-0054"], ["ADR-016"]),
+    ("HIST-05", "X15", "MUST", ["DPC-0082"], ["ADR-017"]),
+    ("ML-01", "X13", "MUST", ["DPC-0050", "DPC-0061", "DPC-0077"], ["ADR-021"]),
+    ("SERV-06", "X13", "MUST", ["DPC-0073", "DPC-0076"], ["ADR-022"]),
+    ("OPS-06", "X8", "SHOULD", ["DPC-0056"], []),
+]
+
+
+@pytest.mark.parametrize("oid,concern,level,caps,adrs", SHAPE_CASES, ids=[c[0] for c in SHAPE_CASES])
+def test_shape_obligation_is_linked(oid, concern, level, caps, adrs):
+    import lint_shape
+    rec = next(r for r in lint.load_obligations() if r["id"] == oid)
+    assert (rec["concern"], rec["_file"], rec["level"], rec.get("origin")) == (concern, concern, level, "shape")
+    by_id = {c["id"]: c for c in lint.load_capabilities()}
+    assert all(oid in by_id[c]["discharges"] for c in caps)
+    cited = {a["id"] for a in lint_shape.load_adrs() if oid in (a.get("dac") or [])}
+    assert set(adrs) <= cited

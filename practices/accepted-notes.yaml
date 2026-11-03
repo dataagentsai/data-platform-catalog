@@ -1,0 +1,107 @@
+# Linter notes that are intended, each with its reason (scripts/lint_practices.py). A listed note is not printed;
+# a listed note that no longer fires is an error, so this list cannot go stale. Delete an entry once its cause is
+# fixed. Two kinds:
+#   {practice, check, reason}  the practice cites a shift-left check whose `dac:` links it does not share
+#   {dac, reason}              no practice serves this DAC obligation yet
+# A reason that starts "Bundle:" means the real fix is a `dac:` link in the shift-left bundle's check, not here.
+
+# ---- the check makes this practice's own logic tested; the practice serves its own obligation, not TEST-03
+- practice: BP-018
+  check: SL-TEST-02
+  reason: The config resolver is a pure function and SL-TEST-02 makes it unit-tested; the practice serves CFG-03 and CFG-05.
+- practice: BP-063
+  check: SL-TEST-02
+  reason: Hygiene and standard-value stages are pure functions that must be unit-tested; the practice serves DQ-01 and PROF-01.
+- practice: BP-063
+  check: SL-CLEAN-21
+  reason: Cited for the quality of those stage tests; the practice serves DQ-01 and PROF-01, not TEST-03.
+- practice: BP-065
+  check: SL-TEST-02
+  reason: The time-zone conversion is a pure function that must be unit-tested; the practice serves LATE-04.
+- practice: BP-105
+  check: SL-SEM-07
+  reason: A known-answer test is a precondition of certifying a metric (SERV-06); the bundle links SL-SEM-07 to TEST-03 only.
+    Bundle follow-up, link SERV-06 too.
+- practice: BP-041
+  check: SL-TEST-09
+  reason: SL-TEST-09 asks for the standard test cases of a known load pattern (full, incremental, reload); the practice
+    serves HIST-03 and HIST-04, which those cases test.
+- practice: BP-059
+  check: SL-TEST-09
+  reason: The standard cases of the read-only-new-batches pattern (a batch read once, a rerun reads nothing) test DUP-02.
+- practice: BP-078
+  check: SL-TEST-09
+  reason: The standard cases of the window-recompute pattern test LATE-01 and DUP-02, which the practice serves.
+- practice: BP-080
+  check: SL-TEST-09
+  reason: The standard cases of the as-of join pattern test SCD-04, which the practice serves.
+- practice: BP-084
+  check: SL-TEST-09
+  reason: The standard cases of replace-not-append test GOLD-01 and DUP-02, which the practice serves.
+- practice: BP-089
+  check: SL-TEST-09
+  reason: The standard cases of the incremental join pattern test LATE-01, which the anti-pattern breaks.
+- practice: BP-092
+  check: SL-TEST-09
+  reason: The standard cases of the as-of join pattern test SCD-04, which the anti-pattern breaks.
+
+# ---- Bundle: the check enforces this practice, but its dac: list names a different, narrower obligation
+- practice: BP-003
+  check: SL-PURE-03
+  reason: 'Bundle: non-repeatable values break deterministic logic (this principle); the check links only TEST-03 and TEST-05.'
+- practice: BP-006
+  check: SL-PURE-03
+  reason: 'Bundle: non-repeatable values break idempotent reruns; the check should also link IDEMP-01.'
+- practice: BP-005
+  check: SL-PURE-06
+  reason: 'Bundle: an action inside a logic function breaks purity; the check should also link PURE-01, not only COST-02.'
+- practice: BP-076
+  check: SL-PURE-06
+  reason: 'Bundle: the harness owning IO is PURE-01; the check should also link PURE-01, not only COST-02.'
+- practice: BP-024
+  check: SL-STYLE-04
+  reason: 'Bundle: a naming check should link NAME-01; it links REL-02 (code review) only.'
+- practice: BP-044
+  check: SL-STYLE-04
+  reason: 'Bundle: streams follow the same naming (NAME-01); the check links REL-02 only.'
+- practice: BP-065
+  check: SL-CLEAN-16
+  reason: 'Bundle: a timestamp without a time zone breaks LATE-04 (time zones and business dates); the check links LATE-01.'
+
+# ---- the check is cited for a side of it the bundle does not link
+- practice: BP-007
+  check: SL-SETUP-06
+  reason: Validating deployment configuration before deploy is one example of failing fast; the principle serves its own
+    obligations, while CFG-01 and REL-06 belong to the declaring and infrastructure practices.
+- practice: BP-114
+  check: SL-SETUP-06
+  reason: This practice is running the bundle in CI; the checks it runs serve their own obligations.
+- practice: BP-083
+  check: SL-COST-CODE-23
+  reason: Cited for the refresh cost of long view chains (COST-02); the bundle links the freshness side (PERF-02).
+- practice: BP-097
+  check: SL-COST-CODE-23
+  reason: Cited for the refresh cost of long view chains (COST-02); the bundle links the freshness side (PERF-02).
+- practice: BP-103
+  check: SL-SEM-01
+  reason: Validating the metric file before deploy is how this practice meets REL-01; the bundle links GATE-01.
+- practice: BP-103
+  check: SL-SEM-04
+  reason: An undeclared multiplying join in a metric breaks SERV-04 (one definition); the bundle links DUP-01.
+- practice: BP-120
+  check: SL-SECRET-03
+  reason: Infrastructure code is scanned for credentials; secrets are served by their own practices (REL-05), not by
+    infrastructure as code.
+- practice: BP-128
+  check: SL-COST-CONFIG-08
+  reason: The sweeper relies on every job having a time limit; the bundle links the time limit to cost (COST-02).
+
+# ---- DAC obligations no card on the page serves yet. The page holds the deck's 134 cards; a new card is new content.
+- dac: ML-01
+  reason: The deck page has no card on machine learning models; ADR-021 and DPC-0050, -0061, -0077 cover it.
+- dac: ORCH-02
+  reason: The deck page has no card on retries; the orchestrator binding proves it.
+- dac: ORCH-05
+  reason: The deck page has no card on recovery time and data loss limits; it is an accepted gap on the free-edition stack.
+- dac: REL-07
+  reason: The deck page has no card on rolling back a release with its data.

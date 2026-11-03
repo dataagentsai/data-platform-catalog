@@ -81,4 +81,4 @@ Stack `free-edition`: engine databricks (profile free-edition). Generated from `
 
 Ports bound: 38 of 44. The platform covers 14 fully, 17 in part and 7 not at all; every gap names who fills it.
 Not bound on this stack: event_publisher, identity_provider, key_manager, network_boundary, object_store, tokenizer.
-Accepted gaps: GATE-02, SCH-01, OPS-01, ENV-02, COST-02, ORCH-05.
+Accepted gaps: GATE-02, SCH-01, OPS-01, OPS-06, ENV-02, COST-02, ORCH-05.

@@ -8,7 +8,7 @@ Part of [Clean Data Engineering](https://cleandataengineering.ai/).
 
 | Part | What it says | Status |
 |---|---|---|
-| [dac/](dac/) | DAC, the Data Assurance Catalog: what must be **true** of a platform, as testable obligations, each naming how it is enforced | v0.1 draft: 84 obligations, lint-clean |
+| [dac/](dac/) | DAC, the Data Assurance Catalog: what must be **true** of a platform, as testable obligations, each naming how it is enforced | v0.1 draft: 89 obligations, lint-clean |
 | [practices/](practices/) | How we meet each obligation: principles, practices and anti-patterns, each linked to DAC. The engineering best-practices page is generated from here | v0.1 draft: 132 practices |
 | [core/](core/) | Shared vocabulary: the 22 cross-cutting concerns, the spine stages, the ten pipeline archetypes, the standards we cite | v0.1 draft |
 | [adr/](adr/) | ADRs: **why** the platform is shaped as it is, one decision record each (MADR), cited by DPC, DAC and practices | 23 accepted |
@@ -27,7 +27,7 @@ DAC starts from the tested technical checks in
 ```bash
 uv run scripts/lint.py
 uv run scripts/lint_practices.py              # practices and enforced_by (reads ../shift-left-bundle)
-uv run scripts/build_practices_page.py        # regenerate the best-practices page
+uv run scripts/build_practices_page.py        # regenerate the best-practices page (targets: page-targets.local.yaml)
 uv run --with pytest --with pyyaml --with jsonschema pytest -q
 ```
 

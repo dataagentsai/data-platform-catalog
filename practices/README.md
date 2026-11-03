@@ -58,7 +58,19 @@ Rules (checked by `scripts/lint_practices.py`, tested by `tests/test_practices.p
   build-time check says so in `gap`.
 
 The linter also prints notes, not errors: a practice that cites a check whose DAC links it does not share, and DAC
-obligations no practice serves yet.
+obligations no practice serves yet. A note that is intended goes in [accepted-notes.yaml](accepted-notes.yaml) with
+its reason, and is then not printed; an entry whose note no longer fires is an error, so the list stays current. A
+reason that starts "Bundle:" means the real fix is a `dac:` link on the shift-left bundle's check.
+
+## The page
+
+Each card shows the DAC obligations it serves and, when it has `adr:`, the decisions behind it ("Decided in", with
+each ADR's title and a link to its file). An **ADR** badge marks those cards, and the "Decision record" filter
+(`#adr=backed` or `#adr=none`) shows the cards with or without a recorded decision.
+
+The page names no client unless a setting says so: `--client NAME` with `--out FILE`, or `client:` on a target in
+`page-targets.local.yaml` at the repository root (not committed; copy
+[../page-targets.example.yaml](../page-targets.example.yaml)). The template and the catalog never hold a client name.
 
 ## ADR ids
 
@@ -79,7 +91,8 @@ detail stays in `how`.
 uv run scripts/lint_practices.py          # lint practices and enforced_by
 uv run scripts/enforced_by.py             # refresh enforced_by after the bundle or proposed-checks.yaml changes
 uv run scripts/index.py                   # refresh dac/INDEX.md
-uv run scripts/build_practices_page.py    # write the page (~/ and ~/apollo-deck/site/); --check to compare
+uv run scripts/build_practices_page.py    # write the page to each target in page-targets.local.yaml (default ~/); --check to compare
+uv run scripts/build_practices_page.py --out FILE --client "Name"   # one copy, naming a client
 ```
 
 The shift-left bundle is read from `$SHIFT_LEFT_BUNDLE`, or `../shift-left-bundle` next to this repository.

@@ -6,7 +6,7 @@ decision-makers: [platform owner]
 consulted: [session A (practices), deck reviewers]
 concerns: [X15, X6]
 dpc: [DPC-0085, DPC-0053, DPC-0054, DPC-0017]
-dac: [SCD-02, DEL-01, DEL-03]
+dac: [SCD-02, DEL-01, DEL-03, DEL-04]
 plan: [G2]
 source: ["ETL page history kinds and guards"]
 ---

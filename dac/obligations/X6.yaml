@@ -160,3 +160,41 @@
     runtime: true
     review: null
     gap: 'No build-time check yet: found only by the runtime test.'
+- id: DEL-04
+  status: draft
+  since: 0.1.0
+  title: A full copy that would delete too much is held, not loaded
+  concern: X6
+  level: MUST
+  core: true
+  dimension: completeness
+  stages:
+  - landing
+  - bronze
+  statement: Before a full copy is appended, its keys MUST be compared with silver's current keys, and when more
+    than the dataset's declared share would be deleted the load MUST append nothing, hold the files and block the
+    dataset with an alert.
+  failure_mode: A daily full copy of materials came back with 40% of rows missing after a failed export; silver
+    treated them as deleted and every dashboard lost those products until someone reloaded by hand.
+  test: In test, deliver a full copy with more than the declared share of keys missing; nothing may reach bronze,
+    the dataset must be blocked with an alert, and silver must still hold every key. Deliver one just under the
+    share and check that it loads.
+  evidence: A declared maximum delete share on every full-copy dataset, a key comparison logged per delivery, and
+    held files with a blocked-dataset alert when the share is exceeded.
+  cites:
+  - standard: ODCS
+    ref: quality[].metric = rowCount
+  - standard: DAMA-DMBOK
+    ref: Data Integration and Interoperability, chapter 8
+  review_check: null
+  origin: shape
+  related:
+  - DEL-01
+  - DQ-04
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: Design review checks that every full-copy dataset declares its maximum delete share.
+    gap: 'No build-time check yet: a full copy that declares no maximum delete share is not caught before deploy;
+      found only by the runtime test.'

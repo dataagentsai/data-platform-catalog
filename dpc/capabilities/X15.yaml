@@ -247,6 +247,7 @@
   discharges:
   - HIST-04
   - LATE-01
+  - HIST-05
   realization_policy: own
   adr:
   - ADR-017

@@ -150,7 +150,7 @@ calendar:                             # story: one of the demo stories this worl
     dataset: erp.material
     does: The daily full copy of materials comes back with 40% of rows missing.
     expect:
-      detector: DQ-04
+      detector: DEL-04
       handled_by: [DPC-0054]
       oracle: nothing is appended to bronze, the dataset is blocked with the mass-delete alert, silver keeps every material
   - id: promised-date-corrected
@@ -161,7 +161,7 @@ calendar:                             # story: one of the demo stories this worl
     does: The sales team records that 12 lines from day 2 were always promised a day later; a backfill plan activates it on day 11.
     pick: 12
     expect:
-      detector: HIST-04
+      detector: HIST-05
       handled_by: [DPC-0082]
       oracle: silver is unchanged; only day 2's and day 3's promised-date windows are rebuilt on day 11; OTIF equals the corrected truth
   - id: new-dealer-late

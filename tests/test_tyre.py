@@ -109,3 +109,18 @@ def test_no_product_names_in_the_slice():
     for f in sorted(D.rglob("*")):
         if f.is_file():
             assert lint.products_in(f.read_text()) == [], f.name
+
+
+# DAC additions proposed by session B: each incident that borrowed a near obligation now has its own.
+OWN_DETECTOR_CASES = [
+    # (incident id, its own detector, the obligation it borrowed before)
+    ("material-copy-short", "DEL-04", "DQ-04"),
+    ("promised-date-corrected", "HIST-05", "HIST-04"),
+]
+
+
+@pytest.mark.parametrize("incident,detector,borrowed", OWN_DETECTOR_CASES, ids=[c[0] for c in OWN_DETECTOR_CASES])
+def test_incident_has_its_own_detector(incident, detector, borrowed):
+    e = next(x for x in WORLD["calendar"] if x["id"] == incident)
+    assert e["expect"]["detector"] == detector != borrowed
+    assert any(detector in CAPS[c]["discharges"] for c in e["expect"]["handled_by"])

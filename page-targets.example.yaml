@@ -1,0 +1,7 @@
+# Where scripts/build_practices_page.py writes the best-practices page, and the client named on each copy.
+# Copy to page-targets.local.yaml (not committed) and edit. Without that file the page goes to
+# ~/Engineering-Best-Practices.html with no client named. A client name is a setting: it never goes in the
+# template or the catalog.
+- path: ~/Engineering-Best-Practices.html
+- path: ~/client-deck/site/Engineering-Best-Practices.html
+  client: Example Client Ltd

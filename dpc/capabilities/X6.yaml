@@ -151,6 +151,7 @@
   discharges:
   - DEL-01
   - DQ-04
+  - DEL-04
   realization_policy: own
   adr:
   - ADR-016

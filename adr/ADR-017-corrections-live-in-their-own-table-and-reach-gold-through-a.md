@@ -6,7 +6,7 @@ decision-makers: [platform owner]
 consulted: [session A (practices), deck reviewers]
 concerns: [X15]
 dpc: [DPC-0082]
-dac: [HIST-04, LATE-01]
+dac: [HIST-04, LATE-01, HIST-05]
 plan: [G2]
 source: ["ETL page guards"]
 ---

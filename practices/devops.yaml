@@ -22,6 +22,7 @@
   - review: The plan is reviewed in the pull request; apply runs only from CI.
   dac:
   - REL-06
+  - SEC-02
   adr: []
 - id: BP-121
   status: draft

@@ -111,6 +111,13 @@ body.present .grid{grid-template-columns:repeat(auto-fill,minmax(32rem,1fr))}
 .dacrow .lbl{font-weight:650;color:var(--ink);margin-right:2px}
 .dac{display:inline-flex;align-items:baseline;gap:4px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.76rem;color:var(--ink);border:1px solid #c9d1da;border-radius:4px;padding:1px 6px;background:#f7f9fb;white-space:nowrap;cursor:help}
 .dac small{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;font-size:.64rem;color:var(--muted);letter-spacing:.03em}
+.adrrow{display:flex;flex-direction:column;gap:3px;font-size:.9rem}
+.adrrow .lbl{font-weight:650;color:var(--ink)}
+.adr{display:flex;align-items:baseline;gap:7px;line-height:1.35;color:var(--ink);text-decoration:none}
+.adr .aid{flex:none;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.76rem;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:1px 6px;background:var(--accent-soft);white-space:nowrap}
+a.adr:hover span:last-child{text-decoration:underline;color:var(--accent)}
+.chead .adrb{flex:none;font-size:.66rem;font-weight:650;letter-spacing:.05em;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:1px 5px;background:var(--accent-soft);cursor:help;margin-left:auto}
+.chead .adrb+.bp{margin-left:0}
 .instead{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;padding:6px 10px}
 .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:auto;padding-top:6px;border-top:1px dashed #e6e9ed}
 .tag{font-size:.74rem;color:var(--muted);border:1px solid #e3e7ec;border-radius:999px;padding:1px 8px;background:#fff}
@@ -144,14 +151,16 @@ mark{background:#fff3b0;color:inherit;padding:0}
   <div class="group" id="g-layer"><h3>Layer</h3><div class="chips"></div></div>
   <div class="group comp" id="g-comp"><h3>Component</h3><div class="chips"></div></div>
   <div class="group" id="g-enf"><h3>Enforced by</h3><div class="chips"></div></div>
+  <div class="group" id="g-adr"><h3>Decision record</h3><div class="chips"></div></div>
   <div class="panel-foot">
     Filters are combined: within a group any chip matches, across groups all must match.
-    Share a view with the page address, e.g. <code>#layer=Gold&amp;kind=Anti-pattern</code> or <code>#enforced=gap</code>.
+    Share a view with the page address, e.g. <code>#layer=Gold&amp;kind=Anti-pattern</code>, <code>#enforced=gap</code>
+    or <code>#adr=backed</code>.
     Press <b>P</b> for present mode (or add <code>&amp;present=1</code>), <b>/</b> to search.
-    Search also finds a DAC id, e.g. <code>#q=GOLD-01</code>.
+    Search also finds a DAC or ADR id, e.g. <code>#q=GOLD-01</code> or <code>#q=ADR-017</code>.
   </div>
   <div class="panel-foot">
-    Generated from the data platform catalog (<code>practices/</code>, <code>dac/</code> and the shift-left
+    Generated from the data platform catalog (<code>practices/</code>, <code>dac/</code>, <code>adr/</code> and the shift-left
     bundle) by <code>scripts/build_practices_page.py</code>. Do not edit this page; edit the catalog.
   </div>
 </aside>
@@ -163,7 +172,7 @@ mark{background:#fff3b0;color:inherit;padding:0}
       <div>
         <h1>Engineering best practices</h1>
         <p class="sub">Data platform on AWS and Databricks · the canon every layer follows</p>
-        <div class="for">Prepared for Apollo Tyres</div>
+        <!--@CLIENT@-->
       </div>
       <div class="tools">
         <button class="btn" id="present" title="Larger text, filter panel folded away (key: P)">Present</button>
@@ -195,14 +204,17 @@ const COMPONENTS = [
 const KINDS = [["P","Principle"],["B","Best practice"],["A","Anti-pattern"]];
 const ENF = [["sl","Shift-left check"],["runtime","Runtime check"],["review","Review"],["gap","Gap (proposed check)"]];
 const ENF_CODE = {"shift-left":"sl",runtime:"runtime",review:"review",gap:"gap"};
+const ADRF = [["backed","ADR-backed"],["none","No ADR yet"]];
 const STAGE = {commit:"commit",pr:"PR",predeploy:"pre-deploy",nightly:"nightly"};
 const GROUPS = {kind:{list:KINDS,field:"k",el:"g-kind",key:"kind",name:"Kind"},
                 layer:{list:LAYERS,field:"l",el:"g-layer",key:"layer",name:"Layer"},
                 comp:{list:COMPONENTS,field:"c",el:"g-comp",key:"component",name:"Component"},
-                enf:{list:ENF,el:"g-enf",key:"enforced",name:"Enforced by",short:true}};
+                enf:{list:ENF,el:"g-enf",key:"enforced",name:"Enforced by",short:true},
+                adr:{list:ADRF,el:"g-adr",key:"adr",name:"Decision record",short:true}};
 const ALIASES = {kind:{"principle (canon)":"P","canon":"P","principles":"P","best practices":"B","anti-patterns":"A","antipattern":"A","anti pattern":"A"},
                  comp:{"data quality":"dq","data expectation services":"dq"}, layer:{},
-                 enf:{"shift-left":"sl","shift left":"sl","shiftleft":"sl","rt":"runtime","rv":"review","proposed":"gap","proposed check":"gap","gap":"gap"}};
+                 enf:{"shift-left":"sl","shift left":"sl","shiftleft":"sl","rt":"runtime","rv":"review","proposed":"gap","proposed check":"gap","gap":"gap"},
+                 adr:{"yes":"backed","adr":"backed","adr-backed":"backed","decided":"backed","no":"none","no adr":"none"}};
 const label = (list,code)=> (list.find(x=>x[0]===code)||[code,code])[1];
 
 function enfText(e){
@@ -211,19 +223,20 @@ function enfText(e){
   return e.text;
 }
 const DATA = ENTRIES.map((e,i)=>({...e, idx:i, L:e.l.split(/\s+/), C:e.c.split(/\s+/), K:[e.k],
-  EN:[...new Set(e.enforced.map(x=>ENF_CODE[x.type]))],
-  hay:[e.id,e.t,e.w,e.h,e.i||"",e.enforced.map(enfText).join(" "),e.d.map(x=>x+" "+((DAC[x]||[""])[0])).join(" "),e.l.split(/\s+/).map(x=>label(LAYERS,x)).join(" "),
+  EN:[...new Set(e.enforced.map(x=>ENF_CODE[x.type]))], AD:[e.a.length?"backed":"none"],
+  hay:[e.id,e.t,e.w,e.h,e.i||"",e.enforced.map(enfText).join(" "),e.d.map(x=>x+" "+((DAC[x]||[""])[0])).join(" "),
+       e.a.map(x=>x+" "+((ADRS[x]||[""])[0])).join(" "),e.l.split(/\s+/).map(x=>label(LAYERS,x)).join(" "),
        e.c.split(/\s+/).map(x=>label(COMPONENTS,x)).join(" "),label(KINDS,e.k)].join(" ").toLowerCase()}));
-const vals = (d,g)=> g==="layer"? d.L : g==="comp"? d.C : g==="enf"? d.EN : d.K;
+const vals = (d,g)=> g==="layer"? d.L : g==="comp"? d.C : g==="enf"? d.EN : g==="adr"? d.AD : d.K;
 
-const state = {layer:new Set(), comp:new Set(), kind:new Set(), enf:new Set(), q:""};
+const state = {layer:new Set(), comp:new Set(), kind:new Set(), enf:new Set(), adr:new Set(), q:""};
 
 /* summary strip, computed from the data */
 (function(){
   const n = t => DATA.filter(d=>d.EN.includes(t)).length;
   const ids = new Set(), gaps = new Set();
   ENTRIES.forEach(e=>e.enforced.forEach(x=>{ if (x.type==="shift-left") x.ids.forEach(i=>ids.add(i)); if (x.type==="gap") gaps.add(x.id); }));
-  const link = (code,txt)=> `<button class="linkbtn" data-g="enf" data-v="${code}">${txt}</button>`;
+  const link = (code,txt,g="enf")=> `<button class="linkbtn" data-g="${g}" data-v="${code}">${txt}</button>`;
   const sep = '<span class="sep">·</span>';
   document.getElementById("summary").innerHTML = [
     `<span class="lead"><b>${DATA.length}</b> practices</span>`,
@@ -231,7 +244,8 @@ const state = {layer:new Set(), comp:new Set(), kind:new Set(), enf:new Set(), q
     link("sl",`<b>${n("sl")}</b> enforced by shift-left checks (${ids.size} distinct checks)`),
     link("runtime",`<b>${n("runtime")}</b> by runtime checks`),
     link("review",`<b>${n("review")}</b> by review`),
-    link("gap",`<b>${gaps.size}</b> proposed checks`)].join(sep);
+    link("gap",`<b>${gaps.size}</b> proposed checks`),
+    link("backed",`<b>${DATA.filter(d=>d.a.length).length}</b> backed by a recorded decision (${new Set(ENTRIES.flatMap(e=>e.a)).size} ADRs)`,"adr")].join(sep);
 })();
 
 /* product name colouring */
@@ -298,17 +312,28 @@ function dacHTML(d){
   }).join("") + `</div>`;
 }
 
+function adrHTML(d){
+  if (!d.a.length) return "";
+  return `<div class="adrrow"><span class="lbl">Decided in</span>` + d.a.map(i=>{
+    const [t,href] = ADRS[i] || ["",""];
+    const inner = `<span class="aid">${i}</span><span>${esc(t)}</span>`;
+    return href ? `<a class="adr" href="${esc(href)}" target="_blank" rel="noopener" title="${esc(i+": "+t+" (opens the decision record)")}">${inner}</a>`
+                : `<div class="adr">${inner}</div>`;
+  }).join("") + `</div>`;
+}
+
 function cardHTML(d){
   const kindName = label(KINDS,d.k);
   const tags = d.L.map(x=>`<span class="tag layer" data-g="layer" data-v="${x}">${label(LAYERS,x)}</span>`).join("")
              + d.C.map(x=>`<span class="tag" data-g="comp" data-v="${x}">${esc(label(COMPONENTS,x))}</span>`).join("");
   return `<article class="card ${d.k}">
-    <div class="chead"><span class="kind k-${d.k}">${kindName}</span><h4>${rich(d.t)}</h4><span class="bp">${d.id}</span></div>
+    <div class="chead"><span class="kind k-${d.k}">${kindName}</span><h4>${rich(d.t)}</h4>${d.a.length?`<span class="adrb" title="${esc("Backed by a recorded decision: "+d.a.join(", "))}">ADR</span>`:""}<span class="bp">${d.id}</span></div>
     <p class="row why"><span class="lbl">Why</span>${rich(d.w)}</p>
     <p class="row"><span class="lbl">${d.k==="A"?"How we prevent it":"How we do it"}</span>${rich(d.h)}</p>
     ${enfHTML(d)}
     ${d.i?`<p class="row instead"><span class="lbl">Do this instead</span>${rich(d.i)}</p>`:""}
     ${dacHTML(d)}
+    ${adrHTML(d)}
     <div class="tags">${tags}</div>
   </article>`;
 }

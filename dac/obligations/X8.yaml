@@ -27,3 +27,35 @@
     runtime: true
     review: null
     gap: 'No build-time check yet: found only by the runtime test.'
+- id: OPS-06
+  status: draft
+  since: 0.1.0
+  title: Alerts are few enough to be read
+  concern: X8
+  level: SHOULD
+  core: true
+  dimension: null
+  stages:
+  - platform
+  statement: An alert SHOULD fire when a check changes state and resolve when it recovers, SHOULD be grouped to
+    one per rule per day, SHOULD be routed by the data product's tier, and every snooze SHOULD carry a reason and
+    an expiry.
+  failure_mode: The same failed rule raised an alert every fifteen minutes for two days; on-call muted the channel,
+    and the next real failure went unseen for a week.
+  test: In test, fail one check for a day; exactly one alert must fire and one resolve when it recovers. Snooze
+    a rule and check that the snooze expires on its date and the alert returns.
+  evidence: Alert rules held as configuration with state-change firing, daily grouping and routes by tier; a snooze
+    list with reason, owner and expiry; a count of alerts per rule per day.
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  review_check: null
+  origin: shape
+  related:
+  - OPS-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: Alert rules and snoozes are reviewed as configuration in the pull request.
+    gap: 'No build-time check yet: found only by the runtime test.'

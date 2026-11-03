@@ -112,6 +112,7 @@
   dac:
   - DQ-04
   - DEL-01
+  - DEL-04
   adr: []
 - id: BP-041
   status: draft
@@ -207,6 +208,7 @@
   - LATE-03
   - DUP-04
   - ORCH-06
+  - COST-04
   adr: []
 - id: BP-045
   status: draft

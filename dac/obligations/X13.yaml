@@ -96,3 +96,81 @@
     runtime: true
     review: The business owner signs off a metric before it is marked certified.
     gap: null
+- id: ML-01
+  status: draft
+  since: 0.1.0
+  title: A machine learning model is a data product
+  concern: X13
+  level: MUST
+  core: false
+  dimension: null
+  stages:
+  - gold
+  - experiences
+  statement: Every model MUST be declared in the manifest with a model card (purpose, owner, target, features, training
+    window, metric and threshold, monitoring, limitations); training MUST read each feature as of its label's time;
+    and a served model SHOULD be watched for drift and stale features against its card's thresholds.
+  failure_mode: A demand model trained on features joined at today's values scored well in testing and badly in
+    use, then kept forecasting for three weeks from features that had stopped updating, and nobody could say which
+    data had trained it.
+  test: Check that every model in use has a card in the manifest; retrain on a window and confirm no feature value
+    is later than its label's time; stop one feature's updates in test and check that the staleness alert fires.
+  evidence: A model card per model in the manifest; each trained version recording its data window, code and configuration;
+    point-in-time feature reads; drift and feature-age monitors with the card's thresholds.
+  cites:
+  - standard: ODPS
+    ref: outputPorts[]
+  - standard: OpenLineage
+    ref: RunEvent
+  review_check: null
+  origin: shape
+  related:
+  - CFG-03
+  - SCD-04
+  - PERF-02
+  - LIN-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: The model card is reviewed before a model version is promoted.
+    gap: 'No shift-left check yet: the catalog linter checks a model card''s features and as-of column, but a model
+      used without a card is found only by the runtime test.'
+- id: SERV-06
+  status: draft
+  since: 0.1.0
+  title: Conversation interfaces and agents use certified metrics only
+  concern: X13
+  level: MUST
+  core: false
+  dimension: consistency
+  stages:
+  - semantic
+  - experiences
+  statement: A conversation interface or agent MUST answer only from metrics marked certified, and a metric MUST
+    NOT be marked certified until its owner has signed it off and its known-answer test passes.
+  failure_mode: An assistant pointed at a draft revenue metric summed a column that still included cancelled orders,
+    and the answer reached the board pack before anyone checked it against the dashboard.
+  test: In test, ask the conversation interface a question only a draft metric can answer; it must decline or say
+    the metric is not certified. Then try to certify a metric whose known-answer test fails; certification must
+    be refused.
+  evidence: A certification status, owner sign-off and known-answer test on every metric; conversation spaces and
+    agent tools configured with certified metrics only; the metric and query shown with each answer.
+  cites:
+  - standard: Ossie
+    ref: metric
+  - standard: DAMA-DMBOK
+    ref: Data Governance, chapter 3
+  review_check: null
+  origin: shape
+  related:
+  - SERV-04
+  - SEC-02
+  - GATE-02
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: Every conversation space and agent tool is reviewed to read certified metrics only.
+    gap: 'No build-time check yet: SL-SEM-07 (a metric with no known-answer test) catches part of it but does not
+      name this obligation; nothing checks before deploy that a conversation space reads certified metrics only.'

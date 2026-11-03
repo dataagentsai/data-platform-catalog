@@ -6,7 +6,7 @@ decision-makers: [platform owner]
 consulted: [session A (practices), deck reviewers]
 concerns: [X13]
 dpc: [DPC-0073, DPC-0076]
-dac: [SERV-04]
+dac: [SERV-04, SERV-06]
 plan: [G6]
 source: ["deck A12"]
 ---

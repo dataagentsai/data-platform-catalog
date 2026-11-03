@@ -41,6 +41,7 @@
   failure_mode: OTIF had three formulas in three dashboards; the plant director stopped trusting all of them.
   discharges:
   - SERV-04
+  - SERV-06
   realization_policy: bind
   adr:
   - ADR-022
@@ -108,6 +109,7 @@
   discharges:
   - SERV-04
   - SEC-02
+  - SERV-06
   realization_policy: bind
   adr:
   - ADR-022
@@ -132,6 +134,7 @@
   discharges:
   - CFG-03
   - LIN-01
+  - ML-01
   realization_policy: bind
   adr:
   - ADR-021

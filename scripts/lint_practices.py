@@ -32,6 +32,7 @@ MORE_PRODUCTS = ["genie", "macie", "photon", "aurora", "postgresql", "appflow", 
 # Session B writes the ADRs. Until adr/ exists, a practice may name only these placeholder ids (from its brief).
 ADR_PLACEHOLDERS = {f"ADR-{n:03d}" for n in range(1, 16)}
 GAP_DEFAULT = "No build-time check yet: found only by the runtime test."
+NOT_PRACTICES = ("components", "proposed-checks", "dropped", "accepted-notes")  # files in practices/ that hold no practice
 
 
 def bundle_dir():
@@ -49,7 +50,7 @@ def load_bundle(path=None):
 def load_practices(root=ROOT):
     recs = []
     for f in sorted((root / "practices").glob("*.yaml")):
-        if f.stem in ("components", "proposed-checks", "dropped"):
+        if f.stem in NOT_PRACTICES:
             continue
         for r in yaml.safe_load(f.read_text()) or []:
             r["_file"] = f.stem
@@ -59,6 +60,12 @@ def load_practices(root=ROOT):
 
 def load_part(name, root=ROOT):
     return yaml.safe_load((root / "practices" / f"{name}.yaml").read_text()) or ([] if name != "components" else {})
+
+
+def load_accepted(root=ROOT):
+    """Notes that are intended, each with its reason (practices/accepted-notes.yaml); none when the file is absent."""
+    p = root / "practices" / "accepted-notes.yaml"
+    return (yaml.safe_load(p.read_text()) or []) if p.exists() else []
 
 
 def adr_ids(root=ROOT):
@@ -199,18 +206,53 @@ def lint_enforced_by(obligations, bundle, proposed):
     return errs
 
 
-def warnings(practices, obligations, bundle):
-    """Not errors: a practice citing a check whose DAC links it does not share, and obligations no practice serves."""
+def notes(practices, obligations, bundle):
+    """Not errors: a practice citing a check whose DAC links it does not share, and obligations no practice serves.
+    Each note comes with its key, the same key an entry in practices/accepted-notes.yaml uses."""
     out = []
     for r in practices:
         for e in r.get("enforced_by") or []:
             for i in e.get("shift_left", []) if isinstance(e, dict) else []:
                 linked = set((bundle or {}).get(i, {}).get("dac") or [])
                 if linked and not linked & set(r.get("dac") or []):
-                    out.append(f"{r['id']}: cites {i} (serves {sorted(linked)}) but links none of those")
+                    out.append((("cites", r["id"], i), f"{r['id']}: cites {i} (serves {sorted(linked)}) but links none of those"))
     served = {d for r in practices for d in r.get("dac") or []}
-    out += [f"{o['id']}: no practice serves it" for o in obligations if o["id"] not in served]
+    out += [(("unserved", o["id"]), f"{o['id']}: no practice serves it") for o in obligations if o["id"] not in served]
     return out
+
+
+def warnings(practices, obligations, bundle):
+    return [text for _, text in notes(practices, obligations, bundle)]
+
+
+def accepted_key(a):
+    if "practice" in a or "check" in a:
+        return ("cites", a.get("practice"), a.get("check"))
+    return ("unserved", a.get("dac"))
+
+
+def apply_accepted(found, accepted, have_bundle=True):
+    """Split the notes into open ones and accepted ones (practices/accepted-notes.yaml). An accepted entry needs a
+    reason and must still match a note, so the list cannot go stale. Without the bundle no 'cites' note can fire, so
+    those entries are not checked for staleness."""
+    keys = {k for k, _ in found}
+    errs = []
+    acc = {}
+    for a in accepted:
+        k = accepted_key(a)
+        w = f"accepted-notes {'/'.join(x for x in k[1:] if x)}"
+        if None in k:
+            errs.append(f"{w}: an entry names a practice and a check, or a dac id")
+            continue
+        if not (a.get("reason") or "").strip():
+            errs.append(f"{w}: needs a reason")
+        if k in acc:
+            errs.append(f"{w}: listed twice")
+        acc[k] = a
+        if k not in keys and (have_bundle or k[0] != "cites"):
+            errs.append(f"{w}: no such note any more; delete the entry")
+    open_ = [text for k, text in found if k not in acc]
+    return open_, sum(k in acc for k, _ in found), errs
 
 
 def run(root=ROOT, bundle=None):
@@ -225,12 +267,14 @@ def run(root=ROOT, bundle=None):
     errs += lint_proposed(proposed, dac_ids, used, bundle_ids)
     errs += [f"dropped {d.get('id')}: needs a reason" for d in dropped if not d.get("dropped")]
     errs += lint_enforced_by(obligations, bundle, proposed)
-    return errs, warnings(practices, obligations, bundle), practices, obligations, dropped
+    open_, _, acc_errs = apply_accepted(notes(practices, obligations, bundle), load_accepted(root), bundle is not None)
+    return errs + acc_errs, open_, practices, obligations, dropped
 
 
 def main():
     bundle = load_bundle()
     errs, warns, practices, obligations, dropped = run(bundle=bundle)
+    n_acc = len(notes(practices, obligations, bundle)) - len(warns)
     for e in errs:
         print("ERROR", e)
     for x in warns:
@@ -242,7 +286,7 @@ def main():
                 for o in obligations if isinstance(o.get("enforced_by"), dict))
     print(f"Practices: {len(practices)} ({', '.join(f'{v} {k}' for k, v in kinds.items())}), {len(dropped)} dropped.")
     print(f"DAC: {build} of {len(obligations)} obligations have a build-time check (shift-left or proposed).")
-    print(f"{len(errs)} errors, {len(warns)} notes")
+    print(f"{len(errs)} errors, {len(warns)} notes ({n_acc} more accepted with a reason in practices/accepted-notes.yaml)")
     sys.exit(1 if errs else 0)
 
 

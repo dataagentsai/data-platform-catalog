@@ -159,6 +159,38 @@ def test_expected_enforced_is_the_reverse_of_the_check_links():
                     "DUP-01": {"shift_left": ["SL-A-02"], "proposed": []}}
 
 
+# ---------- accepted notes (practices/accepted-notes.yaml) ----------
+CITE = (("cites", "BP-001", "SL-A-01"), "BP-001: cites SL-A-01 ...")
+UNSERVED = (("unserved", "ML-01"), "ML-01: no practice serves it")
+
+ACC_CASES = [
+    # (name, notes found, accepted entries, bundle present, open notes left, expected error fragment or None)
+    ("nothing to accept", [CITE], [], True, [CITE[1]], None),
+    ("a cite note accepted", [CITE, UNSERVED], [{"practice": "BP-001", "check": "SL-A-01", "reason": "r"}], True,
+     [UNSERVED[1]], None),
+    ("an unserved note accepted", [UNSERVED], [{"dac": "ML-01", "reason": "r"}], True, [], None),
+    ("accepted without a reason", [UNSERVED], [{"dac": "ML-01", "reason": " "}], True, [], "needs a reason"),
+    ("stale entry", [], [{"dac": "ML-01", "reason": "r"}], True, [], "no such note any more"),
+    ("stale cite entry when the bundle is missing is fine", [],
+     [{"practice": "BP-001", "check": "SL-A-01", "reason": "r"}], False, [], None),
+    ("a practice without its check", [CITE], [{"practice": "BP-001", "reason": "r"}], True, [CITE[1]],
+     "names a practice and a check"),
+    ("listed twice", [UNSERVED], [{"dac": "ML-01", "reason": "r"}] * 2, True, [], "listed twice"),
+]
+
+
+@pytest.mark.parametrize("name,found,accepted,have_bundle,want_open,want", ACC_CASES, ids=[c[0] for c in ACC_CASES])
+def test_apply_accepted(name, found, accepted, have_bundle, want_open, want):
+    open_, _, errs = lp.apply_accepted(found, accepted, have_bundle)
+    assert open_ == want_open
+    assert errs == [] if want is None else any(want in e for e in errs), errs
+
+
+def test_accepted_notes_file_is_not_a_practice_file():
+    assert "accepted-notes" in lp.NOT_PRACTICES
+    assert all(r["_file"] not in lp.NOT_PRACTICES for r in lp.load_practices())
+
+
 # ---------- the real catalog ----------
 def test_real_catalog_is_clean():
     errs, _, practices, _, dropped = lp.run(bundle=BUNDLE)
@@ -185,8 +217,81 @@ def test_page_is_deterministic_and_shows_every_practice_and_its_dac_ids():
 
 
 @needs_bundle
-@pytest.mark.parametrize("target", page.TARGETS, ids=[str(t) for t in page.TARGETS])
-def test_published_page_matches_the_catalog(target):
+@pytest.mark.parametrize("target,client", page.TARGETS, ids=[str(t) for t, _ in page.TARGETS])
+def test_published_page_matches_the_catalog(target, client):
     if not target.exists():
         pytest.skip(f"{target} not on this machine")
-    assert target.read_text() == page.render(bundle=BUNDLE), "run: uv run scripts/build_practices_page.py"
+    assert target.read_text() == page.render(bundle=BUNDLE, client=client), "run: uv run scripts/build_practices_page.py"
+
+
+# ---------- client name is a setting, never in the template ----------
+CLIENT_CASES = [
+    # (client setting, text that must be on the page, text that must not)
+    (None, None, "Prepared for"),
+    ("", None, "Prepared for"),
+    ("Example Client Ltd", '<div class="for">Prepared for Example Client Ltd</div>', "<!--@CLIENT@-->"),
+    ("A & B <Co>", "Prepared for A &amp; B &lt;Co&gt;", "<Co>"),
+]
+
+
+@needs_bundle
+@pytest.mark.parametrize("client,present,absent", CLIENT_CASES, ids=[repr(c[0]) for c in CLIENT_CASES])
+def test_client_name_comes_from_the_setting(client, present, absent):
+    html = page.render(bundle=BUNDLE, client=client)
+    if present:
+        assert present in html
+    assert absent not in html
+
+
+def test_template_names_no_client():
+    t = page.TEMPLATE.read_text()
+    assert "<!--@CLIENT@-->" in t and "Prepared for" not in t
+
+
+TARGET_CASES = [
+    # (settings file text or None for no file, expected [(path, client)] or an error fragment)
+    (None, page.DEFAULT_TARGETS),
+    ("- {path: /tmp/a.html}\n", [(Path("/tmp/a.html"), None)]),
+    ("- {path: ~/a.html, client: Example}\n", [(Path.home() / "a.html", "Example")]),
+    ("- {path: /tmp/a.html, client: ''}\n", [(Path("/tmp/a.html"), None)]),
+    ("- {client: Example}\n", "entry 1 must be"),
+    ("- {path: /tmp/a.html, colour: red}\n", "entry 1 must be"),
+]
+
+
+@pytest.mark.parametrize("text,want", TARGET_CASES, ids=[str(c[0]) for c in TARGET_CASES])
+def test_load_targets(tmp_path, text, want):
+    p = tmp_path / "page-targets.local.yaml"
+    if text is not None:
+        p.write_text(text)
+    if isinstance(want, str):
+        with pytest.raises(SystemExit, match=want):
+            page.load_targets(p)
+    else:
+        assert page.load_targets(p) == want
+
+
+# ---------- ADRs on the cards ----------
+@needs_bundle
+def test_page_carries_each_cited_adr_with_its_title_and_link():
+    html = page.render(bundle=BUNDLE)
+    adrs = {a["id"]: a for a in page.load_adrs()}
+    for r in lp.load_practices():
+        assert f'"a":{page.js(r.get("adr") or [])}' in html, r["id"]
+        for a in r.get("adr") or []:
+            assert f'"{a}":[{page.js(adrs[a]["_title"])},"{page.ADR_BASE}{adrs[a]["_file"]}"]' in html
+
+
+ADR_FILTER_CASES = [
+    # (what the template must hold for the ADR filter and badge to work)
+    'id="g-adr"',
+    'adr:{list:ADRF,el:"g-adr",key:"adr"',
+    'AD:[e.a.length?"backed":"none"]',
+    "function adrHTML(d)",
+    'class="adrb"',
+]
+
+
+@pytest.mark.parametrize("fragment", ADR_FILTER_CASES)
+def test_template_has_the_adr_filter_and_badge(fragment):
+    assert fragment in page.TEMPLATE.read_text()

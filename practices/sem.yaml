@@ -68,6 +68,7 @@
   - SERV-04
   - SERV-01
   - GATE-02
+  - SERV-06
   adr:
   - ADR-022
 - id: BP-106
@@ -111,5 +112,6 @@
   dac:
   - FLOW-01
   - SERV-04
+  - SERV-06
   adr:
   - ADR-022

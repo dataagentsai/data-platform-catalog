@@ -34,6 +34,13 @@ NAME-01, FILE-01, GOLD-01, IDEMP-01, KEY-01, RAW-01, PURE-01. Where a deck decis
 practice links that one instead (grain declared and unique: DES-04; recon per hop: REC-01 and REC-05; SCD2 as-of
 joins: SCD-04; no fact row dropped in a join: LATE-02). That gives **84 obligations, 49 of them core**.
 
+Later on 4 Nov the shape work (session B: ADRs, DPC v0.2, the tyre world) proposed **five obligations** where its
+incidents and decisions had only borrowed a near one (`origin: shape`): DEL-04 mass-delete guard (DPC-0054; the tyre
+day-9 incident used DQ-04), HIST-05 corrections only through a backfill plan (DPC-0082, ADR-017; day 10 used
+HIST-04), ML-01 a model is a data product (DPC-0050, -0061, -0077, ADR-021), SERV-06 certified metrics only for
+conversation interfaces and agents (DPC-0073, -0076, ADR-022) and OPS-06 alert noise controls (DPC-0056). That gives
+**89 obligations, 52 of them core**.
+
 ## The record
 
 Adopted from AAC's record, with the review fields that proved useful kept.
@@ -57,7 +64,7 @@ Adopted from AAC's record, with the review fields that proved useful kept.
     - {standard: DAMA-DMBOK, ref: "Data Quality, chapter 13"}
   review_check: DUP-01       # the data-project-review Tech check it came from, or null
   plan_rule: R7              # optional: the PLAN.html rule a new obligation comes from
-  origin: deck               # optional: set on obligations added from the client deck's design decisions
+  origin: deck               # optional: deck (added from the client deck's design decisions) or shape (from ADRs and DPC)
   related: [DUP-02, REC-01]
   enforced_by:               # how it is enforced (D12). Written by scripts/enforced_by.py
     shift_left: [SL-SEM-04, SL-TEST-09]   # generated: bundle checks whose dac: names this id
