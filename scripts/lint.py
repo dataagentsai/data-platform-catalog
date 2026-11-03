@@ -270,16 +270,21 @@ def lint_manifest(manifest, contract, keys, schema, archetype_ids, name="manifes
     return errs
 
 
-def lint_manifests(root=ROOT):
+def lint_manifests_one(m_path, root=ROOT):
+    """One dataset manifest file. Files of another DPM kind (gold, metric, model, platform) return no errors here;
+    scripts/lint_shape.py checks them."""
+    m = yaml.safe_load(m_path.read_text())
+    if m.get("kind", "dataset") != "dataset":
+        return []
     keys = yaml.safe_load((root / "dpm" / "keys.yaml").read_text())
     schema = json.loads((root / "dpm" / "schema" / "dataset.schema.json").read_text())
     arch = set(yaml.safe_load((root / "core" / "archetypes.yaml").read_text()))
-    errs = []
-    for m_path in sorted(root.glob("slices/*/manifest/*.yaml")):
-        m = yaml.safe_load(m_path.read_text())
-        c = yaml.safe_load((m_path.parent / m["contract"]).read_text()) if "contract" in m else {}
-        errs += lint_manifest(m, c, keys, schema, arch, str(m_path.relative_to(root)))
-    return errs
+    c = yaml.safe_load((m_path.parent / m["contract"]).read_text()) if "contract" in m else {}
+    return lint_manifest(m, c, keys, schema, arch, str(m_path.relative_to(root)))
+
+
+def lint_manifests(root=ROOT):
+    return [e for p in sorted(root.glob("slices/*/manifest/**/*.yaml")) for e in lint_manifests_one(p, root)]
 
 
 def lint_binding(binding, schema, port_names, dac_ids, name="binding"):
@@ -326,12 +331,15 @@ def main():
     errs = (lint(recs, vocab) + lint_triage(recs) + lint_archetypes(vocab)
             + lint_ports(ports, vocab, dac_ids) + lint_capabilities(caps, vocab, dac_ids, {p["port"] for p in ports})
             + lint_manifests() + lint_bindings(ports=ports, dac_ids=dac_ids))
+    import lint_shape  # ADRs, deck crosswalk, two-layer DBS, DPM v0.2 kinds, DWD worlds (session B, Goal 1b)
+    errs += lint_shape.all_errors()
     for e in errs:
         print("ERROR", e)
     core = sum(1 for r in recs if r.get("core"))
     gap = uncovered(recs, caps)
     print(f"DAC: {len(recs)} obligations ({core} core). DPC: {len(ports)} ports, {len(caps)} capabilities.")
     print(f"Coverage: {len(recs) - len(gap)} of {len(recs)} obligations discharged by a capability.")
+    print(lint_shape.summary())
     print(f"{len(errs)} errors")
     sys.exit(1 if errs else 0)
 

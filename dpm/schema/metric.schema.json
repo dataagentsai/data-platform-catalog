@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dataagentsai/data-platform-catalog/dpm/schema/metric.schema.json",
+  "title": "DPM metric view manifest v0.2",
+  "description": "One metric view (D15, ADR-022): measures defined once over a gold fact, each with its certification state, synonyms and a known-answer test. Only certified measures reach conversation interfaces and agents.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "name",
+    "domain",
+    "source",
+    "dimensions",
+    "measures",
+    "owners"
+  ],
+  "properties": {
+    "kind": {
+      "const": "metric_view"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^mv_[a-z0-9_]+$"
+    },
+    "domain": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "source": {
+      "type": "string",
+      "pattern": "^fact_[a-z0-9_]+$"
+    },
+    "joins": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^dim_[a-z0-9_]+$"
+      }
+    },
+    "dimensions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "expr"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "expr": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "measures": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "expr",
+          "additive",
+          "time_dimension",
+          "certification"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "expr": {
+            "type": "string"
+          },
+          "additive": {
+            "type": "boolean"
+          },
+          "time_dimension": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "certification": {
+            "enum": [
+              "draft",
+              "reviewed",
+              "certified",
+              "deprecated"
+            ]
+          },
+          "synonyms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "known_answer": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "where",
+              "value"
+            ],
+            "properties": {
+              "where": {
+                "type": "string"
+              },
+              "value": {
+                "type": "number"
+              },
+              "tolerance": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "owners": {
+      "type": "object",
+      "required": [
+        "dataset"
+      ],
+      "properties": {
+        "dataset": {
+          "type": "string"
+        },
+        "alerts": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

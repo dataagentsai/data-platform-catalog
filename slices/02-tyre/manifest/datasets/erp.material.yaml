@@ -1,0 +1,40 @@
+# DPM v0.2: ERP materials. Pull: our reader takes a full copy (rows can be deleted) and runs the lander steps
+# in-process straight to bronze, so there is no landing hop (ADR-002). The mass-delete guard holds a short copy.
+source_name: erp
+source_env: prod
+dataset_name: material
+is_enabled: true
+kind: dataset
+config:
+  load_type: FULL
+  extraction_mode: full
+  sla_freshness_hours: "24"
+  sla_freshness_error_hours: "48"
+  schedule_trigger: cron
+  schedule_cron: "0 1 * * *"
+  schedule_timezone: Asia/Kolkata
+  cost_center: manufacturing-analytics
+dedup: {mode: business_key_latest, business_keys: [material_code], order_by: extracted_at}
+contract: ../../contracts/material.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA2]
+ingest: {mode: pull, read: full_copy}
+history: {kind: master, track_columns: [description, compound_code, rim_size_in, tyre_class]}
+load:
+  pattern: history
+  history_order_by: extracted_at
+  batch_key: [source_batch_id]
+  new_columns: hold_in_bronze
+  deletes: {detect: key_compare, apply: mark_deleted}
+  quarantine_stop_share: 0.0
+  mass_delete_max_share: 0.05
+volume:
+  expected_rows_per_delivery: {min: 800, max: 5000}
+reconciliation:
+  hops: [sources, bronze, silver]
+  measures:
+    - {name: row_count}
+  tolerance: {row_count: 0}
+  signed_off_by: manufacturing-data@tyre.example
+owners: {dataset: manufacturing-data@tyre.example, alerts: erp-data-rota}
+concerns: {}

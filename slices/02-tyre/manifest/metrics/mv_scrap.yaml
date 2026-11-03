@@ -1,0 +1,25 @@
+kind: metric_view
+name: mv_scrap
+domain: manufacturing
+source: fact_scrap
+joins: [dim_press, dim_material]
+dimensions:
+  - {name: Day, expr: "DATE_TRUNC('DAY', cure_hour)"}
+  - {name: Plant, expr: dim_press.plant_code}
+  - {name: Press, expr: press_id}
+measures:
+  - name: Scrap rate %
+    expr: SUM(tyres_scrapped) / SUM(tyres_cured)
+    additive: false
+    time_dimension: Day
+    description: Tyres scrapped at inspection as a share of tyres cured.
+    certification: certified
+    synonyms: [scrap rate, scrap, reject rate, yield loss]
+    known_answer: {where: "plant = 'P-CHN' AND day = 2026-11-12", value: 0.0185, tolerance: 0.0001}
+  - name: Tyres cured
+    expr: SUM(tyres_cured)
+    additive: true
+    time_dimension: Day
+    certification: reviewed
+    synonyms: [output, production volume]
+owners: {dataset: manufacturing-data@tyre.example}

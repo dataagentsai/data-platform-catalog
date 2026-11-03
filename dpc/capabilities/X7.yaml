@@ -30,3 +30,24 @@
   realization_policy: adopt
   slice: 1
   see_also: []
+- id: DPC-0055
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Consumers read only the semantic layer or published products
+  concern: X7
+  stages:
+  - experiences
+  archetypes:
+  - PA5
+  - PA9
+  core: true
+  port: experience
+  requirement: Dashboards and self-serve analytics MUST read only certified metrics or published products, and MUST
+    show when their data was last complete.
+  failure_mode: A dashboard read silver directly; when silver added history rows its totals doubled.
+  discharges:
+  - FLOW-01
+  - SERV-02
+  realization_policy: bind
+  see_also: []

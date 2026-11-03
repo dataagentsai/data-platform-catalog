@@ -1,0 +1,34 @@
+# Tyre company, slice 2: MES production (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_tyre.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: tyre-mes-production
+name: "MES production (silver)"
+version: 0.1.0
+status: draft
+domain: manufacturing
+description:
+  purpose: "One row per curing batch: which press cured how many tyres of which material, when."
+  limitations: "Counts only; sensor readings are a separate stream."
+schema:
+  - name: production
+    physicalName: silver_mes.production
+    logicalType: object
+    dataGranularityDescription: "One row per production record (append)"
+    properties:
+      - {name: "production_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "press_id", logicalType: "string", required: true}
+      - {name: "material_code", logicalType: "string", required: true}
+      - {name: "shift_id", logicalType: "string", required: true}
+      - {name: "cured_ts", logicalType: "timestamp", required: true}
+      - {name: "tyres_cured", logicalType: "integer", required: true, quality: [{"type": "sql", "description": "tyres_cured is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE tyres_cured < 0", "mustBe": 0, "dimension": "accuracy", "severity": "critical"}]}
+      - {name: "change_seq", logicalType: "integer", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["production_id"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: manufacturing-data
+  members:
+    - {username: manufacturing-data@tyre.example, role: owner}
+slaProperties:
+  - {property: latency, value: 1, unit: h}
+  - {property: retention, value: 10, unit: y}

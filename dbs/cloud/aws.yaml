@@ -1,0 +1,138 @@
+# DBS cloud layer: AWS (decision M1, ADR-014). Product names are allowed here and nowhere else.
+#
+# The cloud layer binds the ports a cloud provides (binds_in includes cloud in dpc/ports.yaml): storage, movers,
+# streams, the metadata store, identity, keys, network, infrastructure and the cloud's own logs. It never names an
+# engine feature; dbs/engine/*.yaml does, and a stack in dbs/stacks/ composes the two.
+#
+# Sources: the deck's AWS + Databricks big picture and "who provides what" (apollo-deck xyz.py, bigpic_aws.py) and
+# the ETL page (cleandataengineering-site _guides/etl_aws.py: sources, landing contract, movers, alerts, jobs).
+apiVersion: data-binding-layer/v0.1
+layer: cloud
+name: aws
+offering: Amazon Web Services, one account per environment under AWS Organizations
+catalog:
+  dac: 0.2.0
+  dpc: 0.2.0
+decisions:
+  ADR-010: {value: "metadata store on Aurora PostgreSQL (Serverless v2), stored procedures as the only way in", source: chosen}
+  landing_layout: {value: "s3://<env>-landing/<source>/<dataset>/<date>/; a separate personal-data landing bucket", source: chosen}
+  pick_order: {value: "machines: Kinesis; SAP: AppFlow OData; changing databases: DMS CDC; small tables: our puller; SaaS: AppFlow; partners: Transfer Family SFTP", source: chosen}
+thresholds:
+  dms_source_log_retention_hours: 72
+  personal_landing_max_hours: 23
+  held_file_max_days: 7
+
+bindings:
+  mover:
+    approach: cloud-native
+    adapter: AWS DMS (full load then CDC to Parquet), Amazon AppFlow (SAP OData, SaaS), AWS Transfer Family SFTP with a rename workflow; each generated from source_config
+    coverage: partial
+    gap: AppFlow and SFTP write no row-count manifest; DMS cannot write one at all.
+    gap_filled_by: {approach: in-house, adapter: "EventBridge rule + Lambda writes the manifest and starts the lander; DMS reconciled daily against its table statistics"}
+    metadata_keys: [extraction_mode, s3_bucket, file_pattern, schedule_trigger]
+    proves: [DUP-01, ORCH-01]
+  landing_store:
+    approach: cloud-native
+    adapter: S3 landing buckets per environment (a personal-data bucket with a 23-hour purge), read through a Unity Catalog volume
+    coverage: full
+    metadata_keys: [target_path_template, lifecycle_delete_days]
+    proves: [DUP-01, DUP-02]
+  stream_bus:
+    approach: cloud-native
+    adapter: Amazon Kinesis Data Streams (7 days kept), fed by AWS IoT SiteWise Edge or IoT Core at the plant
+    coverage: full
+    settings: {retention_days: 7}
+    proves: [ORCH-06, DUP-04, LATE-03]
+  tokenizer:
+    approach: in-house
+    adapter: the lander's tokeniser with the token vault in a separate Aurora schema (prod_pii_vault); Amazon Macie finds personal data in landing
+    coverage: partial
+    gap: Macie finds personal data but does not tokenise it or run erasure.
+    gap_filled_by: {approach: in-house, adapter: "dataplatform.pii (tokeniser, vault, suppression list, erasure flow)"}
+    metadata_keys: [processor_groups.pii]
+    proves: [SEC-01, SEC-03]
+  metadata_service:
+    approach: cloud-native
+    adapter: Aurora PostgreSQL, three schemas (config, runtime, pii vault), stored procedures as the only way in, fed by the validating loader from YAML in GitHub
+    coverage: partial
+    gap: The database holds tables; the manifest schema, key registry, merge view and procedures are ours.
+    gap_filled_by: {approach: in-house, adapter: "dataplatform.meta (loader, procedures, dataset_view)"}
+    proves: [CFG-01, CFG-02, REL-01]
+  run_log:
+    approach: cloud-native
+    adapter: Aurora PostgreSQL runtime schema (master_run_log, run_log, step_log, file_log, error_log, dq_result, input_watermark, config_snapshot), with timeouts on every call
+    coverage: partial
+    gap: The store holds rows; the run recorder and its record shape are ours.
+    gap_filled_by: {approach: in-house, adapter: dataplatform.recorder}
+    proves: [OPS-03, CFG-03]
+  telemetry:
+    approach: cloud-native
+    adapter: Amazon CloudWatch Logs and metrics, Amazon SNS for paging
+    coverage: partial
+    gap: CloudWatch sees the cloud services, not the data; freshness and data alerts come from the engine side.
+    gap_filled_by: {approach: in-house, adapter: dataplatform.ops (joins CloudWatch into the ops tables)}
+    proves: [OPS-01]
+  cost_ledger:
+    approach: cloud-native
+    adapter: AWS Cost and Usage Report with cost allocation tags, AWS Budgets
+    coverage: partial
+    gap: The bill is per service and tag, not per dataset or data product.
+    gap_filled_by: {approach: in-house, adapter: dataplatform.ops cost split}
+    proves: [COST-02, COST-03]
+  secret_store:
+    approach: cloud-native
+    adapter: AWS Secrets Manager, read by service roles; Databricks secret scopes backed by it
+    coverage: full
+    proves: [REL-05]
+  identity_provider:
+    approach: cloud-native
+    adapter: AWS IAM Identity Center groups and IAM roles for services, federated to Databricks account groups
+    coverage: full
+    proves: [ENV-02]
+  key_manager:
+    approach: cloud-native
+    adapter: AWS KMS, one customer-managed key per layer bucket, the metadata store and the vault
+    coverage: full
+    proves: [SEC-02]
+  network_boundary:
+    approach: cloud-native
+    adapter: VPC per environment, PrivateLink to Databricks, S3 and Aurora endpoints, no public data paths
+    coverage: full
+    proves: [ENV-01, SEC-02]
+  object_store:
+    approach: cloud-native
+    adapter: Amazon S3 buckets per environment and layer, versioned; cross-region replication for tier-1 data; Aurora Global Database for the metadata store
+    coverage: full
+    proves: [ORCH-05]
+  compute_pool:
+    approach: cloud-native
+    adapter: EC2 instances under classic compute (only where serverless is not available)
+    coverage: full
+    proves: [COST-04]
+  event_publisher:
+    approach: cloud-native
+    adapter: Amazon EventBridge custom bus, one schema per event contract
+    coverage: partial
+    gap: EventBridge delivers events but does not stop a rerun publishing them again.
+    gap_filled_by: {approach: in-house, adapter: "dataplatform.events (stable event id, publish log)"}
+    proves: [DUP-02, SERV-01]
+  audit_log:
+    approach: cloud-native
+    adapter: AWS CloudTrail for account and service actions
+    coverage: full
+    proves: [SEC-04]
+  infra_provisioner:
+    approach: open-source
+    adapter: Terraform aws provider modules (accounts under AWS Organizations, VPC, buckets, KMS, Aurora, DMS, AppFlow, Transfer Family, Kinesis)
+    coverage: full
+    proves: [REL-06, ENV-01]
+  agent_runtime:
+    approach: cloud-native
+    adapter: Amazon Bedrock AgentCore runtime with Bedrock Guardrails, behind the agent harness from clean-ai-engineering (T-123)
+    coverage: partial
+    gap: The runtime runs agents; manifest-PR-only proposals, gates and evaluation sets are ours.
+    gap_filled_by: {approach: in-house, adapter: "agent harness (clean-ai-engineering) with manifest PR tools and eval harness"}
+    proves: [GATE-03, HEAL-01]
+
+accepted_gaps:
+  - {obligation: ORCH-05, reason: "Recovery targets per tier are not yet declared by the client; replication is set for tier-1 only until they are.", owner: platform-lead, review: "2027-01-15"}

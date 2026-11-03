@@ -28,3 +28,74 @@
   realization_policy: bind
   slice: 1
   see_also: []
+- id: DPC-0056
+  status: draft
+  since: 0.2.0
+  level: SHOULD
+  title: Alerts change on state, grouped, routed by tier
+  concern: X8
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  core: true
+  port: telemetry
+  requirement: Alerts SHOULD fire when a check changes state and resolve when it recovers, SHOULD be grouped to
+    one per rule per day, SHOULD be routed by the data product's tier, and every snooze SHOULD carry a reason and
+    an expiry.
+  failure_mode: The same failed rule raised an alert every fifteen minutes; on-call muted the channel.
+  discharges:
+  - OPS-01
+  realization_policy: own
+  see_also: []
+- id: DPC-0057
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Standard operations views built from the run log
+  concern: X8
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  core: true
+  port: evidence
+  requirement: The platform MUST build the standard operations views (platform health, freshness, data trust, cost,
+    sources and ingestion, usage) from the run log, system records and quality results, joined by run id.
+  failure_mode: Each team built its own status page from different sources; they disagreed during every incident.
+  discharges:
+  - OPS-03
+  - OPS-01
+  realization_policy: own
+  see_also: []
+- id: DPC-0058
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: A heartbeat proves the whole path is alive
+  concern: X8
+  stages:
+  - sources
+  - bronze
+  - silver
+  - gold
+  archetypes:
+  - PA1
+  core: true
+  port: telemetry
+  requirement: A tiny synthetic source MUST send a row through every layer on a fixed interval, and a missing heartbeat
+    MUST alert through a path that does not depend on the metadata store.
+  failure_mode: The metadata store was down, so no run started and no run failed; every dashboard stayed green.
+  discharges:
+  - OPS-01
+  - DQ-04
+  realization_policy: own
+  see_also: []

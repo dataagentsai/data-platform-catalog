@@ -1,0 +1,51 @@
+# DPM v0.2: ERP deliveries. Push change capture, current state only (type 1).
+source_name: erp
+source_env: prod
+dataset_name: delivery
+is_enabled: true
+kind: dataset
+config:
+  load_type: INCREMENTAL
+  watermark_column: change_seq
+  sla_freshness_hours: "1"
+  sla_freshness_error_hours: "2"
+  schedule_trigger: cron
+  schedule_cron: "*/15 * * * *"
+  schedule_timezone: Asia/Kolkata
+  cost_center: sales-analytics
+dedup: {mode: business_key_latest, business_keys: [delivery_id], order_by: change_seq}
+contract: ../../contracts/delivery.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA2]
+ingest: {mode: push, read: change_feed}
+history: {kind: transaction}
+load:
+  pattern: upsert
+  batch_key: [delivery_window, content_checksum]
+  new_columns: hold_in_bronze
+  deletes: {detect: change_feed, apply: mark_deleted}
+  quarantine_stop_share: 0.01
+  late_lookback_days: 35
+volume:
+  expected_rows_per_delivery: {min: 10, max: 20000}
+reconciliation:
+  hops: [sources, landing, bronze, silver]
+  measures:
+    - {name: row_count}
+    - {name: delivered_qty_total, column: delivered_qty}
+  tolerance: {row_count: 0, delivered_qty_total: 0.0}
+  signed_off_by: sales-data@tyre.example
+  entries:
+    - name: live_source_vs_silver
+      left: sources
+      right: silver
+      keys: [delivery_id]
+      measures:
+        - {name: deliveries, agg: count}
+        - {name: delivered_qty_total, agg: sum, column: delivered_qty}
+      window: {column: delivered_ts, days: 35}
+      buckets: 64
+      tolerance: {deliveries: 0, delivered_qty_total: 0}
+      schedule: daily 02:00
+owners: {dataset: sales-data@tyre.example, alerts: erp-data-rota}
+concerns: {}

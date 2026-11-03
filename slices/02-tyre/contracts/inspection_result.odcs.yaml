@@ -1,0 +1,36 @@
+# Tyre company, slice 2: Lab inspection results (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_tyre.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: tyre-lims-inspection-result
+name: "Lab inspection results (silver)"
+version: 0.1.0
+status: draft
+domain: quality
+description:
+  purpose: "One row per inspection of cured tyres: pass, rework or scrap, with the defect code."
+  limitations: "Files from the lab system; one file per lab per hour."
+schema:
+  - name: inspection_result
+    physicalName: silver_lims.inspection_result
+    logicalType: object
+    dataGranularityDescription: "One row per inspection (append)"
+    properties:
+      - {name: "inspection_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "production_id", logicalType: "string", required: true}
+      - {name: "press_id", logicalType: "string", required: true}
+      - {name: "inspected_ts", logicalType: "timestamp", required: true}
+      - {name: "result", logicalType: "string", required: true, quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["pass", "rework", "scrap"]}, "mustBe": 0, "dimension": "conformity", "severity": "critical"}]}
+      - {name: "tyres_inspected", logicalType: "integer", required: true, quality: [{"type": "sql", "description": "tyres_inspected is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE tyres_inspected < 0", "mustBe": 0, "dimension": "accuracy", "severity": "critical"}]}
+      - {name: "tyres_scrapped", logicalType: "integer", required: true, quality: [{"type": "sql", "description": "tyres_scrapped is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE tyres_scrapped < 0", "mustBe": 0, "dimension": "accuracy", "severity": "critical"}]}
+      - {name: "defect_code", logicalType: "string", required: false}
+      - {name: "inspector_id", logicalType: "string", required: true, classification: "restricted"}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["inspection_id"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: quality-data
+  members:
+    - {username: manufacturing-data@tyre.example, role: owner}
+slaProperties:
+  - {property: latency, value: 2, unit: h}
+  - {property: retention, value: 10, unit: y}

@@ -29,3 +29,98 @@
   realization_policy: bind
   slice: 1
   see_also: []
+- id: DPC-0066
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Access model as code
+  concern: X11
+  stages:
+  - silver
+  - gold
+  - semantic
+  - experiences
+  archetypes:
+  - PA5
+  - PA9
+  core: true
+  port: access_control
+  requirement: Grants, row filters and column masks MUST be generated from code that maps groups and classification
+    tags to policies, and the lowest-privilege role MUST NOT read a restricted column directly.
+  failure_mode: A mask added by hand in one workspace was missing in the next; the restricted column leaked through
+    a new dashboard.
+  discharges:
+  - SEC-02
+  - ENV-02
+  realization_policy: bind
+  see_also: []
+- id: DPC-0067
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Stores encrypted with keys limited to their service
+  concern: X11
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  core: false
+  port: key_manager
+  requirement: Storage, the metadata store and the token vault MUST each be encrypted with a key whose use is limited
+    to that store's service identities.
+  failure_mode: One shared key meant a reporting role could decrypt the token vault's backups.
+  discharges:
+  - SEC-02
+  - ENC-01
+  realization_policy: bind
+  see_also: []
+- id: DPC-0068
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Private data paths, separated per environment
+  concern: X11
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  core: false
+  port: network_boundary
+  requirement: Data paths between sources, storage and compute MUST be private, and development MUST NOT reach production
+    data over the network.
+  failure_mode: A development notebook read the production bucket because the network allowed it.
+  discharges:
+  - ENV-01
+  - SEC-02
+  realization_policy: bind
+  see_also: []
+- id: DPC-0069
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: People and services in groups; jobs run as services
+  concern: X11
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  core: true
+  port: identity_provider
+  requirement: Grants MUST go to groups and service identities, and every job MUST run as a service identity, never
+    as a person.
+  failure_mode: A pipeline ran as an engineer who left; it stopped the day their account was closed.
+  discharges:
+  - ENV-02
+  realization_policy: bind
+  see_also: []

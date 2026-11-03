@@ -1,0 +1,33 @@
+# Tyre company, slice 2: Material dimension (gold). ODCS v3.2.0, adopted not restated (validated by tests/test_tyre.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: tyre-gold-dim-material
+name: "Material dimension (gold)"
+version: 0.1.0
+status: draft
+domain: manufacturing
+description:
+  purpose: "Materials as of any date, with reserved members."
+  limitations: "From silver materials."
+schema:
+  - name: dim_material
+    physicalName: gold_manufacturing.dim_material
+    logicalType: object
+    dataGranularityDescription: "One row per material per version, plus the reserved members"
+    properties:
+      - {name: "material_sk", logicalType: "integer", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "material_code", logicalType: "string", required: true}
+      - {name: "compound_code", logicalType: "string", required: true}
+      - {name: "tyre_class", logicalType: "string", required: true}
+      - {name: "valid_from", logicalType: "timestamp", required: true}
+      - {name: "valid_to", logicalType: "timestamp", required: true}
+      - {name: "is_current", logicalType: "boolean", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["material_sk"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+team:
+  name: manufacturing-data
+  members:
+    - {username: manufacturing-data@tyre.example, role: owner}
+slaProperties:
+  - {property: latency, value: 24, unit: h}
+  - {property: retention, value: 10, unit: y}

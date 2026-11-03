@@ -1,0 +1,27 @@
+# DPC capabilities for X20, Self-healing. Normative: edit here.
+- id: DPC-0100
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Self-healing fixes pass the same gates
+  concern: X20
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  core: false
+  port: agent_runtime
+  requirement: A self-healing fix MUST be proposed as a change, MUST pass the same tests and gates as any change,
+    MUST be verified after deploy, and MUST be rolled back if verification fails.
+  failure_mode: An agent widened a quality limit to clear an alert; the bad data it hid reached the board report.
+  discharges:
+  - HEAL-01
+  - GATE-03
+  realization_policy: own
+  adr:
+  - ADR-023
+  see_also: []

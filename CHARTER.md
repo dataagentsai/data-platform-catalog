@@ -16,10 +16,11 @@ adds.
 | **DPC**, Data Platform Catalog | what must **EXIST** (capabilities and ports) | universal | AHC | `dpc/` |
 | **DWD**, Data World Description | what must be **FACED** | per platform or slice | AWD (DWD extends `awd/v0`) | `slices/*/world.yaml` |
 | **DPM**, Data Platform Manifest | what this platform **DOES**, per dataset | per company | AOAS | `dpm/`, `slices/*/manifest/` |
-| **DBS**, Data Binding Spec | **which product** fills each port | per platform | ABS (the harness profile format) | `dbs/`, `slices/*/binding-*.yaml` |
+| **DBS**, Data Binding Spec | **which product** fills each port | per stack (engine layer + cloud layer) | ABS (the harness profile format) | `dbs/engine/`, `dbs/cloud/`, `dbs/stacks/` |
+| ADRs (not a spec) | **why** a design was chosen | per decision | the AI family's decision log | `adr/` |
 
-Derived, generated and never hand-edited: the DAC index (`dac/INDEX.md`), coverage by concern per binding
-(`scripts/coverage.py`), and, at run time, the evidence view that joins every verdict for one run.
+Derived, generated and never hand-edited: the DAC index (`dac/INDEX.md`), the ADR index (`adr/README.md`),
+coverage by concern per stack (`scripts/coverage.py`), and, at run time, the evidence view that joins every verdict for one run.
 
 ## 2 · The routing rule, for data
 
@@ -28,6 +29,8 @@ Derived, generated and never hand-edited: the DAC index (`dac/INDEX.md`), covera
 2. **What kind of statement?** A property that must hold: DAC. A part or a plug: DPC. A source and the incidents it
    throws: DWD. How one dataset is loaded: DPM.
 3. **Does it name a product?** Then it is DBS, however much it feels like design.
+4. **Is it the reason for a choice** (the options weighed and why one won)? Then it is an ADR, and the DPC, DAC
+   or practice text that carries it out cites the ADR id instead of repeating the argument.
 
 ## 3 · What the data family adds
 

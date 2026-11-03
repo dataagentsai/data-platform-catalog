@@ -1,0 +1,33 @@
+# Tyre company, slice 2: Dealers (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_tyre.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: tyre-dealer-api-dealer
+name: "Dealers (silver)"
+version: 0.1.0
+status: draft
+domain: sales
+description:
+  purpose: "Dealers with their region and contact, from the dealer management interface; history kept (type 2)."
+  limitations: "Contacts are tokenised before bronze."
+schema:
+  - name: dealer
+    physicalName: silver_dealer_api.dealer
+    logicalType: object
+    dataGranularityDescription: "One row per dealer per version"
+    properties:
+      - {name: "dealer_code", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "dealer_name", logicalType: "string", required: true}
+      - {name: "region", logicalType: "string", required: true, quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["north", "south", "east", "west", "central_europe"]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "contact_email", logicalType: "string", required: true, classification: "restricted", description: "Personal data class email; tokenised before bronze."}
+      - {name: "contact_phone", logicalType: "string", required: false, classification: "restricted", description: "Personal data class phone; tokenised before bronze."}
+      - {name: "updated_at", logicalType: "timestamp", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["dealer_code", "updated_at"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: sales-data
+  members:
+    - {username: sales-data@tyre.example, role: owner}
+slaProperties:
+  - {property: latency, value: 24, unit: h}
+  - {property: retention, value: 10, unit: y}

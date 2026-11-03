@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dataagentsai/data-platform-catalog/dpm/schema/platform.schema.json",
+  "title": "DPM platform manifest v0.2",
+  "description": "One per domain: what applies to every dataset in it. The business time zone, environments, default quality actions per severity (ADR-009) and the agents enabled per environment (ADR-023). It never names a cloud or product (M4: one manifest drives every stack).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "domain",
+    "business_timezone",
+    "environments",
+    "quality_defaults",
+    "agents"
+  ],
+  "properties": {
+    "kind": {
+      "const": "platform"
+    },
+    "domain": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "business_timezone": {
+      "type": "string",
+      "pattern": "^[A-Za-z]+/[A-Za-z_]+$"
+    },
+    "environments": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "dev",
+          "test",
+          "prod"
+        ]
+      }
+    },
+    "quality_defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "critical",
+        "major",
+        "minor"
+      ],
+      "properties": {
+        "critical": {
+          "$ref": "dataset.schema.json#/$defs/action"
+        },
+        "major": {
+          "$ref": "dataset.schema.json#/$defs/action"
+        },
+        "minor": {
+          "$ref": "dataset.schema.json#/$defs/action"
+        }
+      }
+    },
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "enabled",
+          "autonomy",
+          "tools",
+          "environments"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "autonomy": {
+            "enum": [
+              "read_only",
+              "suggest",
+              "propose_pr"
+            ]
+          },
+          "tools": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "environments": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "dev",
+                "test",
+                "prod"
+              ]
+            }
+          },
+          "spec": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

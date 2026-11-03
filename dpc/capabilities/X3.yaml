@@ -94,3 +94,120 @@
   realization_policy: bind
   slice: 1
   see_also: []
+- id: DPC-0037
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Pulled batches pass the lander steps on the way to bronze
+  concern: X3
+  stages:
+  - sources
+  - bronze
+  archetypes:
+  - PA2
+  - PA3
+  core: true
+  port: source_reader
+  requirement: A batch read by pull MUST pass the same lander steps as a pushed file (contract check, personal-data
+    tokenising, mass-delete guard, file and batch log) in the same process, and MUST then be written straight to
+    bronze without a landing copy.
+  failure_mode: A connector wrote straight into a table, skipping tokenising; customer phone numbers sat in bronze
+    for a month.
+  discharges:
+  - SCH-02
+  - SEC-01
+  - DQ-03
+  - ING-01
+  - RAW-01
+  realization_policy: own
+  adr:
+  - ADR-002
+  see_also: []
+- id: DPC-0038
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: A landing contract every push mover meets
+  concern: X3
+  stages:
+  - landing
+  archetypes:
+  - PA1
+  - PA2
+  core: true
+  port: mover
+  requirement: A push mover MUST write each file once, under a unique name, in one declared folder layout, visible
+    only when complete, with a row count or control file where the mover can give one, and MUST NOT transform content
+    beyond changing the file format.
+  failure_mode: A partner overwrote yesterday's file under the same name and the platform loaded half of each.
+  discharges:
+  - ORCH-01
+  - DUP-01
+  - FILE-01
+  realization_policy: bind
+  adr:
+  - ADR-002
+  see_also: []
+- id: DPC-0039
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: A data product is published with its contract, owner and freshness promise
+  concern: X3
+  stages:
+  - gold
+  - semantic
+  archetypes:
+  - PA5
+  - PA9
+  - PA10
+  core: false
+  port: product_publisher
+  requirement: A gold table or metric set offered to consumers MUST be published with its contract, owner, freshness
+    target and completeness flag, and MUST NOT be offered without them.
+  failure_mode: A team built a forecast on a table that was rebuilt weekly with no notice; nobody owned it.
+  discharges:
+  - SERV-01
+  - SERV-02
+  realization_policy: bind
+  see_also: []
+- id: DPC-0040
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Out-port interfaces serve only published products
+  concern: X3
+  stages:
+  - experiences
+  archetypes:
+  - PA8
+  - PA9
+  core: false
+  port: data_api
+  requirement: Request-response interfaces MUST serve only published products, under the caller's identity.
+  failure_mode: An interface on a silver table broke three partner systems when silver added history columns.
+  discharges:
+  - SERV-01
+  - SEC-02
+  realization_policy: bind
+  see_also: []
+- id: DPC-0041
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Published events carry a contract and a stable id
+  concern: X3
+  stages:
+  - experiences
+  archetypes:
+  - PA8
+  core: false
+  port: event_publisher
+  requirement: Each business event MUST be published under a versioned contract with a stable id, so a rerun publishes
+    nothing new.
+  failure_mode: A rerun after a failure sent every late-delivery event twice and customers got two apology emails.
+  discharges:
+  - SERV-01
+  - DUP-02
+  realization_policy: bind
+  see_also: []

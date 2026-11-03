@@ -1,0 +1,30 @@
+# DPM v0.2 gold fact: scrap per press, material and hour. Modelled: one pure dataframe build() in the harness (D18).
+kind: gold_fact
+name: fact_scrap
+domain: manufacturing
+pipeline: modelled
+contract: ../../contracts/fact_scrap.odcs.yaml
+contract_version: 0.1.0
+grain: [press_id, material_code, cure_hour]
+inputs:
+  - {dataset: mes.production, bookmark: change_seq, role: driver}
+  - {dataset: lims.inspection_result, role: driver}
+dimensions:
+  - {name: dim_press, key: press_sk, business_key: [press_id], as_of: cure_hour}
+  - {name: dim_material, key: material_sk, business_key: [material_code], as_of: cure_hour}
+keys: {surrogate: hash, unknown_member: -1, not_applicable: -2}
+window: {column: cure_hour, unit: hour, lookback: 48}
+build: {kind: dataframe, ref: "gold.manufacturing.scrap:build"}
+materialize: table
+corrections: false
+completeness: {on_incomplete: flag}
+checks:
+  grain_unique: true
+  orphan_rate_max: 0.005
+  reconcile:
+    against: silver
+    measures:
+      - {name: tyres_cured_total, column: tyres_cured}
+      - {name: tyres_scrapped_total, column: tyres_scrapped}
+    tolerance: {tyres_cured_total: 0, tyres_scrapped_total: 0}
+owners: {dataset: manufacturing-data@tyre.example, alerts: plant-maintenance}

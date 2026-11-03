@@ -1,0 +1,34 @@
+# Tyre company, slice 2: ERP deliveries (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_tyre.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: tyre-erp-delivery
+name: "ERP deliveries (silver)"
+version: 0.1.0
+status: draft
+domain: sales
+description:
+  purpose: "One row per delivery of an order line, current state only (type 1)."
+  limitations: "Returns are a later dataset."
+schema:
+  - name: delivery
+    physicalName: silver_erp.delivery
+    logicalType: object
+    dataGranularityDescription: "One row per delivery"
+    properties:
+      - {name: "delivery_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "order_id", logicalType: "string", required: true}
+      - {name: "line_no", logicalType: "integer", required: true}
+      - {name: "delivered_qty", logicalType: "integer", required: true, quality: [{"type": "sql", "description": "delivered_qty is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE delivered_qty < 0", "mustBe": 0, "dimension": "accuracy", "severity": "critical"}]}
+      - {name: "delivered_ts", logicalType: "timestamp", required: true}
+      - {name: "plant_code", logicalType: "string", required: true}
+      - {name: "change_seq", logicalType: "integer", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["delivery_id", "change_seq"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: sales-data
+  members:
+    - {username: sales-data@tyre.example, role: owner}
+slaProperties:
+  - {property: latency, value: 1, unit: h}
+  - {property: retention, value: 10, unit: y}

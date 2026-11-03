@@ -1,0 +1,343 @@
+# DBS engine layer: Databricks, on any cloud (decision M1, ADR-014). Product names are allowed here and nowhere else.
+#
+# The engine layer binds the ports that run on the engine (binds_in includes engine in dpc/ports.yaml). It never
+# names a cloud service: those live in dbs/cloud/*.yaml, and a stack in dbs/stacks/ composes one engine with one
+# cloud. The base bindings below are Databricks on a paid workspace; the free-edition profile replaces what Free
+# Edition lacks and carries over everything slice 1 proved (it was slices/01-orders/binding-databricks.yaml).
+#
+# Sources: the deck's AWS + Databricks big picture and "who provides what" (apollo-deck xyz.py, bigpic_aws.py),
+# ~/clean-data-engineering/FREE-EDITION.md, and the slice 1 build (data-platform-framework branch slice1).
+apiVersion: data-binding-layer/v0.1
+layer: engine
+name: databricks
+offering: Databricks Data Intelligence Platform (Unity Catalog, Lakeflow, Databricks SQL, Mosaic AI)
+catalog:
+  dac: 0.2.0
+  dpc: 0.2.0
+decisions:
+  D6: {value: "Service A silver on Lakeflow Declarative Pipelines; gold modelled facts in the harness as SQL or pure PySpark (D18)", source: chosen}
+  D11: {value: "push movers write landing; the lander and the puller are our PySpark code", source: chosen}
+  ADR-011: {value: "liquid clustering CLUSTER BY AUTO; predictive optimization on every managed table", source: golden-path}
+  ADR-012: {value: "catalogs <env>_<layer> (landing, bronze, silver, gold, ops), schemas per source or domain", source: chosen}
+thresholds:
+  quarantine_stop_share: 0.01
+  freshness_warn_hours: 4
+  freshness_error_hours: 8
+
+bindings:
+  source_reader:
+    approach: framework
+    adapter: our PySpark puller as a Lakeflow job (JDBC for SQL Server, Oracle, PostgreSQL, MySQL; REST; SFTP), calling the lander steps in-process
+    coverage: none
+    gap: Lakeflow Connect writes straight into tables and skips the lander steps (tokenising, mass-delete guard, file log), so it is not used in v1.
+    gap_filled_by: {approach: in-house, adapter: "dataplatform.puller + dataplatform.lander (LakeIngestionFramework connectors)"}
+    metadata_keys: [extraction_mode, watermark_column, segment_size_rows, rest_endpoint_path, pagination_style]
+    proves: [SCH-02, HIST-04, DEL-01]
+  table_writer:
+    approach: platform
+    adapter: Lakeflow Declarative Pipelines AUTO CDC (SCD type 1 and 2, SEQUENCE BY, apply_as_deletes), append with txnAppId/txnVersion for bronze, replaceWhere for gold windows
+    coverage: partial
+    gap: AUTO CDC needs a batch key and load columns it does not make, and does not refuse a resend.
+    gap_filled_by: {approach: in-house, adapter: "dataplatform.lander (batch key, load columns, resend skipped)"}
+    metadata_keys: [load.pattern, load.history_order_by, load.deletes, dedup.business_keys, history.kind, history.track_columns]
+    settings: {layout: "CLUSTER BY AUTO", maintenance: predictive optimization}
+    proves: [DUP-01, DUP-02, SCD-02, DEL-01, HIST-04, PERF-05]
+  stage_runner:
+    approach: framework
+    adapter: one generated Declarative Pipeline per source running our thirteen stage functions (PySpark), tables defined in a loop from metadata
+    coverage: partial
+    gap: Pipelines run any code; the stage list, per-column settings and cast-failure rules are ours.
+    gap_filled_by: {approach: in-house, adapter: dataplatform.stages}
+    metadata_keys: [silver.columns, processor_groups.*, on_cast_failure]
+    proves: [DQ-02, CFG-01, LATE-04]
+  contract_enforcer:
+    approach: in-house
+    adapter: dataplatform.contract.check_columns against the ODCS file, in the lander and before silver
+    coverage: none
+    gap: Delta schema enforcement stops a write but does not read an ODCS contract or name the missing column.
+    gap_filled_by: {approach: in-house, adapter: dataplatform.contract}
+    metadata_keys: [contract, contract_version, load.new_columns]
+    proves: [SCH-01, SCH-02]
+  quarantine:
+    approach: platform
+    adapter: a pipeline table fed by the inverse of the expectations, with the failed rule names as a column
+    coverage: partial
+    gap: Expectations drop or count rows but do not keep them with the rule names, and have no release path.
+    gap_filled_by: {approach: in-house, adapter: "realms/databricks/pipelines/silver.py quarantine table + release job"}
+    metadata_keys: [load.quarantine_stop_share]
+    proves: [DQ-02]
+  quality_runner:
+    approach: platform
+    adapter: DQX checks and pipeline expectations, rules compiled from the contract into the metadata store
+    coverage: partial
+    gap: Expectations report a pass on zero rows; severity actions and gold pre-publish checks are not built in.
+    gap_filled_by: {approach: in-house, adapter: "dataplatform.quality (severity actions, rowCount, duplicateValues, gold checks)"}
+    metadata_keys: [quality.actions, quality_rules (compiled from the contract)]
+    proves: [DQ-01, DQ-02, DQ-04, GATE-01]
+  profiler:
+    approach: platform
+    adapter: Lakehouse Monitoring (data profiling) on Unity Catalog tables
+    coverage: partial
+    gap: Does not profile landing files or live sources.
+    gap_filled_by: {approach: in-house, adapter: "dataplatform.profile (same result shape)"}
+    metadata_keys: [concerns.X5]
+    proves: [PROF-01]
+  reconciler:
+    approach: in-house
+    adapter: dataplatform.reconcile, per hop and live source against silver with hash buckets, results in check_results
+    coverage: none
+    gap: No product reconciles counts and totals across hops and names the hop.
+    gap_filled_by: {approach: in-house, adapter: dataplatform.reconcile}
+    metadata_keys: [reconciliation.hops, reconciliation.measures, reconciliation.tolerance, reconciliation.entries]
+    proves: [REC-01, REC-03, REC-05]
+  model_runner:
+    approach: framework
+    adapter: the gold harness as a Lakeflow job per modelled fact (window recompute, replaceWhere); materialized views in a Declarative Pipeline for simple aggregates
+    coverage: partial
+    gap: Materialized views refresh themselves but cannot apply corrections, completeness or checks before publish.
+    gap_filled_by: {approach: in-house, adapter: dataplatform.gold.harness}
+    metadata_keys: [gold.grain, gold.window, gold.inputs, gold.build, gold.materialize]
+    proves: [LATE-01, DUP-02, LATE-02, SCD-04]
+  semantic_layer:
+    approach: platform
+    adapter: Unity Catalog metric views, generated from the manifest's metric files
+    coverage: full
+    metadata_keys: [metrics.*]
+    proves: [SERV-04]
+  product_publisher:
+    approach: platform
+    adapter: Unity Catalog (tags, comments) and Delta Sharing for external consumers
+    coverage: partial
+    gap: A share carries no contract, owner or freshness promise.
+    gap_filled_by: {approach: in-house, adapter: "dataplatform.publish (contract and owner as table properties and tags)"}
+    proves: [SERV-01, SERV-02]
+  experience:
+    approach: platform
+    adapter: AI/BI dashboards and SQL warehouses, reading metric views and gold only
+    coverage: full
+    proves: [FLOW-01, SERV-02]
+  conversation:
+    approach: platform
+    adapter: a Genie space over certified metric views, sample questions from the metric files
+    coverage: full
+    proves: [SERV-04, SEC-02]
+  data_api:
+    approach: platform
+    adapter: SQL Statement Execution API on a serverless SQL warehouse
+    coverage: partial
+    gap: The API runs any query; limiting it to published products is ours.
+    gap_filled_by: {approach: in-house, adapter: "grants generated for published products only"}
+    proves: [SERV-01, SEC-02]
+  feed_writer:
+    approach: framework
+    adapter: a Lakeflow job generated per feed from configuration
+    coverage: partial
+    gap: Jobs do not make a resend idempotent at the target.
+    gap_filled_by: {approach: in-house, adapter: "dataplatform.feeds (window key per send)"}
+    proves: [DUP-02, FLOW-01]
+  vector_index:
+    approach: platform
+    adapter: Mosaic AI Vector Search, delta-sync index on a gold chunk table
+    coverage: full
+    proves: [DEL-03, SEC-02]
+  feature_store:
+    approach: platform
+    adapter: Unity Catalog feature tables with point-in-time lookups
+    coverage: full
+    proves: [SCD-04, LIN-01]
+  model_registry:
+    approach: platform
+    adapter: MLflow models in Unity Catalog, model card fields as tags
+    coverage: partial
+    gap: The model card and the promotion gate are not MLflow concepts.
+    gap_filled_by: {approach: in-house, adapter: "dataplatform.ml (card from the manifest, gate in CI)"}
+    proves: [CFG-03, REL-03]
+  model_server:
+    approach: platform
+    adapter: Mosaic AI Model Serving and inference tables, with Lakehouse Monitoring on them
+    coverage: full
+    proves: [PERF-02, SEC-02]
+  orchestrator:
+    approach: platform
+    adapter: Lakeflow Jobs generated from metadata and deployed by Asset Bundles; table-update triggers on batch-ready markers; queued runs, max concurrent runs 1
+    coverage: full
+    metadata_keys: [schedule_trigger, schedule_cron, schedule_timezone]
+    proves: [ORCH-01, ORCH-02, ORCH-04]
+  lineage_emitter:
+    approach: platform
+    adapter: Unity Catalog lineage, captured automatically for every table written
+    coverage: full
+    proves: [LIN-01]
+  telemetry:
+    approach: platform
+    adapter: system.lakeflow tables, pipeline event log, Databricks SQL alerts; the ops builder joins them with the run log
+    coverage: partial
+    gap: Freshness against the contract and alert noise rules are not built in.
+    gap_filled_by: {approach: in-house, adapter: "dataplatform.ops (ops builder, heartbeat, alert rules as config)"}
+    metadata_keys: [sla_freshness_hours, sla_freshness_error_hours]
+    proves: [OPS-01, PERF-02]
+  evidence:
+    approach: in-house
+    adapter: evidence view joining run_log, check_results, lineage and cost by run id
+    coverage: none
+    gap: Each Databricks feature reports alone; nothing answers "is this number right, and how do we know?" for one run.
+    gap_filled_by: {approach: in-house, adapter: dataplatform.evidence}
+    proves: [SIM-01, OPS-03]
+  cost_ledger:
+    approach: platform
+    adapter: system.billing.usage with custom tags, and budget policies
+    coverage: partial
+    gap: Billing is per job run and pipeline update, not per dataset or data product.
+    gap_filled_by: {approach: in-house, adapter: "dataplatform.ops cost split (task time and rows written shares); CostSherlock rules for waste"}
+    metadata_keys: [cost_center]
+    proves: [COST-02, COST-03, COST-04]
+  access_control:
+    approach: platform
+    adapter: Unity Catalog grants, ABAC policies, row filters and column masks
+    coverage: partial
+    gap: Policies are not generated from groups and classification tags.
+    gap_filled_by: {approach: in-house, adapter: "access model as code (Terraform databricks provider, generated from contracts)"}
+    proves: [SEC-02, ENV-02]
+  data_catalog:
+    approach: platform
+    adapter: Unity Catalog comments, tags, governed tags and search
+    coverage: partial
+    gap: Entries are typed by hand unless synced.
+    gap_filled_by: {approach: in-house, adapter: "dataplatform.catalog_sync (from contracts on every release)"}
+    proves: [SERV-01, SEC-01]
+  audit_log:
+    approach: platform
+    adapter: system.access.audit
+    coverage: full
+    proves: [SEC-04]
+  secret_store:
+    approach: platform
+    adapter: Databricks secret scopes
+    coverage: full
+    proves: [REL-05]
+  identity_provider:
+    approach: platform
+    adapter: account groups and service principals (synced by SCIM from the company directory)
+    coverage: full
+    proves: [ENV-02]
+  compute_pool:
+    approach: platform
+    adapter: serverless jobs, pipelines and SQL warehouses (Photon), with budget policy tags
+    coverage: full
+    proves: [COST-04, COST-03]
+  deployer:
+    approach: platform
+    adapter: Databricks Asset Bundles generated from metadata, promoted dev to prod by GitHub Actions; shallow clones for the release gate
+    coverage: partial
+    gap: Bundles deploy code but do not compare old and new results or roll back tables.
+    gap_filled_by: {approach: in-house, adapter: "release gate (shallow clones + recon) and RESTORE on rollback"}
+    proves: [REL-03, REL-07, ENV-01]
+  infra_provisioner:
+    approach: open-source
+    adapter: Terraform databricks provider (workspaces, catalogs, schemas, grants)
+    coverage: full
+    proves: [REL-06]
+  agent_runtime:
+    approach: platform
+    adapter: Mosaic AI Agent Framework, Agent Bricks, MLflow evaluation
+    coverage: partial
+    gap: Agents may act directly; manifest-PR-only proposals and gates are ours.
+    gap_filled_by: {approach: in-house, adapter: "agent harness (clean-ai-engineering) with manifest PR tools"}
+    proves: [GATE-03, HEAL-01]
+  clock:
+    approach: in-house
+    adapter: the run date is a job parameter; the world day in simulation, the real date in production
+    coverage: none
+    gap: No product lets a job run on a simulated date.
+    gap_filled_by: {approach: in-house, adapter: job parameter run_date}
+    proves: [LATE-04]
+
+accepted_gaps:
+  - {obligation: GATE-02, reason: "Protected contract files are a Git branch-protection setting, outside the platform.", owner: platform-lead, review: "2026-12-01"}
+
+profiles:
+  free-edition:
+    summary: >-
+      Databricks Free Edition: serverless only, one workspace and metastore, no account console, no private
+      networking, no SSO or SCIM, at most 5 concurrent tasks, one active pipeline per type. Slice 1 ran here
+      (88 of 88 checks, all 4 planted incidents caught). There is no cloud layer: storage and identity are managed.
+    decisions:
+      environments: {value: "one schema set per environment (dp_<env>_*), since Free Edition has one workspace", source: chosen}
+    bindings:
+      mover:
+        approach: platform
+        adapter: the world writes files into a Unity Catalog volume (stands in for Auto Loader or Lakeflow Connect)
+        coverage: full
+        metadata_keys: [file_pattern, schedule_trigger]
+        proves: [DUP-01]
+      landing_store:
+        approach: platform
+        adapter: Unity Catalog volume, one folder per source, dataset and window, read as files (dataplatform.adapters.files)
+        coverage: full
+        proves: [DUP-01]
+      metadata_service:
+        approach: in-house
+        adapter: Delta tables in dp_<env>_meta; compiled manifest loaded by the prepare step only when its fingerprint changes
+        coverage: none
+        gap: No product holds a dataset manifest that pipelines read at run time.
+        gap_filled_by: {approach: in-house, adapter: dataplatform.adapters.spark_delta.SparkMeta}
+        proves: [CFG-01, CFG-02]
+      run_log:
+        approach: in-house
+        adapter: run_log Delta table in the metadata schema, one row per step, with the config fingerprint
+        coverage: none
+        gap: Job run history does not record which config a run used.
+        gap_filled_by: {approach: in-house, adapter: dataplatform.adapters.spark_delta.SparkRunLog}
+        proves: [OPS-03, CFG-03]
+      stream_bus:
+        approach: platform
+        adapter: event files dropped into a volume and read as a stream by Auto Loader (stands in for a stream bus)
+        coverage: partial
+        gap: A volume keeps files, not an event log with retention and replay positions.
+        gap_filled_by: {approach: in-house, adapter: "the world's stream writer + checkpoint in the pipeline"}
+        proves: [DUP-04, LATE-03]
+      telemetry:
+        approach: platform
+        adapter: Lakeflow Jobs run history and pipeline event log
+        coverage: partial
+        gap: Freshness against the contract's latency is not measured; no alert is sent.
+        gap_filled_by: {approach: in-house, adapter: not built in slice 1 (accepted gap)}
+        metadata_keys: [sla_freshness_hours, sla_freshness_error_hours]
+        proves: [OPS-01]
+      orchestrator:
+        approach: platform
+        adapter: Lakeflow Jobs, one run per world day, max concurrent runs 1, run id passed to every task
+        coverage: full
+        metadata_keys: [schedule_trigger, schedule_timezone]
+        proves: [ORCH-01, ORCH-02]
+      secret_store:
+        approach: platform
+        adapter: Databricks secret scopes (not needed in slice 1; the world is inside the workspace)
+        coverage: full
+        proves: [REL-05]
+      semantic_layer:
+        approach: platform
+        adapter: Unity Catalog metric view orders_metrics (dimensions order_date, status, store_id; measures orders, revenue)
+        coverage: full
+        proves: [SERV-04]
+      evidence:
+        approach: in-house
+        adapter: evidence view joining run_log and check_results by run id
+        coverage: none
+        gap: Each Databricks feature reports alone; nothing answers "is this number right, and how do we know?" for one run.
+        gap_filled_by: {approach: in-house, adapter: dataplatform.adapters.spark_delta.create_meta (evidence view)}
+        proves: [SIM-01]
+      clock:
+        approach: in-house
+        adapter: the world day is a job parameter; production would pass the real date
+        coverage: none
+        gap: No product lets a job run on a simulated date.
+        gap_filled_by: {approach: in-house, adapter: job parameter day}
+        proves: [LATE-04]
+    unbind: [identity_provider]
+    accepted_gaps:
+      - {obligation: SCH-01, reason: "New columns are reported but not kept in bronze yet (load.new_columns: hold_in_bronze is not built).", owner: platform-lead, review: "2026-12-01"}
+      - {obligation: OPS-01, reason: "Freshness is not measured against the contract's latency and no alert is sent in slice 1.", owner: platform-lead, review: "2026-12-01"}
+      - {obligation: ENV-02, reason: "Free Edition has no SSO, SCIM or account console, so groups and service principals cannot be shown.", owner: platform-lead, review: "2026-12-15"}
+      - {obligation: COST-02, reason: "Free Edition has no budget policies; usage is readable from system.billing.usage only.", owner: platform-lead, review: "2026-12-15"}
+      - {obligation: ORCH-05, reason: "Free Edition offers no disaster recovery; recovery is shown locally on open-source engines.", owner: platform-lead, review: "2026-12-15"}

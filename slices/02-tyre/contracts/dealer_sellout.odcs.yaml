@@ -1,0 +1,32 @@
+# Tyre company, slice 2: Dealer sell-out (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_tyre.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: tyre-partner-dealer-sellout
+name: "Dealer sell-out (silver)"
+version: 0.1.0
+status: draft
+domain: sales
+description:
+  purpose: "Units each dealer sold to end customers per month and material, from partner files."
+  limitations: "A re-sent or corrected file replaces that dealer's month."
+schema:
+  - name: dealer_sellout
+    physicalName: silver_partner.dealer_sellout
+    logicalType: object
+    dataGranularityDescription: "One row per dealer, month and material"
+    properties:
+      - {name: "dealer_code", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "sale_month", logicalType: "date", required: true, primaryKey: true, primaryKeyPosition: 2}
+      - {name: "material_code", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 3}
+      - {name: "units_sold", logicalType: "integer", required: true, quality: [{"type": "sql", "description": "units_sold is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE units_sold < 0", "mustBe": 0, "dimension": "accuracy", "severity": "major"}]}
+      - {name: "file_name", logicalType: "string", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["dealer_code", "sale_month", "material_code"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: sales-data
+  members:
+    - {username: sales-data@tyre.example, role: owner}
+slaProperties:
+  - {property: latency, value: 72, unit: h}
+  - {property: retention, value: 10, unit: y}

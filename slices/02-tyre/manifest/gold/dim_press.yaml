@@ -1,0 +1,15 @@
+# DPM v0.2 gold dimension: one silver table reshaped through the common pipeline (ADR-003), history kept,
+# deterministic hash keys with reserved members -1 and -2 (ADR-004). No build: the common pipeline does it all.
+kind: gold_dimension
+name: dim_press
+domain: manufacturing
+pipeline: one_to_one
+contract: ../../contracts/dim_press.odcs.yaml
+contract_version: 0.1.0
+grain: [press_sk]
+inputs:
+  - {dataset: mes.press, role: driver}
+history: scd2
+keys: {surrogate: hash, unknown_member: -1, not_applicable: -2}
+materialize: table
+owners: {dataset: manufacturing-data@tyre.example}

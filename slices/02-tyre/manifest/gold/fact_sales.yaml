@@ -1,0 +1,30 @@
+# DPM v0.2 gold fact: sell-in and sell-out per dealer, material and month. Modelled: one SQL build() in the harness.
+# Partner files arrive late and are corrected by re-sending, so months are rebuilt and logged as restatements.
+kind: gold_fact
+name: fact_sales
+domain: sales
+pipeline: modelled
+contract: ../../contracts/fact_sales.odcs.yaml
+contract_version: 0.1.0
+grain: [dealer_code, material_code, sale_month]
+inputs:
+  - {dataset: erp.sales_order_line, bookmark: change_seq, role: driver}
+  - {dataset: partner.dealer_sellout, role: driver}
+dimensions:
+  - {name: dim_dealer, key: dealer_sk, business_key: [dealer_code], as_of: sale_month}
+  - {name: dim_material, key: material_sk, business_key: [material_code], as_of: sale_month}
+keys: {surrogate: hash, unknown_member: -1, not_applicable: -2}
+window: {column: sale_month, unit: month, lookback: 3}
+build: {kind: sql, ref: gold/sales/fact_sales.sql}
+materialize: table
+corrections: true
+completeness: {on_incomplete: flag}
+checks:
+  grain_unique: true
+  orphan_rate_max: 0.01
+  reconcile:
+    against: silver
+    measures:
+      - {name: units_out_total, column: units_sold_out}
+    tolerance: {units_out_total: 0}
+owners: {dataset: sales-data@tyre.example, alerts: sales-data-rota}

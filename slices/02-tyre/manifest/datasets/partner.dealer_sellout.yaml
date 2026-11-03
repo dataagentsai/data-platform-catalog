@@ -1,0 +1,41 @@
+# DPM v0.2: dealer sell-out from partner files (PA1). Each file covers one dealer and month; a re-sent or corrected
+# file replaces that dealer's month (overwrite_window), so a resend changes nothing and a correction restates.
+source_name: partner
+source_env: prod
+dataset_name: dealer_sellout
+is_enabled: true
+kind: dataset
+config:
+  load_type: INCREMENTAL
+  file_format: csv
+  file_pattern: "sellout_*.csv"
+  csv_delimiter: ","
+  csv_has_header: "true"
+  sla_freshness_hours: "72"
+  sla_freshness_error_hours: "120"
+  schedule_trigger: on_delivery
+  schedule_timezone: Asia/Kolkata
+  cost_center: sales-analytics
+dedup: {mode: business_key_latest, business_keys: [dealer_code, sale_month, material_code], order_by: file_name}
+contract: ../../contracts/dealer_sellout.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA1]
+ingest: {mode: push, read: files}
+history: {kind: snapshot}
+load:
+  pattern: overwrite_window
+  batch_key: [file_name, content_checksum]
+  new_columns: hold_in_bronze
+  deletes: {detect: none, apply: none}
+  quarantine_stop_share: 0.05
+  late_lookback_days: 90
+volume:
+  expected_rows_per_delivery: {min: 5, max: 3000}
+reconciliation:
+  hops: [sources, landing, bronze, silver]
+  measures:
+    - {name: row_count}
+    - {name: units_total, column: units_sold}
+  tolerance: {row_count: 0, units_total: 0.0}
+owners: {dataset: sales-data@tyre.example, alerts: partner-data-rota}
+concerns: {}

@@ -1,0 +1,31 @@
+# DPM v0.2 gold fact: on time in full. Modelled: one pure build() (a SQL model) inside the gold harness (ADR-003, D18).
+# The harness finds the promised-date days changed in either input, reads them in full, joins dimensions as of the
+# order time (ADR-005), lays active corrections over silver (ADR-017), checks, and replaces the days (ADR-006).
+kind: gold_fact
+name: fact_otif
+domain: sales
+pipeline: modelled
+contract: ../../contracts/fact_otif.odcs.yaml
+contract_version: 0.1.0
+grain: [order_id, line_no]
+inputs:
+  - {dataset: erp.sales_order_line, bookmark: change_seq, role: driver}
+  - {dataset: erp.delivery, bookmark: change_seq, role: driver}
+dimensions:
+  - {name: dim_dealer, key: dealer_sk, business_key: [dealer_code], as_of: order_ts}
+  - {name: dim_material, key: material_sk, business_key: [material_code], as_of: order_ts}
+keys: {surrogate: hash, unknown_member: -1, not_applicable: -2}
+window: {column: promised_date, unit: day, lookback: 35}
+build: {kind: sql, ref: gold/sales/fact_otif.sql}
+materialize: table
+corrections: true
+completeness: {on_incomplete: flag}
+checks:
+  grain_unique: true
+  orphan_rate_max: 0.01
+  reconcile:
+    against: silver
+    measures:
+      - {name: ordered_qty_total, column: ordered_qty}
+    tolerance: {ordered_qty_total: 0}
+owners: {dataset: sales-data@tyre.example, alerts: sales-data-rota}

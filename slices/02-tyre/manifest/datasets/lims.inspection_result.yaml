@@ -1,0 +1,43 @@
+# DPM v0.2: lab inspection results. Push: hourly CSV files dropped by the lab system (PA1); events, appended.
+# inspector_id is restricted: tokenised before bronze.
+source_name: lims
+source_env: prod
+dataset_name: inspection_result
+is_enabled: true
+kind: dataset
+config:
+  load_type: INCREMENTAL
+  file_format: csv
+  file_pattern: "inspection_*.csv"
+  csv_delimiter: ";"
+  csv_has_header: "true"
+  sla_freshness_hours: "2"
+  sla_freshness_error_hours: "4"
+  schedule_trigger: on_delivery
+  schedule_timezone: Europe/Budapest
+  cost_center: quality-analytics
+dedup: {mode: business_key_first, business_keys: [inspection_id]}
+contract: ../../contracts/inspection_result.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA1]
+ingest: {mode: push, read: files}
+history: {kind: event}
+load:
+  pattern: append
+  batch_key: [file_name, content_checksum]
+  new_columns: stop
+  deletes: {detect: none, apply: none}
+  quarantine_stop_share: 0.02
+volume:
+  expected_rows_per_delivery: {min: 10, max: 2000}
+quality:
+  actions:
+    major: {rows: quarantine, dataset: alert_owner, page: false}
+reconciliation:
+  hops: [sources, landing, bronze, silver]
+  measures:
+    - {name: row_count}
+    - {name: scrapped_total, column: tyres_scrapped}
+  tolerance: {row_count: 0, scrapped_total: 0.0}
+owners: {dataset: quality-data@tyre.example, alerts: quality-data-rota}
+concerns: {}

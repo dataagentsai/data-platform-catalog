@@ -30,3 +30,77 @@
   realization_policy: bind
   slice: 1
   see_also: []
+- id: DPC-0088
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Environments, accounts and networks from code
+  concern: X16
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  core: true
+  port: infra_provisioner
+  requirement: Accounts, environments, networks, storage, catalogs and workspaces MUST be created from code, one
+    module set for every environment.
+  failure_mode: Production was built by hand; after a region outage nobody could rebuild it.
+  discharges:
+  - REL-06
+  - ENV-01
+  realization_policy: bind
+  see_also: []
+- id: DPC-0089
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: One catalog per environment and layer
+  concern: X16
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  core: true
+  port: deployer
+  requirement: Each environment MUST have one catalog per layer with the same shape, each bound only to its own
+    environment's compute, with names generated from metadata and checked in CI.
+  failure_mode: A test job wrote into the production schema because both lived in one catalog.
+  discharges:
+  - ENV-01
+  - REL-04
+  - NAME-01
+  realization_policy: bind
+  adr:
+  - ADR-012
+  see_also: []
+- id: DPC-0090
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Every change reviewed on a branch
+  concern: X16
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  core: true
+  port: null
+  requirement: Every change to code, manifests, contracts and metric files MUST go through a branch and a review
+    before it is merged.
+  failure_mode: A quality limit was relaxed by a direct commit on Friday night; nobody saw it until month end.
+  discharges:
+  - REL-02
+  realization_policy: own
+  see_also: []

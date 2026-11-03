@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dataagentsai/data-platform-catalog/dpm/schema/ml_model.schema.json",
+  "title": "DPM machine-learning model manifest v0.2",
+  "description": "One model as a data product (D16, ADR-021): its model card. Features and target come from gold tables in the same domain.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "name",
+    "domain",
+    "purpose",
+    "owners",
+    "status",
+    "target",
+    "features",
+    "training",
+    "metric",
+    "monitoring",
+    "serving",
+    "intended_use",
+    "limitations"
+  ],
+  "properties": {
+    "kind": {
+      "const": "ml_model"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "domain": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 20
+    },
+    "owners": {
+      "type": "object",
+      "required": [
+        "dataset"
+      ],
+      "properties": {
+        "dataset": {
+          "type": "string"
+        },
+        "alerts": {
+          "type": "string"
+        }
+      }
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "candidate",
+        "approved",
+        "retired"
+      ]
+    },
+    "risk_tier": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "column"
+      ],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "column": {
+          "$ref": "dataset.schema.json#/$defs/name"
+        },
+        "horizon": {
+          "type": "string"
+        }
+      }
+    },
+    "features": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source",
+          "columns"
+        ],
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "columns": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "dataset.schema.json#/$defs/name"
+            }
+          }
+        }
+      }
+    },
+    "training": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "window_days",
+        "as_of"
+      ],
+      "properties": {
+        "window_days": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "as_of": {
+          "$ref": "dataset.schema.json#/$defs/name"
+        },
+        "retrain": {
+          "type": "string"
+        }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "threshold",
+        "better"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "threshold": {
+          "type": "number"
+        },
+        "better": {
+          "enum": [
+            "lower",
+            "higher"
+          ]
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "drift_threshold",
+        "feature_max_age_hours"
+      ],
+      "properties": {
+        "drift_threshold": {
+          "type": "number",
+          "minimum": 0
+        },
+        "feature_max_age_hours": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "serving": {
+      "enum": [
+        "batch",
+        "online"
+      ]
+    },
+    "intended_use": {
+      "type": "string",
+      "minLength": 10
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

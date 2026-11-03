@@ -124,3 +124,198 @@
   realization_policy: own
   slice: 1
   see_also: []
+- id: DPC-0042
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Quality severity sets the action
+  concern: X4
+  stages:
+  - silver
+  - gold
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  core: true
+  port: quality_runner
+  requirement: Every quality rule MUST carry a severity (critical, major or minor), and the severity MUST set the
+    action declared for it (critical quarantines and blocks or holds the window and pages; major quarantines and
+    alerts the owner; minor keeps the row, flags it and goes into a digest).
+  failure_mode: Every failed rule paged on-call at night; within a month the alerts were muted, including the ones
+    that mattered.
+  discharges:
+  - DQ-01
+  - DQ-02
+  - SEV-01
+  realization_policy: own
+  adr:
+  - ADR-009
+  see_also: []
+- id: DPC-0043
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Standard rules on every dataset without authoring
+  concern: X4
+  stages:
+  - bronze
+  - silver
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  core: true
+  port: quality_runner
+  requirement: Every dataset MUST get the standard rules without anyone writing them (contract and schema, key not
+    empty and unique, volume against the same weekday's baseline, freshness, empty-value drift, duplicate rate).
+  failure_mode: A new dataset went live with no rules at all because its owner meant to add them later.
+  discharges:
+  - DQ-04
+  - DQ-01
+  realization_policy: own
+  see_also: []
+- id: DPC-0044
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Quarantined rows return through silver once fixed
+  concern: X4
+  stages:
+  - silver
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  core: true
+  port: quarantine
+  requirement: A quarantined row MUST be fixed only by a corrected source row, a changed rule or a row in the corrections
+    table, never by editing quarantine, and released rows MUST go back through the standard stages, after which
+    gold recomputes the affected windows.
+  failure_mode: A steward edited rows in quarantine and pushed them straight into gold; the next rebuild undid it.
+  discharges:
+  - DQ-02
+  - QUAR-01
+  realization_policy: own
+  see_also:
+  - DPC-0011
+- id: DPC-0045
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: The standard stages run from bronze to silver, set per column
+  concern: X4
+  stages:
+  - silver
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  core: true
+  port: stage_runner
+  requirement: Bronze to silver MUST run only the standard stages, in their declared order, configured per column
+    from metadata; a need they cannot meet MUST become a new generic stage with its own tests, or logic for gold.
+  failure_mode: Each table got its own cleaning query; the same date format was parsed four different ways.
+  discharges:
+  - DQ-02
+  - CFG-01
+  - LATE-04
+  - ENG-01
+  - PROJ-01
+  realization_policy: own
+  adr:
+  - ADR-007
+  - ADR-008
+  see_also: []
+- id: DPC-0046
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: No fact row dropped for a missing dimension
+  concern: X4
+  stages:
+  - gold
+  archetypes:
+  - PA5
+  core: true
+  port: model_runner
+  requirement: Facts MUST join dimensions with a left join, a fact row with no matching member MUST take the unknown
+    member, keep its business key, be counted as an orphan, and be re-keyed when the member arrives.
+  failure_mode: Sales for a new dealer vanished from the report for a week because the dealer master was late.
+  discharges:
+  - LATE-02
+  - SCD-04
+  realization_policy: own
+  adr:
+  - ADR-004
+  see_also: []
+- id: DPC-0047
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: History dimensions joined as of the event
+  concern: X4
+  stages:
+  - gold
+  archetypes:
+  - PA5
+  - PA6
+  core: true
+  port: model_runner
+  requirement: A fact joining a history-kept dimension MUST match the version valid at the event's time, never the
+    current version.
+  failure_mode: A dealer moved region and last year's sales moved with it.
+  discharges:
+  - SCD-04
+  realization_policy: own
+  adr:
+  - ADR-005
+  see_also: []
+- id: DPC-0048
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Gold checked before publish
+  concern: X4
+  stages:
+  - gold
+  archetypes:
+  - PA5
+  core: true
+  port: quality_runner
+  requirement: Before a gold window is published, grain uniqueness, the orphan rate, reconciliation to silver and
+    input completeness MUST be checked; on failure the last good window MUST stay published.
+  failure_mode: A join fanned out and doubled one plant's output; silver checks had all passed.
+  discharges:
+  - GATE-01
+  - DES-04
+  - PUB-01
+  realization_policy: own
+  see_also: []
+- id: DPC-0050
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Features read as of the label's time
+  concern: X4
+  stages:
+  - gold
+  - experiences
+  archetypes:
+  - PA6
+  core: false
+  port: feature_store
+  requirement: Features MUST be computed from gold and MUST be read for training as of each label's time.
+  failure_mode: A churn model trained on next month's features scored perfectly and failed in use.
+  discharges:
+  - SCD-04
+  - LIN-01
+  realization_policy: bind
+  adr:
+  - ADR-021
+  see_also: []

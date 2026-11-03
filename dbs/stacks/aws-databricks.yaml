@@ -1,0 +1,23 @@
+# DBS stack: Databricks on AWS (decision D17), the binding for Goal 1b and the tyre company.
+# A stack names one engine layer, one cloud layer and an engine profile, and says which layer wins wherever both bind
+# a port (`prefer`). The composed binding and its coverage are generated: scripts/coverage.py --stack <this file>.
+apiVersion: data-binding-stack/v0.1
+name: aws-databricks
+subject:
+  name: tyre company, Goal 1b
+  platform: Databricks on AWS (dev and prod as separate catalogs, buckets, metadata schemas and bundle targets)
+  archetypes: [PA1, PA2, PA3, PA4, PA5, PA6, PA9]
+engine: {layer: databricks}
+cloud: {layer: aws}
+prefer:
+  telemetry: engine          # data alerts and freshness live on the engine side; CloudWatch is joined in by the ops builder
+  cost_ledger: engine        # billing system tables carry job and pipeline ids; CUR adds the AWS side
+  secret_store: cloud        # Secrets Manager is the source; secret scopes are backed by it
+  identity_provider: cloud   # IAM Identity Center is the directory; Databricks groups are synced from it
+  compute_pool: engine       # serverless first; EC2 only for classic compute
+  audit_log: engine          # data access audit; CloudTrail covers the account side
+  infra_provisioner: cloud   # one Terraform run per environment, aws provider first, databricks provider after
+  agent_runtime: cloud       # the AWS agent harness (T-123); Mosaic AI for retrieval and serving only
+decisions:
+  environments: {value: "dev and prod: separate catalogs, S3 prefixes, metadata schemas and bundle targets in one AWS account to start", source: chosen}
+accepted_gaps: []

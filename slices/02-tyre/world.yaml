@@ -1,0 +1,209 @@
+# DWD draft: the tyre company's data world (decision D17, goal G4). Extends AgentTwin's world format (awd/v0).
+#
+# The rule kept from AWD: a world cites the specification and never declares the domain. Columns, rules and keys
+# live in the contracts and manifests it cites; the world says only what the sources do, how much, when, and which
+# incidents it plants. Each incident names the detector expected to fire (a DAC obligation), the capabilities that
+# must handle it (DPC) and an oracle judged from the world's own truth, never from the platform's logs (R9, SIM-01).
+# No product names (R1): systems are named by what they are (an ERP database, a lab system), not by vendor.
+apiVersion: dwd/v0
+extends: awd/v0
+name: tyre-company
+seed: 11
+cites:
+  platform: {path: manifest/platform.yaml}
+  manifests: manifest/datasets/
+  gold: manifest/gold/
+  metrics: manifest/metrics/
+
+fidelity:
+  faithful_about:
+    - the order life cycle (placed, promised, partly or fully delivered, cancelled) and the change sequence the ERP assigns
+    - curing batches per press and shift, and the share scrapped at inspection
+    - partner files arriving monthly per dealer, late and re-sent, as partners really do
+    - sensor readings arriving out of order and replayed after a restart
+  not_faithful_about:
+    - volume (thousands of rows a day, not millions); performance is shown by the cost rules, not by load
+    - prices and margins, which are plausible but not modelled
+    - the shop floor beyond presses (mixing, building, warehousing)
+
+clock:
+  start: 2026-11-09T00:00:00+05:30    # jobs read time only through the clock port (DPC-0032)
+  days: 14
+  business_timezone: Asia/Kolkata
+  plants:
+    P-CHN: {timezone: Asia/Kolkata, presses: 48, shifts_per_day: 3}
+    P-HUN: {timezone: Europe/Budapest, presses: 24, shifts_per_day: 2}
+
+systems:                              # each is a mock source system the world writes into (resolution as in AWD)
+  erp_db:
+    kind: database
+    resolution: mock
+    change_feed: true                 # inserts, updates and deletes with a change sequence
+    datasets: [erp.sales_order_line, erp.delivery, erp.material]
+    delivers: {erp.sales_order_line: every 15 minutes, erp.delivery: every 15 minutes, erp.material: full copy daily 01:00}
+  mes_db:
+    kind: database
+    resolution: mock
+    change_feed: true
+    datasets: [mes.production, mes.press]
+    delivers: {mes.production: every 15 minutes, mes.press: full copy daily 01:00}
+  lims_drop:
+    kind: file_drop
+    resolution: mock
+    datasets: [lims.inspection_result]
+    delivers: {lims.inspection_result: one CSV per plant per hour}
+  partner_drop:
+    kind: file_drop
+    resolution: mock
+    datasets: [partner.dealer_sellout]
+    delivers: {partner.dealer_sellout: one CSV per dealer per month, in the first 5 days of the month}
+  dealer_api:
+    kind: rest_api
+    resolution: mock
+    datasets: [dealer_api.dealer]
+    delivers: {dealer_api.dealer: pages of 200 since a cursor, read every 6 hours}
+  press_stream:
+    kind: stream
+    resolution: mock
+    datasets: [press_stream.press_reading]
+    delivers: {press_stream.press_reading: one reading per press every 10 seconds}
+
+population:
+  dealers: 600
+  materials: 1800
+  orders_per_day: {min: 1500, max: 3000}
+  lines_per_order: {min: 1, max: 6}
+  on_time_share: 0.93
+  in_full_share: 0.96
+  cancel_share: 0.03
+  tyres_cured_per_press_hour: {min: 20, max: 34}
+  scrap_share: {mean: 0.018, sd: 0.006}
+  generator: faker                    # behind the population port; never a hosted generator (REUSE.md)
+
+calendar:                             # story: one of the demo stories this world must cover (see covers below)
+  - id: readings-out-of-order
+    day: 3
+    story: out_of_order
+    kind: late_events
+    dataset: press_stream.press_reading
+    does: For two hours, 4% of readings from 6 presses arrive up to 90 seconds late and out of order.
+    expect:
+      detector: LATE-03
+      handled_by: [DPC-0060]
+      oracle: every reading lands in the hour of its event time; hourly scrap and press-hour totals equal the world's truth
+  - id: order-lines-deleted
+    day: 4
+    story: deletes
+    kind: source_delete
+    dataset: erp.sales_order_line
+    does: Hard-delete 5 cancelled order lines from day 1 at the source.
+    pick: 5
+    expect:
+      detector: DEL-01
+      handled_by: [DPC-0017, DPC-0053]
+      oracle: the 5 lines are marked deleted in silver, are gone from fact_otif and fact_sales, and OTIF equals the world's truth
+  - id: sellout-file-late
+    day: 5
+    story: late_data
+    kind: late_delivery
+    dataset: partner.dealer_sellout
+    does: Dealer D-0042's October file, due on day 1, arrives on day 5.
+    expect:
+      detector: LATE-01
+      handled_by: [DPC-0080, DPC-0059, DPC-0079]
+      oracle: October for D-0042 is published flagged incomplete until day 5, then rebuilt, marked complete and logged as a restatement
+  - id: sellout-file-resent
+    day: 6
+    story: resend
+    kind: duplicate_delivery
+    dataset: partner.dealer_sellout
+    does: Re-send D-0042's October file byte for byte under a new name.
+    expect:
+      detector: DUP-01
+      handled_by: [DPC-0024, DPC-0023, DPC-0038]
+      oracle: silver and fact_sales for D-0042 October are unchanged; no restatement is logged
+  - id: lab-column-renamed
+    day: 7
+    story: schema_change
+    kind: renamed_column
+    dataset: lims.inspection_result
+    does: The lab system renames defect_code to defect in P-HUN's files from 10:00.
+    expect:
+      detector: SCH-02
+      handled_by: [DPC-0008]
+      oracle: the load stops naming defect_code; silver is unchanged; no nulls loaded; P-CHN's files keep loading
+  - id: promised-date-out-of-order
+    day: 8
+    story: out_of_order
+    kind: late_change
+    dataset: erp.sales_order_line
+    does: A promised-date change for a day-2 line arrives with a change sequence older than one already loaded.
+    pick: 1
+    expect:
+      detector: SCD-02
+      handled_by: [DPC-0025, DPC-0026]
+      oracle: the line has exactly one current version holding the newest change, with no overlapping periods
+  - id: material-copy-short
+    day: 9
+    story: mass_delete
+    kind: short_full_copy
+    dataset: erp.material
+    does: The daily full copy of materials comes back with 40% of rows missing.
+    expect:
+      detector: DQ-04
+      handled_by: [DPC-0054]
+      oracle: nothing is appended to bronze, the dataset is blocked with the mass-delete alert, silver keeps every material
+  - id: promised-date-corrected
+    day: 10
+    story: correction
+    kind: correction
+    dataset: erp.sales_order_line
+    does: The sales team records that 12 lines from day 2 were always promised a day later; a backfill plan activates it on day 11.
+    pick: 12
+    expect:
+      detector: HIST-04
+      handled_by: [DPC-0082]
+      oracle: silver is unchanged; only day 2's and day 3's promised-date windows are rebuilt on day 11; OTIF equals the corrected truth
+  - id: new-dealer-late
+    day: 11
+    story: late_dimension
+    kind: late_dimension
+    dataset: dealer_api.dealer
+    does: Orders for new dealer D-9001 start on day 11; the dealer appears in the interface on day 13.
+    expect:
+      detector: LATE-02
+      handled_by: [DPC-0046]
+      oracle: no fact row is dropped; D-9001's lines sit on the unknown member (-1) and count as orphans on days 11 and 12, then are re-keyed on day 13
+  - id: change-feed-drops-rows
+    day: 12
+    story: recon_mismatch
+    kind: silent_loss
+    dataset: erp.delivery
+    does: The change feed silently skips 7 delivery rows during a source maintenance window.
+    pick: 7
+    expect:
+      detector: REC-05
+      handled_by: [DPC-0052, DPC-0015]
+      oracle: the live-source-against-silver entry fails that night, names the hop sources to landing, and drills to the 7 keys
+  - id: stream-replayed
+    day: 13
+    story: out_of_order
+    kind: replay
+    dataset: press_stream.press_reading
+    does: After a reader restart, the stream replays the last 45 minutes of readings.
+    expect:
+      detector: DUP-04
+      handled_by: [DPC-0086, DPC-0096]
+      oracle: no reading is counted twice; press-hour totals equal the world's truth
+
+covers: [late_data, resend, schema_change, deletes, out_of_order, mass_delete, correction, late_dimension, recon_mismatch]
+
+oracles:                              # judged from world state, never from the platform's own logs
+  - id: silver-agrees-with-world
+    check: For every day and dataset, silver's current rows equal the world's true current rows (count, keys, measure totals).
+  - id: gold-agrees-with-world
+    check: OTIF %, scrap rate % and sell-out units per day or month equal the world's truth once their windows are complete.
+  - id: every-incident-noticed
+    check: Every calendar entry's detector fired on its day and on no clean day (SIM-01).
+  - id: same-number-everywhere
+    check: The metric view, the dashboard and the conversation interface give the same OTIF % for the same question.

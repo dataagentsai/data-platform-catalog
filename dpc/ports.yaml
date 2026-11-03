@@ -5,6 +5,7 @@
 #   kernel_owns: what our own code decides, whatever product sits behind the port
 #   supplied_outside: what the adapter brings
 #   invariants[].obligation: the DAC obligation the invariant protects
+#   binds_in: which binding layer may fill the port (decision M1, ADR-014): engine, cloud or both. Checked by the linter.
 
 # ---------- Service A: acquire ----------
 - port: mover
@@ -12,6 +13,7 @@
   since: 0.1.0
   service: A
   tier: core
+  binds_in: [cloud, engine]
   concerns: [X15, X8]
   stages: [sources, landing]
   summary: >-
@@ -39,6 +41,7 @@
   since: 0.1.0
   service: A
   tier: core
+  binds_in: [cloud, engine]
   concerns: [X18, X14]
   stages: [landing]
   summary: Keeps every delivery exactly as received, so a bad parse can be redone from the original bytes.
@@ -59,6 +62,7 @@
   since: 0.1.0
   service: A
   tier: core
+  binds_in: [engine]
   concerns: [X15, X3]
   stages: [bronze, silver, gold]
   summary: Writes rows into a table by a declared pattern (append, overwrite a window, upsert, history type 1 or 2).
@@ -89,6 +93,7 @@
   since: 0.1.0
   service: A
   tier: core
+  binds_in: [engine]
   concerns: [X3, X4]
   stages: [bronze, silver]
   summary: Compares an incoming batch with the dataset's contract (columns, types, keys) before it reaches silver.
@@ -113,6 +118,7 @@
   since: 0.1.0
   service: A
   tier: core
+  binds_in: [engine]
   concerns: [X4]
   stages: [bronze, silver]
   summary: Holds rows that failed a blocking rule or could not be parsed, with the reason, until they are fixed and replayed.
@@ -134,18 +140,33 @@
   since: 0.1.0
   service: B
   tier: later
+  binds_in: [engine]
   concerns: [X15, X17]
   stages: [gold]
-  summary: Builds gold tables from silver as models written as code, with tests beside them.
-  kernel_owns: The model's grain and key, the look-back window for late rows, and the tests that must pass before publish.
-  supplied_outside: Compiling and running the models.
+  summary: >-
+    The gold harness (ADR-003). One-to-one gold tables go through one common pipeline driven by metadata; each
+    modelled fact supplies one pure build() (a set-based query model or a pure dataframe function) and the harness
+    does everything else: detect changed windows, read them in full, look up keys as of the event, check, replace.
+  kernel_owns: >-
+    The model's grain and key, the window and look-back for late rows, surrogate keys and reserved members,
+    corrections, completeness per window, and the tests that must pass before publish. All IO is here, never in build().
+  supplied_outside: Running the query or dataframe engine and the transactional window replace.
   operations:
-    - {name: build, intent: Build one model, or the models affected by changed input windows.}
+    - {name: build, intent: Build one model, or the windows of a model affected by changed inputs.}
     - {name: test, intent: Run a model's tests and return results with rows examined.}
+    - {name: plan_backfill, intent: Rebuild a declared set of windows in chunks, for corrections and restatements., optional: true}
   invariants:
     - must: A late row rebuilds every period it affects and nothing else.
       because: Rebuilding everything costs money; rebuilding too little leaves wrong totals.
       obligation: LATE-01
+      checkable: dynamic
+    - must: A window is replaced whole, never appended to.
+      because: Appending on a rerun or a backfill doubles the number.
+      obligation: DUP-02
+      checkable: dynamic
+    - must: No fact row is dropped because its dimension has not arrived; it takes the unknown member.
+      because: An inner join to a late dimension silently loses sales.
+      obligation: LATE-02
       checkable: dynamic
 
 - port: semantic_layer
@@ -153,6 +174,7 @@
   since: 0.1.0
   service: B
   tier: later
+  binds_in: [engine]
   concerns: [X13]
   stages: [semantic]
   summary: Holds each metric's definition once, and answers every consumer from that definition.
@@ -172,6 +194,7 @@
   since: 0.1.0
   service: B
   tier: later
+  binds_in: [engine]
   concerns: [X3, X13]
   stages: [gold, semantic]
   summary: Publishes a gold dataset as a data product with its contract, owner and freshness promise.
@@ -192,9 +215,12 @@
   since: 0.1.0
   service: C
   tier: later
+  binds_in: [engine]
   concerns: [X9, X11]
   stages: [experiences]
-  summary: Any consumer surface (dashboard, conversation interface, extract, feature read, reverse load). One port for v0.1; it splits when a binding needs it.
+  summary: >-
+    Dashboards and self-serve analytics. Split in 0.2.0 because the deck's Out Port needed it: conversation, data_api,
+    event_publisher, feed_writer, vector_index, feature_store and model_server are their own ports.
   kernel_owns: The rule that experiences read only the semantic layer or published products, and show when data was last complete.
   supplied_outside: The surface itself.
   operations:
@@ -215,6 +241,7 @@
   since: 0.1.0
   service: platform
   tier: core
+  binds_in: [cloud, engine]
   concerns: [X1]
   stages: [platform]
   summary: >-
@@ -241,6 +268,7 @@
   since: 0.1.0
   service: platform
   tier: core
+  binds_in: [engine, cloud]
   concerns: [X2]
   stages: [platform]
   summary: Starts jobs when their inputs are complete, in dependency order, with retries only for passing failures.
@@ -264,6 +292,7 @@
   since: 0.1.0
   service: platform
   tier: core
+  binds_in: [engine]
   concerns: [X4]
   stages: [silver, gold]
   summary: Runs the quality rules declared in a dataset's contract and returns results with rows examined.
@@ -282,6 +311,7 @@
   since: 0.1.0
   service: platform
   tier: later
+  binds_in: [engine]
   concerns: [X5]
   stages: [bronze, silver]
   summary: Measures what each batch looks like (counts, nulls, distinct values, ranges) and compares it with recent batches.
@@ -301,6 +331,7 @@
   since: 0.1.0
   service: platform
   tier: core
+  binds_in: [engine]
   concerns: [X6]
   stages: [sources, bronze, silver, gold]
   summary: Compares counts and control totals between two hops and judges the difference against a tolerance.
@@ -323,6 +354,7 @@
   since: 0.1.0
   service: platform
   tier: core
+  binds_in: [engine]
   concerns: [X7]
   stages: [bronze, silver, gold, semantic]
   summary: Emits a lineage event for every run, naming what it read and what it wrote.
@@ -342,6 +374,7 @@
   since: 0.1.0
   service: platform
   tier: core
+  binds_in: [engine, cloud]
   concerns: [X8, X9]
   stages: [platform]
   summary: Carries logs, metrics and alerts, so one run can be followed end to end and failures reach a person.
@@ -365,6 +398,7 @@
   since: 0.1.0
   service: platform
   tier: core
+  binds_in: [cloud, engine]
   concerns: [X14]
   stages: [platform]
   summary: Keeps a record of every run, its inputs and outputs, counts, status and the configuration it ran under.
@@ -388,6 +422,7 @@
   since: 0.1.0
   service: platform
   tier: core
+  binds_in: [engine]
   concerns: [X14, X6, X4, X7]
   stages: [platform]
   summary: Joins everything known about one run (run log, quality results, reconciliation, lineage, cost) by its run id, to answer "is this number right, and how do we know?"
@@ -411,6 +446,7 @@
   since: 0.1.0
   service: platform
   tier: later
+  binds_in: [engine, cloud]
   concerns: [X10]
   stages: [platform]
   summary: Attributes spend to a team, a dataset and a job, and holds budgets against it.
@@ -430,6 +466,7 @@
   since: 0.1.0
   service: platform
   tier: later
+  binds_in: [engine]
   concerns: [X11, X12]
   stages: [silver, gold, semantic, experiences]
   summary: Grants access by role and masks or filters restricted columns and rows.
@@ -449,6 +486,7 @@
   since: 0.1.0
   service: platform
   tier: core
+  binds_in: [engine, cloud]
   concerns: [X11]
   stages: [platform]
   summary: Hands credentials to jobs at run time, so none are written in code or configuration.
@@ -467,6 +505,7 @@
   since: 0.1.0
   service: platform
   tier: later
+  binds_in: [engine, cloud]
   concerns: [X16]
   stages: [platform]
   summary: Promotes one build through environments and rolls back a release, including its data changes.
@@ -486,6 +525,7 @@
   since: 0.1.0
   service: platform
   tier: core
+  binds_in: [engine]
   concerns: [X22, X15]
   stages: [platform]
   summary: The only source of "now" for jobs, so the simulated world can move time and a replay can run as of a past day.
@@ -498,3 +538,494 @@
       because: A job that reads the machine's clock cannot be replayed or simulated.
       obligation: SIM-01
       checkable: static
+
+# ---------- Added for Goal 1b (session B, from the deck crosswalk). Service A ----------
+- port: source_reader
+  status: draft
+  since: 0.2.0
+  service: A
+  tier: core
+  binds_in: [engine]
+  concerns: [X15, X3]
+  stages: [sources, bronze]
+  summary: >-
+    Pull: reads a source directly (database, interface, file server) and hands the batch to the lander steps
+    in-process, straight to bronze with no landing copy (ADR-002, decision D11 as amended).
+  kernel_owns: >-
+    The lander steps every batch passes whichever way it came (contract check, personal-data tokenising, mass-delete
+    guard, file and batch log), the watermark, and the rule that a table that can delete rows is read as a full copy.
+  supplied_outside: Connecting to the source, paging, segmenting large reads and the read itself.
+  operations:
+    - {name: read, intent: Read one declared window (or a full copy) of one dataset and return it with its row count.}
+    - {name: describe, intent: Report which read modes the connector supports (full, watermark, pages, files)., optional: true}
+  invariants:
+    - must: A pulled batch passes the same lander steps as a pushed file before it reaches bronze.
+      because: A second way in that skips the checks is where personal data and broken shapes slip through.
+      obligation: SCH-02
+      checkable: static
+    - must: Watermarks live in the metadata service, never inside the connector.
+      because: State kept inside a connector is lost when the source moves to another connector.
+      obligation: HIST-04
+      checkable: static
+    - must: A table whose rows can be deleted is read as a full copy, not by watermark.
+      because: A watermark read never sees a delete.
+      obligation: DEL-01
+      checkable: static
+
+- port: stage_runner
+  status: draft
+  since: 0.2.0
+  service: A
+  tier: core
+  binds_in: [engine]
+  concerns: [X4, X1]
+  stages: [silver]
+  summary: >-
+    Runs the thirteen standard bronze-to-silver stages (ADR-007) for any dataset, switched on and tuned per column
+    from metadata; the same code for every table.
+  kernel_owns: >-
+    The stages, their order, the per-column settings each reads, and the rule that no free-form query runs between
+    bronze and silver.
+  supplied_outside: The dataframe or declarative pipeline engine that executes the stages.
+  operations:
+    - {name: run, intent: Run the standard stages for one dataset's batch and return silver rows, quarantined rows and counts per stage.}
+  invariants:
+    - must: A value that cannot be converted goes to quarantine or is emptied and counted, as its column says; never silently emptied.
+      because: A date that quietly becomes empty changes totals with no trace.
+      obligation: DQ-02
+      checkable: dynamic
+    - must: A new table is new metadata rows, never new stage code.
+      because: Copy-pasted pipelines per table drift apart within months.
+      obligation: CFG-01
+      checkable: static
+
+- port: stream_bus
+  status: draft
+  since: 0.2.0
+  service: A
+  tier: later
+  binds_in: [cloud, engine]
+  concerns: [X15, X18, X9]
+  stages: [sources, bronze]
+  summary: >-
+    Carries a continuous flow of events from machines and sensors into the platform; for streams it is the landing
+    (decision D5: one medallion, two speeds).
+  kernel_owns: The event id, the event-time column, the late allowance, and the checkpoint position kept per reader.
+  supplied_outside: Receiving, retaining and serving the events.
+  operations:
+    - {name: read, intent: Read events from a checkpoint onwards.}
+    - {name: retention, intent: Report how long events are kept, so a reader knows how long it may be down., optional: true}
+  invariants:
+    - must: Events are kept longer than the longest outage the platform promises to recover from.
+      because: A reader that restarts after the events expired loses them for good.
+      obligation: ORCH-06
+      checkable: static
+    - must: A replayed event is dropped by its event id.
+      because: Replays after a restart would count the same reading twice.
+      obligation: DUP-04
+      checkable: dynamic
+
+- port: tokenizer
+  status: draft
+  since: 0.2.0
+  service: A
+  tier: core
+  binds_in: [cloud, engine]
+  concerns: [X12]
+  stages: [landing, bronze]
+  summary: >-
+    Replaces personal values with random tokens before bronze; the real values live only in a token vault. Finds
+    personal data in free text through a detector behind the same port.
+  kernel_owns: The personal-data class per column (from the contract), the suppression list, and the erasure flow.
+  supplied_outside: The vault store and the free-text detector.
+  operations:
+    - {name: tokenise, intent: Replace the personal columns of a batch with tokens and store the real values in the vault.}
+    - {name: erase, intent: Delete a person's vault entries and add them to the suppression list.}
+    - {name: detect, intent: Find personal data in free text and return the spans to tokenise., optional: true}
+  invariants:
+    - must: No personal value reaches bronze untokenised.
+      because: Once a real value is in an append-only layer, erasing it means rewriting history.
+      obligation: SEC-01
+      checkable: dynamic
+    - must: Deleting a person's vault entry makes every copy of their data anonymous.
+      because: Erasure that depends on finding every copy never finishes.
+      obligation: SEC-03
+      checkable: dynamic
+
+# ---------- Service C: serve (split from experience, because the deck's Out Port needs it) ----------
+- port: conversation
+  status: draft
+  since: 0.2.0
+  service: C
+  tier: later
+  binds_in: [engine, cloud]
+  concerns: [X13, X11]
+  stages: [experiences]
+  summary: Answers business questions asked in plain words, from certified metrics only.
+  kernel_owns: The certified-metric list, synonyms and sample questions (from the metric files), and the asker's identity.
+  supplied_outside: Understanding the question and writing the query.
+  operations:
+    - {name: ask, intent: Answer one question for one asker and return the answer with the metric and query used.}
+  invariants:
+    - must: Answers come only from certified metrics.
+      because: A confident answer from an uncertified formula is the most dangerous wrong number.
+      obligation: SERV-04
+      checkable: static
+    - must: The asker's own access applies to every answer.
+      because: A conversation interface that reads as a service account leaks every restricted row.
+      obligation: SEC-02
+      checkable: dynamic
+
+- port: data_api
+  status: draft
+  since: 0.2.0
+  service: C
+  tier: later
+  binds_in: [engine, cloud]
+  concerns: [X3, X11]
+  stages: [experiences]
+  summary: Serves published data products to other systems over a request-response interface.
+  kernel_owns: Which products are exposed, their contracts and the caller's identity.
+  supplied_outside: The endpoint, authentication and query execution.
+  operations:
+    - {name: query, intent: Return rows of a published product for an authorised caller.}
+  invariants:
+    - must: Only published products with a contract are served.
+      because: An endpoint on an internal table becomes a contract nobody agreed to.
+      obligation: SERV-01
+      checkable: static
+    - must: The caller's identity and grants apply.
+      because: One shared key for every caller makes access unauditable.
+      obligation: SEC-02
+      checkable: dynamic
+
+- port: event_publisher
+  status: draft
+  since: 0.2.0
+  service: C
+  tier: later
+  binds_in: [cloud]
+  concerns: [X3, X15]
+  stages: [experiences]
+  summary: Publishes business events (an order shipped late, a press stopped) for other systems to react to.
+  kernel_owns: The event contracts, the event id and the rule for when an event is published.
+  supplied_outside: Delivering events to subscribers.
+  operations:
+    - {name: publish, intent: Publish one event under its contract with a stable id.}
+  invariants:
+    - must: Every event carries a contract version and a stable id, so a rerun publishes nothing new.
+      because: Subscribers act on events; a duplicate event is a duplicate action.
+      obligation: DUP-02
+      checkable: dynamic
+    - must: Nothing is published without a contract.
+      because: Subscribers have nothing to hold the platform to otherwise.
+      obligation: SERV-01
+      checkable: static
+
+- port: feed_writer
+  status: draft
+  since: 0.2.0
+  service: C
+  tier: later
+  binds_in: [engine]
+  concerns: [X15, X7]
+  stages: [experiences]
+  summary: Writes scheduled extracts of published products to another system (a reverse load or a partner feed).
+  kernel_owns: The feed definition (product, columns, schedule, target) from configuration.
+  supplied_outside: The transfer to the target.
+  operations:
+    - {name: send, intent: Write one window of a product to the feed's target.}
+  invariants:
+    - must: Sending the same window twice changes nothing at the target.
+      because: Targets outside the platform cannot be rolled back by it.
+      obligation: DUP-02
+      checkable: dynamic
+    - must: Feeds read only published products.
+      because: A feed from silver bypasses the checks gold makes before publish.
+      obligation: FLOW-01
+      checkable: static
+
+- port: vector_index
+  status: draft
+  since: 0.2.0
+  service: C
+  tier: later
+  binds_in: [engine, cloud]
+  concerns: [X12, X11]
+  stages: [experiences]
+  summary: Holds document chunks and their embeddings for retrieval by AI assistants (archetype PA7).
+  kernel_owns: The chunking rule, the source document id on every chunk and the access tags carried from the source.
+  supplied_outside: Embedding, indexing and similarity search.
+  operations:
+    - {name: upsert, intent: Add or replace the chunks of one document.}
+    - {name: delete, intent: Remove every chunk of one document.}
+    - {name: search, intent: Return the chunks an asker may read that best match a question.}
+  invariants:
+    - must: A document deleted at the source is gone from the index within the declared time.
+      because: Assistants keep quoting documents that were withdrawn.
+      obligation: DEL-03
+      checkable: dynamic
+    - must: Search returns only chunks the asker may read.
+      because: Retrieval is a side door around every grant.
+      obligation: SEC-02
+      checkable: dynamic
+
+- port: feature_store
+  status: draft
+  since: 0.2.0
+  service: C
+  tier: later
+  binds_in: [engine]
+  concerns: [X4, X7]
+  stages: [gold, experiences]
+  summary: Holds features for machine-learning models, computed from gold, read the same way in training and serving (PA6).
+  kernel_owns: Feature names, their source gold tables, the entity key and the time column for point-in-time reads.
+  supplied_outside: Storing features and serving them at low latency.
+  operations:
+    - {name: write, intent: Write a feature table from its declared gold source.}
+    - {name: read_as_of, intent: Return features for entities as they were at given times.}
+  invariants:
+    - must: Training reads features as of each label's time, never later.
+      because: Features from the future make a model look accurate in training and fail in use.
+      obligation: SCD-04
+      checkable: dynamic
+    - must: Every feature table emits lineage to its gold source.
+      because: A model that drifts cannot be traced to the table that changed.
+      obligation: LIN-01
+      checkable: dynamic
+
+- port: model_registry
+  status: draft
+  since: 0.2.0
+  service: C
+  tier: later
+  binds_in: [engine]
+  concerns: [X14, X16]
+  stages: [experiences]
+  summary: Records every trained model version with its data, code, metrics and card, and its stage (candidate, approved, retired).
+  kernel_owns: The model card (from the manifest, ADR-021) and the promotion rule.
+  supplied_outside: Tracking runs and storing model artefacts.
+  operations:
+    - {name: register, intent: Record a trained version with its training data version, code version and metrics.}
+    - {name: promote, intent: Move a version to the next stage when its gates pass.}
+  invariants:
+    - must: Every model version records the data window, code and configuration it was trained with.
+      because: A model nobody can retrain the same way cannot be audited.
+      obligation: CFG-03
+      checkable: dynamic
+    - must: A version is promoted only through the same gates as code.
+      because: A model swapped by hand in production skips every test.
+      obligation: REL-03
+      checkable: static
+
+- port: model_server
+  status: draft
+  since: 0.2.0
+  service: C
+  tier: later
+  binds_in: [engine, cloud]
+  concerns: [X9, X11]
+  stages: [experiences]
+  summary: Serves an approved model's predictions in batch or online, and watches its inputs and outputs for drift.
+  kernel_owns: The drift and freshness thresholds from the model card, and who may call it.
+  supplied_outside: The serving endpoint or batch scoring job.
+  operations:
+    - {name: predict, intent: Return predictions for a batch or a request.}
+    - {name: monitor, intent: Compare recent inputs and outputs with the training profile and report drift.}
+  invariants:
+    - must: Drift and feature freshness are measured against the model card's thresholds.
+      because: A model fed stale features keeps answering confidently.
+      obligation: PERF-02
+      checkable: dynamic
+    - must: Only authorised callers get predictions.
+      because: Predictions can reveal the restricted data they were trained on.
+      obligation: SEC-02
+      checkable: dynamic
+
+# ---------- Platform: governance, foundation and agents ----------
+- port: data_catalog
+  status: draft
+  since: 0.2.0
+  service: platform
+  tier: later
+  binds_in: [engine]
+  concerns: [X13, X12]
+  stages: [platform]
+  summary: Lists every table and product with its owner, description, classification tags and glossary terms, and makes them searchable.
+  kernel_owns: The tag standard and the rule that entries are filled from contracts, never typed by hand.
+  supplied_outside: Storing, searching and showing the entries.
+  operations:
+    - {name: register, intent: Write a table's owner, description, tags and terms from its contract.}
+    - {name: search, intent: Find tables and products by name, term or tag.}
+  invariants:
+    - must: Every published table has an owner and a description from its contract.
+      because: A table nobody owns is a table nobody fixes.
+      obligation: SERV-01
+      checkable: static
+    - must: Every personal-data column carries its classification tag.
+      because: Masks and retention rules are driven by the tag; an untagged column is unprotected.
+      obligation: SEC-01
+      checkable: static
+
+- port: audit_log
+  status: draft
+  since: 0.2.0
+  service: platform
+  tier: later
+  binds_in: [engine, cloud]
+  concerns: [X14]
+  stages: [platform]
+  summary: Records who read, granted, changed or deleted what, and when, across the platform and the cloud account.
+  kernel_owns: Which events are kept, for how long, and who reviews them.
+  supplied_outside: Capturing and storing the events.
+  operations:
+    - {name: query, intent: Return audit events for a table, a person or a period.}
+  invariants:
+    - must: Every read of restricted data and every grant change is recorded.
+      because: Without it, a leak cannot be scoped.
+      obligation: SEC-04
+      checkable: dynamic
+
+- port: key_manager
+  status: draft
+  since: 0.2.0
+  service: platform
+  tier: later
+  binds_in: [cloud]
+  concerns: [X11]
+  stages: [platform]
+  summary: Holds the encryption keys for storage, the metadata store and the token vault, and rotates them.
+  kernel_owns: Which store uses which key, and who may use each key.
+  supplied_outside: Key storage, rotation and encryption.
+  operations:
+    - {name: key_for, intent: Return the key reference a store must use.}
+  invariants:
+    - must: Each store is encrypted with a key whose use is limited to that store's service identities.
+      because: One key for everything means one leaked role decrypts everything.
+      obligation: SEC-02
+      checkable: static
+
+- port: identity_provider
+  status: draft
+  since: 0.2.0
+  service: platform
+  tier: core
+  binds_in: [cloud, engine]
+  concerns: [X11]
+  stages: [platform]
+  summary: Holds people, groups and service identities; every grant is to a group or a service identity.
+  kernel_owns: The group list per environment and the rule that jobs run as service identities.
+  supplied_outside: Identities, sign-in and federation.
+  operations:
+    - {name: groups, intent: Return the groups a person or service belongs to.}
+  invariants:
+    - must: Grants go to groups and service identities, never to named people.
+      because: Access granted to people outlives their role.
+      obligation: ENV-02
+      checkable: static
+
+- port: network_boundary
+  status: draft
+  since: 0.2.0
+  service: platform
+  tier: later
+  binds_in: [cloud]
+  concerns: [X11, X16]
+  stages: [platform]
+  summary: Keeps data paths between sources, storage and compute private, and separates environments.
+  kernel_owns: The allowed paths, declared per environment.
+  supplied_outside: Networks, private endpoints and firewalls.
+  operations:
+    - {name: paths, intent: Return the declared network paths for an environment.}
+  invariants:
+    - must: Development cannot reach production data over the network.
+      because: Separation that exists only in naming is not separation.
+      obligation: ENV-01
+      checkable: dynamic
+
+- port: object_store
+  status: draft
+  since: 0.2.0
+  service: platform
+  tier: core
+  binds_in: [cloud]
+  concerns: [X18, X19]
+  stages: [landing, bronze, silver, gold]
+  summary: Stores the bytes under landing and every table, per environment and layer.
+  kernel_owns: The location per environment and layer (ADR-012), versioning and replication to meet the recovery targets.
+  supplied_outside: Durable storage.
+  operations:
+    - {name: location, intent: Return the storage location for an environment and a layer.}
+  invariants:
+    - must: Storage is versioned and copied as far as the declared recovery targets require.
+      because: Recovery targets that the storage cannot meet are only words.
+      obligation: ORCH-05
+      checkable: static
+
+- port: compute_pool
+  status: draft
+  since: 0.2.0
+  service: platform
+  tier: core
+  binds_in: [engine, cloud]
+  concerns: [X10, X19]
+  stages: [platform]
+  summary: Supplies compute for jobs, pipelines and queries, sized by rule and stopped when idle.
+  kernel_owns: The sizing rules, the idle limit and the cost tags every pool carries.
+  supplied_outside: The compute itself.
+  operations:
+    - {name: acquire, intent: Return compute for a job, sized by its rule and tagged.}
+  invariants:
+    - must: Nothing runs when nothing needs it.
+      because: Idle compute is the most common waste on any platform.
+      obligation: COST-04
+      checkable: dynamic
+    - must: Every pool carries the team, dataset and job tags.
+      because: Cost without an owner is cost nobody cuts.
+      obligation: COST-03
+      checkable: static
+
+- port: infra_provisioner
+  status: draft
+  since: 0.2.0
+  service: platform
+  tier: core
+  binds_in: [cloud, engine]
+  concerns: [X16]
+  stages: [platform]
+  summary: Creates accounts, environments, networks, storage, catalogs and workspaces from code.
+  kernel_owns: The environment list and the modules each environment is built from.
+  supplied_outside: Applying the code to the cloud and the engine.
+  operations:
+    - {name: plan, intent: Show what applying the code would change.}
+    - {name: apply, intent: Make an environment match the code.}
+  invariants:
+    - must: Every environment is built from code; nothing is created by hand.
+      because: A hand-built environment cannot be rebuilt after a disaster.
+      obligation: REL-06
+      checkable: static
+
+- port: agent_runtime
+  status: draft
+  since: 0.2.0
+  service: platform
+  tier: later
+  binds_in: [cloud, engine]
+  concerns: [X21, X20]
+  stages: [platform]
+  summary: >-
+    Runs the platform's agents (alert triage, ask-your-data, self-healing). The harness kernel is cloud-free; model,
+    gateway and runtime are adapters (decision M6). Data tools are reached through a tool protocol.
+  kernel_owns: Which agents are enabled (from the manifest), their tools, their autonomy level and the gates their proposals pass.
+  supplied_outside: The model, the gateway and the hosted runtime.
+  operations:
+    - {name: run, intent: Run one agent task and return its proposal and evidence.}
+  invariants:
+    - must: Agents propose changes as manifest pull requests; the same gates decide.
+      because: An agent that changes production directly bypasses every test.
+      obligation: GATE-03
+      checkable: static
+    - must: A self-healing fix is verified and can be rolled back like any release.
+      because: A fix that cannot be undone turns one incident into two.
+      obligation: HEAL-01
+      checkable: dynamic

@@ -1,0 +1,33 @@
+# Tyre company, slice 2: Press sensor readings (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_tyre.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: tyre-press-stream-press-reading
+name: "Press sensor readings (silver)"
+version: 0.1.0
+status: draft
+domain: manufacturing
+description:
+  purpose: "Temperature and pressure readings from curing presses, one row per reading, by event time."
+  limitations: "Readings are never deleted or corrected."
+schema:
+  - name: press_reading
+    physicalName: silver_press_stream.press_reading
+    logicalType: object
+    dataGranularityDescription: "One row per reading (append)"
+    properties:
+      - {name: "reading_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "press_id", logicalType: "string", required: true}
+      - {name: "event_ts", logicalType: "timestamp", required: true}
+      - {name: "temperature_c", logicalType: "number", required: true}
+      - {name: "pressure_bar", logicalType: "number", required: true, quality: [{"type": "sql", "description": "pressure_bar is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE pressure_bar < 0", "mustBe": 0, "dimension": "accuracy", "severity": "major"}]}
+      - {name: "cycle_state", logicalType: "string", required: true, quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["idle", "loading", "curing", "unloading"]}, "mustBe": 0, "dimension": "conformity", "severity": "minor"}]}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["reading_id"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "major"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: manufacturing-data
+  members:
+    - {username: manufacturing-data@tyre.example, role: owner}
+slaProperties:
+  - {property: latency, value: 1, unit: h}
+  - {property: retention, value: 2, unit: y}

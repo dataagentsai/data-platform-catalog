@@ -1,0 +1,41 @@
+# Tyre company, slice 2: On time in full (gold). ODCS v3.2.0, adopted not restated (validated by tests/test_tyre.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: tyre-gold-fact-otif
+name: "On time in full (gold)"
+version: 0.1.0
+status: draft
+domain: sales
+description:
+  purpose: "One row per order line: was it delivered on time (by the date first promised) and in full."
+  limitations: "Partial deliveries count as not in full."
+schema:
+  - name: fact_otif
+    physicalName: gold_sales.fact_otif
+    logicalType: object
+    dataGranularityDescription: "One row per order line"
+    properties:
+      - {name: "order_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "line_no", logicalType: "integer", required: true, primaryKey: true, primaryKeyPosition: 2}
+      - {name: "dealer_sk", logicalType: "integer", required: true}
+      - {name: "material_sk", logicalType: "integer", required: true}
+      - {name: "dealer_code", logicalType: "string", required: true}
+      - {name: "material_code", logicalType: "string", required: true}
+      - {name: "promised_date", logicalType: "date", required: true}
+      - {name: "ordered_qty", logicalType: "integer", required: true}
+      - {name: "delivered_qty", logicalType: "integer", required: true}
+      - {name: "on_time", logicalType: "boolean", required: true}
+      - {name: "in_full", logicalType: "boolean", required: true}
+      - {name: "on_time_in_full", logicalType: "integer", required: true}
+      - {name: "_is_complete", logicalType: "boolean", required: true}
+      - {name: "_run_id", logicalType: "string", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["order_id", "line_no"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: sales-data
+  members:
+    - {username: sales-data@tyre.example, role: owner}
+slaProperties:
+  - {property: latency, value: 2, unit: h}
+  - {property: retention, value: 10, unit: y}

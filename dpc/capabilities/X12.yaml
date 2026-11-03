@@ -1,0 +1,69 @@
+# DPC capabilities for X12, Privacy and personal data. Normative: edit here.
+- id: DPC-0070
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Personal data tokenised before bronze
+  concern: X12
+  stages:
+  - landing
+  - bronze
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  core: true
+  port: tokenizer
+  requirement: Columns with a personal-data class MUST be replaced by random tokens before bronze, free text MUST
+    be scanned for personal data, and people on the suppression list MUST NOT be loaded again.
+  failure_mode: Warranty notes held customers' names in free text; they were copied into four layers and two extracts.
+  discharges:
+  - SEC-01
+  - SEC-03
+  - PII-01
+  realization_policy: own
+  see_also: []
+- id: DPC-0071
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Erasure and retention for personal data
+  concern: X12
+  stages:
+  - landing
+  - bronze
+  - silver
+  - gold
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  core: true
+  port: tokenizer
+  requirement: An erasure request MUST delete the person's vault entries and add them to the suppression list; personal-data
+    landing files MUST be deleted within a day of loading, and held files within the declared limit.
+  failure_mode: An erasure request took six weeks because nobody knew which tables held the person.
+  discharges:
+  - SEC-03
+  realization_policy: own
+  see_also: []
+- id: DPC-0072
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Document index follows deletes and grants
+  concern: X12
+  stages:
+  - experiences
+  archetypes:
+  - PA7
+  core: false
+  port: vector_index
+  requirement: Every chunk MUST carry its source document id and access tags; a document deleted at the source MUST
+    leave the index within the declared time; search MUST return only what the asker may read.
+  failure_mode: An assistant quoted a withdrawn safety notice for a month after it was deleted.
+  discharges:
+  - DEL-03
+  - SEC-02
+  realization_policy: bind
+  see_also: []

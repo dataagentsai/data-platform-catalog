@@ -1,0 +1,28 @@
+# DPM v0.2 platform manifest for the tyre company: what applies to every dataset in this domain. It names no cloud
+# and no product (M4): the same file drives every stack in dbs/stacks/.
+kind: platform
+domain: tyre
+business_timezone: Asia/Kolkata
+environments: [dev, prod]
+quality_defaults:                                     # ADR-009: severity sets the action
+  critical: {rows: quarantine, dataset: block, page: true}
+  major: {rows: quarantine, dataset: alert_owner, page: false}
+  minor: {rows: flag, dataset: digest, page: false}
+agents:                                               # ADR-023: agents propose, gates decide
+  - name: alert_triage
+    enabled: true
+    autonomy: suggest
+    tools: [read_run_log, read_evidence, read_manifest]
+    environments: [dev, prod]
+    spec: clean-ai-engineering T-123 (alert triage agent)
+  - name: ask_your_data
+    enabled: true
+    autonomy: read_only
+    tools: [query_certified_metrics]
+    environments: [dev, prod]
+    spec: clean-ai-engineering T-123 (ask-your-data agent)
+  - name: self_healing
+    enabled: true
+    autonomy: propose_pr
+    tools: [read_run_log, read_evidence, read_manifest, open_manifest_pr]
+    environments: [dev]

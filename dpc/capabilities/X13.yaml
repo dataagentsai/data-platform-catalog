@@ -1,0 +1,138 @@
+# DPC capabilities for X13, Governance, catalog and semantics. Normative: edit here.
+- id: DPC-0049
+  status: draft
+  since: 0.2.0
+  level: SHOULD
+  title: Codes conformed through mapping tables with a steward
+  concern: X13
+  stages:
+  - silver
+  - gold
+  archetypes:
+  - PA1
+  - PA2
+  - PA5
+  core: false
+  port: stage_runner
+  requirement: Codes from different sources SHOULD be conformed through declared mapping tables owned by a steward;
+    an unmapped code SHOULD become the unknown value and raise an alert.
+  failure_mode: Two plants used different material codes for the same compound and scrap was reported twice.
+  discharges:
+  - LATE-02
+  - DQ-01
+  realization_policy: own
+  see_also: []
+- id: DPC-0073
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Metrics defined once and certified before use
+  concern: X13
+  stages:
+  - semantic
+  archetypes:
+  - PA5
+  - PA9
+  - PA10
+  core: true
+  port: semantic_layer
+  requirement: Each metric MUST be defined once in a metric file with its time dimension, whether it may be summed,
+    its synonyms and a known-answer test; only certified metrics MAY be used by conversation interfaces and agents.
+  failure_mode: OTIF had three formulas in three dashboards; the plant director stopped trusting all of them.
+  discharges:
+  - SERV-04
+  realization_policy: bind
+  adr:
+  - ADR-022
+  see_also: []
+- id: DPC-0074
+  status: draft
+  since: 0.2.0
+  level: SHOULD
+  title: Shared dimensions conformed once
+  concern: X13
+  stages:
+  - gold
+  - semantic
+  archetypes:
+  - PA5
+  core: false
+  port: model_runner
+  requirement: Dimensions used by more than one fact (date, plant, product, customer) SHOULD be built once, in gold,
+    and shared.
+  failure_mode: Two facts had their own plant tables; a plant renamed in one never matched the other.
+  discharges:
+  - SCD-04
+  - DES-04
+  realization_policy: own
+  adr:
+  - ADR-001
+  see_also: []
+- id: DPC-0075
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Catalog entries filled from contracts
+  concern: X13
+  stages:
+  - platform
+  archetypes:
+  - PA5
+  - PA9
+  core: false
+  port: data_catalog
+  requirement: Owners, descriptions, glossary terms and classification tags MUST be written to the catalog from
+    the contracts on every release, never typed by hand.
+  failure_mode: The catalog said one owner, the contract another; the alert went to someone who had moved team.
+  discharges:
+  - SERV-01
+  - SEC-01
+  - CAT-01
+  realization_policy: bind
+  see_also: []
+- id: DPC-0076
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Plain-word answers only from certified metrics
+  concern: X13
+  stages:
+  - experiences
+  archetypes:
+  - PA5
+  core: false
+  port: conversation
+  requirement: A conversation interface MUST answer only from certified metrics, under the asker's identity, and
+    MUST show the metric and query it used.
+  failure_mode: Asked for revenue, the assistant summed a column that included cancelled orders.
+  discharges:
+  - SERV-04
+  - SEC-02
+  realization_policy: bind
+  adr:
+  - ADR-022
+  see_also: []
+- id: DPC-0077
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: A model is a declared data product with a card
+  concern: X13
+  stages:
+  - experiences
+  archetypes:
+  - PA6
+  core: false
+  port: model_registry
+  requirement: Every model MUST be declared in the manifest with a model card (purpose, owner, target, features,
+    training window, metric and threshold, monitoring, limitations), and every trained version MUST record its data
+    window, code and configuration.
+  failure_mode: Nobody could say which data trained the model in production, so its bias complaint could not be
+    answered.
+  discharges:
+  - CFG-03
+  - LIN-01
+  realization_policy: bind
+  adr:
+  - ADR-021
+  see_also: []

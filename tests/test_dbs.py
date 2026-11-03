@@ -1,4 +1,4 @@
-"""DBS binding checks (DE-023): each row breaks the slice 1 Databricks binding in one way."""
+"""DBS binding checks (DE-023): each row breaks the composed free-edition binding (slice 1) in one way."""
 import copy
 import json
 import sys
@@ -11,7 +11,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import lint  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-B = yaml.safe_load((ROOT / "slices/01-orders/binding-databricks.yaml").read_text())
+import lint_shape  # noqa: E402
+B = lint_shape.compose(lint_shape.load_stacks()["free-edition"], lint_shape.load_layers())  # slice 1's stack
 SCHEMA = json.loads((ROOT / "dbs/schema/binding.schema.json").read_text())
 PORTS = lint.load_ports()
 DAC = {r["id"] for r in lint.load_obligations()}

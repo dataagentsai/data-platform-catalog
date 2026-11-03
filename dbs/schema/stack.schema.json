@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dataagentsai/data-platform-catalog/dbs/schema/stack.schema.json",
+  "title": "DBS stack v0.1",
+  "description": "Composes one engine layer (with an optional profile) and at most one cloud layer into a binding (binding.schema.json). Where both layers bind a port, prefer says which wins; the linter requires an answer for every such port and no other.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "name", "subject", "engine", "prefer", "decisions", "accepted_gaps"],
+  "properties": {
+    "apiVersion": {"const": "data-binding-stack/v0.1"},
+    "name": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+    "subject": {"$ref": "binding.schema.json#/properties/subject"},
+    "engine": {
+      "type": "object", "additionalProperties": false, "required": ["layer"],
+      "properties": {"layer": {"type": "string"}, "profile": {"type": "string"}}
+    },
+    "cloud": {
+      "type": "object", "additionalProperties": false, "required": ["layer"],
+      "properties": {"layer": {"type": "string"}, "profile": {"type": "string"}}
+    },
+    "prefer": {"type": "object", "additionalProperties": {"enum": ["engine", "cloud"]}},
+    "decisions": {"$ref": "binding.schema.json#/properties/decisions"},
+    "accepted_gaps": {"$ref": "binding.schema.json#/properties/accepted_gaps"}
+  }
+}

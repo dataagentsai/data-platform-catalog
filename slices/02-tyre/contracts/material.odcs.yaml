@@ -1,0 +1,33 @@
+# Tyre company, slice 2: ERP materials (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_tyre.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: tyre-erp-material
+name: "ERP materials (silver)"
+version: 0.1.0
+status: draft
+domain: manufacturing
+description:
+  purpose: "Tyre materials (articles) with compound, rim size and class; history kept (type 2)."
+  limitations: "Read as a full copy; deletes are found by comparing copies."
+schema:
+  - name: material
+    physicalName: silver_erp.material
+    logicalType: object
+    dataGranularityDescription: "One row per material per version"
+    properties:
+      - {name: "material_code", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "description", logicalType: "string", required: true}
+      - {name: "compound_code", logicalType: "string", required: true}
+      - {name: "rim_size_in", logicalType: "integer", required: true, quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": [13, 14, 15, 16, 17, 18, 19, 20, 22]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "tyre_class", logicalType: "string", required: true, quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["passenger", "truck", "two_wheeler", "off_highway"]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "extracted_at", logicalType: "timestamp", required: true, description: "When the full copy was taken; orders versions of a full copy."}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["material_code", "extracted_at"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: manufacturing-data
+  members:
+    - {username: manufacturing-data@tyre.example, role: owner}
+slaProperties:
+  - {property: latency, value: 24, unit: h}
+  - {property: retention, value: 10, unit: y}

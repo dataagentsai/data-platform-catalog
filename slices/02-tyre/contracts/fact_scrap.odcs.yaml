@@ -1,0 +1,36 @@
+# Tyre company, slice 2: Scrap (gold). ODCS v3.2.0, adopted not restated (validated by tests/test_tyre.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: tyre-gold-fact-scrap
+name: "Scrap (gold)"
+version: 0.1.0
+status: draft
+domain: manufacturing
+description:
+  purpose: "Tyres cured and scrapped per press, material and hour."
+  limitations: "Rework is not scrap."
+schema:
+  - name: fact_scrap
+    physicalName: gold_manufacturing.fact_scrap
+    logicalType: object
+    dataGranularityDescription: "One row per press, material and hour"
+    properties:
+      - {name: "press_sk", logicalType: "integer", required: true}
+      - {name: "material_sk", logicalType: "integer", required: true}
+      - {name: "press_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "material_code", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 2}
+      - {name: "cure_hour", logicalType: "timestamp", required: true, primaryKey: true, primaryKeyPosition: 3}
+      - {name: "tyres_cured", logicalType: "integer", required: true}
+      - {name: "tyres_scrapped", logicalType: "integer", required: true}
+      - {name: "_is_complete", logicalType: "boolean", required: true}
+      - {name: "_run_id", logicalType: "string", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["press_id", "material_code", "cure_hour"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: manufacturing-data
+  members:
+    - {username: manufacturing-data@tyre.example, role: owner}
+slaProperties:
+  - {property: latency, value: 2, unit: h}
+  - {property: retention, value: 10, unit: y}

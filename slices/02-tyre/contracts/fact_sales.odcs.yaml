@@ -1,0 +1,37 @@
+# Tyre company, slice 2: Sales (gold). ODCS v3.2.0, adopted not restated (validated by tests/test_tyre.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: tyre-gold-fact-sales
+name: "Sales (gold)"
+version: 0.1.0
+status: draft
+domain: sales
+description:
+  purpose: "Sell-in (from orders) and sell-out (from dealers) per dealer, material and month."
+  limitations: "Sell-out is as dealers report it."
+schema:
+  - name: fact_sales
+    physicalName: gold_sales.fact_sales
+    logicalType: object
+    dataGranularityDescription: "One row per dealer, material and month"
+    properties:
+      - {name: "dealer_sk", logicalType: "integer", required: true}
+      - {name: "material_sk", logicalType: "integer", required: true}
+      - {name: "dealer_code", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "material_code", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 2}
+      - {name: "sale_month", logicalType: "date", required: true, primaryKey: true, primaryKeyPosition: 3}
+      - {name: "units_sold_in", logicalType: "integer", required: true}
+      - {name: "units_sold_out", logicalType: "integer", required: true}
+      - {name: "net_value", logicalType: "number", required: true}
+      - {name: "_is_complete", logicalType: "boolean", required: true}
+      - {name: "_run_id", logicalType: "string", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["dealer_code", "material_code", "sale_month"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: sales-data
+  members:
+    - {username: sales-data@tyre.example, role: owner}
+slaProperties:
+  - {property: latency, value: 24, unit: h}
+  - {property: retention, value: 10, unit: y}

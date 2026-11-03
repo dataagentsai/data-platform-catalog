@@ -22,3 +22,68 @@
   realization_policy: own
   slice: 1
   see_also: []
+- id: DPC-0059
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: A gold window is complete only when every input has caught up
+  concern: X9
+  stages:
+  - gold
+  - semantic
+  archetypes:
+  - PA5
+  core: true
+  port: model_runner
+  requirement: Each input MUST carry a bookmark in source time, a gold window MUST be marked complete only when
+    every input's bookmark is past its end, incomplete windows MUST be published flagged or held as the fact declares,
+    and every rebuild of a published window MUST be logged as a restatement.
+  failure_mode: Half a shift's production was shown as the full shift's scrap rate.
+  discharges:
+  - SERV-02
+  - PERF-02
+  realization_policy: own
+  adr:
+  - ADR-018
+  see_also: []
+- id: DPC-0060
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Stream event time with a late allowance
+  concern: X9
+  stages:
+  - bronze
+  - silver
+  archetypes:
+  - PA4
+  core: false
+  port: stream_bus
+  requirement: Stream processing MUST use event time, MUST declare a late allowance, and MUST keep bookmarks per
+    producing machine so one silent machine is visible.
+  failure_mode: Readings that arrived two minutes late fell into the next hour and every hourly total was off.
+  discharges:
+  - LATE-03
+  realization_policy: bind
+  see_also: []
+- id: DPC-0061
+  status: draft
+  since: 0.2.0
+  level: SHOULD
+  title: Served models watched for drift and stale features
+  concern: X9
+  stages:
+  - experiences
+  archetypes:
+  - PA6
+  core: false
+  port: model_server
+  requirement: A served model SHOULD be monitored for input drift, output drift and feature freshness against its
+    model card's thresholds.
+  failure_mode: A demand model kept forecasting from features that had stopped updating three weeks earlier.
+  discharges:
+  - PERF-02
+  realization_policy: bind
+  adr:
+  - ADR-021
+  see_also: []

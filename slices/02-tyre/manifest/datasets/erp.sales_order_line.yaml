@@ -1,0 +1,54 @@
+# DPM v0.2: ERP sales order lines. Push: the change-capture mover lands change files; history type 2 on the promised
+# date and quantity, because OTIF needs the date first promised (ADR-016). No product names here (R1).
+source_name: erp
+source_env: prod
+dataset_name: sales_order_line
+is_enabled: true
+kind: dataset
+config:
+  load_type: INCREMENTAL
+  watermark_column: change_seq
+  sla_freshness_hours: "1"
+  sla_freshness_error_hours: "2"
+  schedule_trigger: cron
+  schedule_cron: "*/15 * * * *"
+  schedule_timezone: Asia/Kolkata
+  cost_center: sales-analytics
+dedup: {mode: business_key_latest, business_keys: [order_id, line_no], order_by: change_seq}
+contract: ../../contracts/sales_order_line.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA2]
+ingest: {mode: push, read: change_feed}
+history: {kind: transaction, type: scd2, track_columns: [promised_date, ordered_qty]}
+load:
+  pattern: history
+  history_order_by: change_seq
+  batch_key: [delivery_window, content_checksum]
+  new_columns: hold_in_bronze
+  deletes: {detect: change_feed, apply: mark_deleted}
+  quarantine_stop_share: 0.01
+  late_lookback_days: 35
+volume:
+  expected_rows_per_delivery: {min: 20, max: 20000}
+reconciliation:
+  hops: [sources, landing, bronze, silver]
+  measures:
+    - {name: row_count}
+    - {name: net_value_total, column: net_value}
+  tolerance: {row_count: 0, net_value_total: 0.0}
+  signed_off_by: sales-data@tyre.example
+  entries:
+    - name: live_source_vs_silver
+      left: sources
+      right: silver
+      keys: [order_id, line_no]
+      measures:
+        - {name: lines, agg: count}
+        - {name: net_value_total, agg: sum, column: net_value}
+        - {name: qty_total, agg: sum, column: ordered_qty}
+      window: {column: order_ts, days: 35}
+      buckets: 64
+      tolerance: {lines: 0, net_value_total: 0.0, qty_total: 0}
+      schedule: daily 02:00
+owners: {dataset: sales-data@tyre.example, alerts: erp-data-rota}
+concerns: {}

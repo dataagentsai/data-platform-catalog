@@ -1,11 +1,14 @@
-# DPC, the Data Platform Catalog (v0.1, draft)
+# DPC, the Data Platform Catalog (v0.2, draft)
 
 **What a data platform must have**: each stage of the spine and each cross-cutting concern as capabilities, and
 the port (interface) each one is reached through. No product names. It is the data sibling of the
 [AI Harness Catalog](https://github.com/dataagentsai/ai-harness-catalog) and uses the same record shapes.
 
-- [ports.yaml](ports.yaml): the seams every product sits behind (rule R4). 22 ports, 14 of them core.
-- [capabilities/](capabilities/): 32 capability records so far, all from slice 1 (`slice: 1`), one file per concern.
+- [ports.yaml](ports.yaml): the seams every product sits behind (rule R4). 44 ports, 22 of them core. Each says
+  which binding layer may fill it (`binds_in`: engine, cloud or both; decision M1, ADR-014).
+- [capabilities/](capabilities/): 102 capability records, one file per concern: 32 from slice 1 (`slice: 1`) and 70
+  added in 0.2.0 so every concern in the client deck has one (see [../crosswalks/deck.yaml](../crosswalks/deck.yaml)).
+  A capability cites the ADRs that explain it (`adr:`, see [../adr/](../adr/)).
 - [../core/archetypes.yaml](../core/archetypes.yaml): the ten pipeline archetypes, PA1 to PA10.
 - [../core/stages.yaml](../core/stages.yaml) and [../core/concerns.yaml](../core/concerns.yaml): shared with DAC.
 
@@ -13,7 +16,7 @@ the port (interface) each one is reached through. No product names. It is the da
 
 A **capability** (DPC) is something that must exist, such as "every write carries a batch key". It is reached
 through a **port**, such as `table_writer`, and it **discharges** obligations in DAC, such as DUP-01 "a file
-delivered twice changes no total". A **binding** (DBS, later) says which product serves each port on one stack.
+delivered twice changes no total". A **binding** (DBS, [../dbs/](../dbs/)) says which product serves each port on one stack.
 Each port's **invariants** name the DAC obligation they protect, so the contract tests for a port come straight
 from DAC.
 
@@ -23,13 +26,14 @@ The spine is split into three deployable services, so a client can adopt one alo
 
 | Service | Spine | Core ports |
 |---|---|---|
-| A, acquire | sources, landing, bronze, silver | mover, landing_store, table_writer, contract_enforcer, quarantine |
-| B, model | gold, semantic | model_runner, semantic_layer, product_publisher (all later) |
-| C, serve | experiences | experience (later; it splits when a binding needs it) |
-| platform | all | metadata_service, orchestrator, quality_runner, reconciler, lineage_emitter, telemetry, run_log, secret_store, clock |
+| A, acquire | sources, landing, bronze, silver | mover, landing_store, source_reader, table_writer, contract_enforcer, quarantine, stage_runner, tokenizer (stream_bus later) |
+| B, model | gold, semantic | model_runner (the gold harness, ADR-003), semantic_layer, product_publisher (all later) |
+| C, serve | experiences | split in 0.2.0 for the deck's Out Port: experience, conversation, data_api, event_publisher, feed_writer, vector_index, feature_store, model_registry, model_server (all later) |
+| platform | all | metadata_service, orchestrator, quality_runner, reconciler, lineage_emitter, telemetry, run_log, evidence, secret_store, clock, identity_provider, object_store, compute_pool, infra_provisioner (later: profiler, cost_ledger, access_control, deployer, data_catalog, audit_log, key_manager, network_boundary, agent_runtime) |
 
 The lander (landing to bronze) is our own code, not a port (decision D11). It uses `landing_store`,
-`contract_enforcer`, `table_writer`, `quarantine` and `run_log`.
+`contract_enforcer`, `tokenizer`, `table_writer`, `quarantine` and `run_log`. A pull (`source_reader`) runs the same
+lander steps in-process and writes straight to bronze (D11 as amended, ADR-002).
 
 ## The capability record
 
@@ -59,6 +63,7 @@ lesson's "decide" box. One record, three uses.
       resolution: ...
   realization_policy: own   # own (our code) | adopt (an open format or tool behind a port) | bind (a product, per binding)
   slice: 1                  # optional: the thin slice that first needed it
+  adr: [ADR-002]            # optional: the decision records that explain it (adr/)
   see_also: [DPC-0002]
 ```
 

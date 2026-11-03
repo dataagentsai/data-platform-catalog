@@ -52,3 +52,26 @@
   realization_policy: own
   slice: 1
   see_also: []
+- id: DPC-0078
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Access and changes audited
+  concern: X14
+  stages:
+  - platform
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  core: true
+  port: audit_log
+  requirement: Every read of restricted data, grant change, configuration change and deletion MUST be recorded with
+    who, what and when, and kept for the declared period.
+  failure_mode: A leak was found, but nobody could say who had read the table in the last month.
+  discharges:
+  - SEC-04
+  realization_policy: bind
+  see_also: []

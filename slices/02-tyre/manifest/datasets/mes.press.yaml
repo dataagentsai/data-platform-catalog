@@ -1,0 +1,37 @@
+# DPM v0.2: MES curing presses. Pull, full copy, master data with history (type 2).
+source_name: mes
+source_env: prod
+dataset_name: press
+is_enabled: true
+kind: dataset
+config:
+  load_type: FULL
+  extraction_mode: full
+  sla_freshness_hours: "24"
+  sla_freshness_error_hours: "48"
+  schedule_trigger: cron
+  schedule_cron: "0 1 * * *"
+  schedule_timezone: Asia/Kolkata
+  cost_center: manufacturing-analytics
+dedup: {mode: business_key_latest, business_keys: [press_id], order_by: extracted_at}
+contract: ../../contracts/press.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA2]
+ingest: {mode: pull, read: full_copy}
+history: {kind: master, track_columns: [plant_code, mould_code, ideal_cycle_seconds]}
+load:
+  pattern: history
+  history_order_by: extracted_at
+  batch_key: [source_batch_id]
+  new_columns: hold_in_bronze
+  deletes: {detect: key_compare, apply: mark_deleted}
+  mass_delete_max_share: 0.05
+volume:
+  expected_rows_per_delivery: {min: 40, max: 400}
+reconciliation:
+  hops: [sources, bronze, silver]
+  measures:
+    - {name: row_count}
+  tolerance: {row_count: 0}
+owners: {dataset: manufacturing-data@tyre.example, alerts: mes-data-rota}
+concerns: {}

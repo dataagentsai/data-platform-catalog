@@ -19,7 +19,8 @@ y = lambda p: yaml.safe_load((SLICE / p).read_text())  # noqa: E731
 CONTRACT = y("contracts/orders.odcs.yaml")
 MANIFEST = y("manifest/orders.yaml")
 WORLD = y("world.yaml")
-BINDING = y("binding-databricks.yaml")
+import lint_shape  # noqa: E402
+BINDING = lint_shape.compose(lint_shape.load_stacks()["free-edition"], lint_shape.load_layers())
 DAC = {r["id"] for r in lint.load_obligations()}
 CAPS = {c["id"]: c for c in lint.load_capabilities()}
 PORTS = {p["port"] for p in lint.load_ports()}
@@ -87,6 +88,6 @@ def test_slice1_consistent(name, holds):
 
 def test_no_product_names_outside_the_binding():
     for f in ("world.yaml", "manifest/orders.yaml", "contracts/orders.odcs.yaml", "README.md"):
-        text = (SLICE / f).read_text().replace("binding-databricks.yaml", "")  # the binding's own file name
+        text = (SLICE / f).read_text()
         hits = lint.products_in(text)
         assert hits == [], f"{f}: {hits}"

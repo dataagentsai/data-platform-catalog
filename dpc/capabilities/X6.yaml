@@ -80,3 +80,78 @@
   realization_policy: own
   slice: 1
   see_also: []
+- id: DPC-0052
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Live source compared with silver by buckets
+  concern: X6
+  stages:
+  - sources
+  - silver
+  archetypes:
+  - PA2
+  - PA3
+  core: true
+  port: reconciler
+  requirement: Each dataset MUST declare a reconciliation entry (keys, measures, window, buckets, tolerance, schedule),
+    the live source MUST be compared with silver up to the watermark by counts, totals and hash buckets, and row-level
+    differences MUST be computed only inside a bucket that does not match.
+  failure_mode: The change feed dropped rows during a source upgrade; batch-by-batch counts agreed, the source and
+    silver did not.
+  discharges:
+  - REC-01
+  - REC-05
+  realization_policy: own
+  see_also: []
+- id: DPC-0053
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Deletes flow through to gold and indexes
+  concern: X6
+  stages:
+  - silver
+  - gold
+  - semantic
+  archetypes:
+  - PA5
+  - PA7
+  core: true
+  port: model_runner
+  requirement: A row soft-deleted in silver MUST stop counting in every gold window and metric that used it, and
+    in every index built from it, within the declared time.
+  failure_mode: A cancelled order line was gone from silver but still counted in monthly sales.
+  discharges:
+  - DEL-03
+  realization_policy: own
+  adr:
+  - ADR-016
+  see_also: []
+- id: DPC-0054
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Mass deletes stopped before bronze
+  concern: X6
+  stages:
+  - landing
+  - bronze
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  core: true
+  port: null
+  requirement: For a full copy, the lander MUST compare its keys with silver's current keys before appending, and
+    if more than the dataset's declared share would be deleted, MUST append nothing, hold the files and block the
+    dataset with an alert.
+  failure_mode: A pull came back with a third of the materials missing; silver deleted them and every dashboard
+    lost a third of its products.
+  discharges:
+  - DEL-01
+  - DQ-04
+  realization_policy: own
+  adr:
+  - ADR-016
+  see_also: []

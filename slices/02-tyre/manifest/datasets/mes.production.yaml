@@ -1,0 +1,37 @@
+# DPM v0.2: MES production records. Push change capture; events, appended (ADR-016).
+source_name: mes
+source_env: prod
+dataset_name: production
+is_enabled: true
+kind: dataset
+config:
+  load_type: INCREMENTAL
+  watermark_column: change_seq
+  sla_freshness_hours: "1"
+  sla_freshness_error_hours: "2"
+  schedule_trigger: cron
+  schedule_cron: "*/15 * * * *"
+  schedule_timezone: Asia/Kolkata
+  cost_center: manufacturing-analytics
+dedup: {mode: business_key_first, business_keys: [production_id]}
+contract: ../../contracts/production.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA2]
+ingest: {mode: push, read: change_feed}
+history: {kind: event}
+load:
+  pattern: append
+  batch_key: [delivery_window, content_checksum]
+  new_columns: hold_in_bronze
+  deletes: {detect: none, apply: none}
+  quarantine_stop_share: 0.01
+volume:
+  expected_rows_per_delivery: {min: 50, max: 5000}
+reconciliation:
+  hops: [sources, landing, bronze, silver]
+  measures:
+    - {name: row_count}
+    - {name: tyres_cured_total, column: tyres_cured}
+  tolerance: {row_count: 0, tyres_cured_total: 0.0}
+owners: {dataset: manufacturing-data@tyre.example, alerts: mes-data-rota}
+concerns: {}

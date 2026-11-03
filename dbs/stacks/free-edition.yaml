@@ -1,0 +1,12 @@
+# DBS stack: Databricks Free Edition, no cloud layer (storage and identity are managed by the vendor).
+# Slice 1 (shop orders) ran on this stack; it replaces slices/01-orders/binding-databricks.yaml.
+apiVersion: data-binding-stack/v0.1
+name: free-edition
+subject:
+  name: shop orders, slice 1
+  platform: Databricks Free Edition (serverless, one workspace)
+  archetypes: [PA2]
+engine: {layer: databricks, profile: free-edition}
+prefer: {}
+decisions: {}
+accepted_gaps: []

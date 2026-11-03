@@ -9,7 +9,7 @@ must notice and handle each one. The slice is spec only: building it comes after
 | [contracts/orders.odcs.yaml](contracts/orders.odcs.yaml) | ODCS v3.2.0 (adopted) | Columns, key, grain, quality rules, freshness and retention. Passes the published ODCS schema. |
 | [manifest/orders.yaml](manifest/orders.yaml) | DPM draft | How the dataset is loaded: the framework's existing dataset file plus the new blocks DPM adds. |
 | [world.yaml](world.yaml) | DWD draft | The shop world: clock, change feed, population and the incident calendar. |
-| [binding-databricks.yaml](binding-databricks.yaml) | DBS draft | Which product serves each port, and the obligations no product meets on its own. |
+| [../../dbs/stacks/free-edition.yaml](../../dbs/stacks/free-edition.yaml) | DBS stack | Which product serves each port: the engine layer's free-edition profile, no cloud layer (moved there in 0.2.0, decision M1). Coverage: [free-edition.COVERAGE.md](../../dbs/stacks/free-edition.COVERAGE.md). |
 | [../../dpc/capabilities/](../../dpc/capabilities/) | DPC | The 32 capabilities slice 1 needs (marked `slice: 1`). |
 
 ## The four incidents

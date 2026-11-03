@@ -1,0 +1,28 @@
+# DPC capabilities for X5, Profiling. Normative: edit here.
+- id: DPC-0051
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Every batch profiled and drift reported
+  concern: X5
+  stages:
+  - landing
+  - bronze
+  - silver
+  - gold
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  - PA5
+  core: true
+  port: profiler
+  requirement: Every batch MUST be profiled (counts, empty share, distinct values, ranges, common values) with the
+    same result shape for files, live sources and tables, and drift beyond a threshold against the dataset's own
+    history MUST be reported.
+  failure_mode: A source began sending zero for unknown weights; averages fell for a month and no rule fired.
+  discharges:
+  - PROF-01
+  realization_policy: bind
+  see_also: []

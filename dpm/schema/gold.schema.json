@@ -1,0 +1,309 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dataagentsai/data-platform-catalog/dpm/schema/gold.schema.json",
+  "title": "DPM gold table manifest v0.2",
+  "description": "One gold table (D15, ADR-003). A one_to_one table reshapes one silver dataset through the common pipeline and has no build; a modelled fact names exactly one pure build() (a SQL model or a pure dataframe function, D18) run by the gold harness. Columns and rules live in the contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "name",
+    "domain",
+    "pipeline",
+    "contract",
+    "contract_version",
+    "grain",
+    "inputs",
+    "materialize",
+    "owners"
+  ],
+  "properties": {
+    "kind": {
+      "enum": [
+        "gold_fact",
+        "gold_dimension"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^(fact|dim)_[a-z0-9_]+$"
+    },
+    "domain": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "pipeline": {
+      "enum": [
+        "one_to_one",
+        "modelled"
+      ]
+    },
+    "contract": {
+      "type": "string",
+      "pattern": "\\.odcs\\.ya?ml$"
+    },
+    "contract_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "grain": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "dataset.schema.json#/$defs/name"
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "dataset"
+        ],
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+            "description": "source_name.dataset_name of a dataset manifest in the same domain"
+          },
+          "bookmark": {
+            "$ref": "dataset.schema.json#/$defs/name"
+          },
+          "role": {
+            "enum": [
+              "driver",
+              "lookup"
+            ]
+          }
+        }
+      }
+    },
+    "dimensions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "key",
+          "business_key"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^dim_[a-z0-9_]+$"
+          },
+          "key": {
+            "$ref": "dataset.schema.json#/$defs/name"
+          },
+          "business_key": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "dataset.schema.json#/$defs/name"
+            }
+          },
+          "as_of": {
+            "$ref": "dataset.schema.json#/$defs/name"
+          }
+        }
+      }
+    },
+    "history": {
+      "enum": [
+        "scd1",
+        "scd2"
+      ],
+      "description": "Dimensions only."
+    },
+    "keys": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "surrogate": {
+          "const": "hash"
+        },
+        "unknown_member": {
+          "const": -1
+        },
+        "not_applicable": {
+          "const": -2
+        }
+      }
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "column",
+        "unit"
+      ],
+      "properties": {
+        "column": {
+          "$ref": "dataset.schema.json#/$defs/name"
+        },
+        "unit": {
+          "enum": [
+            "hour",
+            "day",
+            "month"
+          ]
+        },
+        "lookback": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "sql",
+            "dataframe"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 3
+        }
+      }
+    },
+    "materialize": {
+      "enum": [
+        "table",
+        "materialized_view"
+      ]
+    },
+    "corrections": {
+      "type": "boolean"
+    },
+    "completeness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "on_incomplete"
+      ],
+      "properties": {
+        "on_incomplete": {
+          "enum": [
+            "flag",
+            "hold"
+          ]
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "grain_unique": {
+          "type": "boolean"
+        },
+        "orphan_rate_max": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "reconcile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "against",
+            "measures",
+            "tolerance"
+          ],
+          "properties": {
+            "against": {
+              "const": "silver"
+            },
+            "measures": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "column"
+                ],
+                "properties": {
+                  "name": {
+                    "$ref": "dataset.schema.json#/$defs/name"
+                  },
+                  "column": {
+                    "$ref": "dataset.schema.json#/$defs/name"
+                  }
+                }
+              }
+            },
+            "tolerance": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "owners": {
+      "type": "object",
+      "required": [
+        "dataset"
+      ],
+      "properties": {
+        "dataset": {
+          "type": "string"
+        },
+        "alerts": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "pipeline": {
+            "const": "modelled"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "build",
+          "window",
+          "keys",
+          "checks",
+          "completeness"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "gold_dimension"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "history",
+          "keys"
+        ]
+      }
+    }
+  ]
+}

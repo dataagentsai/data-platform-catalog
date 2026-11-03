@@ -1,0 +1,33 @@
+# Tyre company, slice 2: MES curing presses (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_tyre.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: tyre-mes-press
+name: "MES curing presses (silver)"
+version: 0.1.0
+status: draft
+domain: manufacturing
+description:
+  purpose: "Curing presses with their plant, mould and ideal cycle time; history kept (type 2)."
+  limitations: "Read as a full copy."
+schema:
+  - name: press
+    physicalName: silver_mes.press
+    logicalType: object
+    dataGranularityDescription: "One row per press per version"
+    properties:
+      - {name: "press_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "plant_code", logicalType: "string", required: true, quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["P-CHN", "P-HUN"]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "press_type", logicalType: "string", required: true}
+      - {name: "mould_code", logicalType: "string", required: true}
+      - {name: "ideal_cycle_seconds", logicalType: "integer", required: true, quality: [{"type": "sql", "description": "ideal_cycle_seconds is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE ideal_cycle_seconds < 0", "mustBe": 0, "dimension": "accuracy", "severity": "critical"}]}
+      - {name: "extracted_at", logicalType: "timestamp", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["press_id", "extracted_at"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: manufacturing-data
+  members:
+    - {username: manufacturing-data@tyre.example, role: owner}
+slaProperties:
+  - {property: latency, value: 24, unit: h}
+  - {property: retention, value: 10, unit: y}

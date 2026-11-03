@@ -1,0 +1,558 @@
+# Crosswalk: the client deck's 68 concerns (C01 to C68) to DPC (decision D13: DPC is the source of the concern list).
+# Names, groups and lead letters are copied from the deck's who-provides-what data (lead: X the platform provides,
+# Y our horizontal asset, Z each project). Product names stay in the deck and in dbs/; none here (rule R1).
+# gap_filled: true means DPC v0.1 had no capability for this deck concern; the capabilities named were added in 0.2.0.
+# Checked by scripts/lint_shape.py (lint_crosswalk): all 68 present once, every id and port resolves.
+source: client deck, who-provides-what data and the two big-picture slides (4 Nov 2026)
+concerns:
+  - deck: C01
+    name: Ingestion framework
+    group: Core Services
+    lead: Y
+    concerns: [X15, X3]
+    dpc: [DPC-0023, DPC-0024, DPC-0037, DPC-0038]
+    ports: [mover, source_reader, landing_store, table_writer]
+    gap_filled: false
+  - deck: C02
+    name: Transformation
+    group: Core Services
+    lead: Y
+    concerns: [X4, X15]
+    dpc: [DPC-0045, DPC-0012, DPC-0014, DPC-0083, DPC-0084]
+    ports: [stage_runner, model_runner]
+    gap_filled: false
+  - deck: C03
+    name: Orchestration
+    group: Core Services
+    lead: Y
+    concerns: [X2, X1]
+    dpc: [DPC-0004, DPC-0005, DPC-0006, DPC-0035, DPC-0036]
+    ports: [orchestrator]
+    gap_filled: false
+  - deck: C04
+    name: Data contracts (in, out)
+    group: Core Services
+    lead: Z
+    concerns: [X3]
+    dpc: [DPC-0007, DPC-0008, DPC-0009, DPC-0039]
+    ports: [contract_enforcer, product_publisher]
+    gap_filled: false
+  - deck: C05
+    name: Modelling, history
+    group: Core Services
+    lead: Z
+    concerns: [X15, X4]
+    dpc: [DPC-0085, DPC-0025, DPC-0081, DPC-0047, DPC-0046, DPC-0074, DPC-0083, DPC-0080]
+    ports: [table_writer, model_runner]
+    gap_filled: false
+  - deck: C06
+    name: Replay, backfill
+    group: Core Services
+    lead: Y
+    concerns: [X15]
+    dpc: [DPC-0027, DPC-0028, DPC-0082, DPC-0079]
+    ports: [metadata_service, orchestrator, model_runner]
+    gap_filled: false
+  - deck: C07
+    name: Data quality rules
+    group: Data Expectation Services
+    lead: Z
+    concerns: [X4]
+    dpc: [DPC-0010, DPC-0042, DPC-0043, DPC-0048]
+    ports: [quality_runner]
+    gap_filled: false
+  - deck: C08
+    name: Profiling
+    group: Data Expectation Services
+    lead: X
+    concerns: [X5]
+    dpc: [DPC-0051]
+    ports: [profiler]
+    gap_filled: true
+  - deck: C09
+    name: Reconciliation
+    group: Data Expectation Services
+    lead: Y
+    concerns: [X6]
+    dpc: [DPC-0015, DPC-0016, DPC-0052]
+    ports: [reconciler]
+    gap_filled: false
+  - deck: C10
+    name: Quarantine, stewardship
+    group: Data Expectation Services
+    lead: Y
+    concerns: [X4]
+    dpc: [DPC-0011, DPC-0044]
+    ports: [quarantine]
+    gap_filled: false
+  - deck: C11
+    name: Metadata store
+    group: Metadata Store and Config
+    lead: Y
+    concerns: [X1]
+    dpc: [DPC-0033, DPC-0002]
+    ports: [metadata_service]
+    gap_filled: false
+  - deck: C12
+    name: Configuration as code (YAML)
+    group: Metadata Store and Config
+    lead: Y
+    concerns: [X1]
+    dpc: [DPC-0001, DPC-0030]
+    ports: [metadata_service]
+    gap_filled: false
+  - deck: C13
+    name: Settings registry
+    group: Metadata Store and Config
+    lead: Y
+    concerns: [X1]
+    dpc: [DPC-0034, DPC-0003]
+    ports: [metadata_service]
+    gap_filled: false
+  - deck: C14
+    name: Run state, bookmarks
+    group: Metadata Store and Config
+    lead: Y
+    concerns: [X15]
+    dpc: [DPC-0027]
+    ports: [metadata_service]
+    gap_filled: false
+    note: "Run state and bookmarks are kept with the run record in the metadata store (ADR-010)."
+  - deck: C15
+    name: Logging and run log
+    group: Monitoring and Observability
+    lead: Y
+    concerns: [X14]
+    dpc: [DPC-0021, DPC-0022]
+    ports: [run_log]
+    gap_filled: false
+  - deck: C16
+    name: Metrics and monitoring
+    group: Monitoring and Observability
+    lead: X
+    concerns: [X8]
+    dpc: [DPC-0057]
+    ports: [telemetry, evidence]
+    gap_filled: true
+  - deck: C17
+    name: Freshness and SLOs
+    group: Monitoring and Observability
+    lead: Y
+    concerns: [X9]
+    dpc: [DPC-0020, DPC-0059]
+    ports: [telemetry, model_runner]
+    gap_filled: false
+  - deck: C18
+    name: Alerting and incidents
+    group: Monitoring and Observability
+    lead: Y
+    concerns: [X8]
+    dpc: [DPC-0019, DPC-0056]
+    ports: [telemetry]
+    gap_filled: false
+  - deck: C19
+    name: Ops dashboards
+    group: Monitoring and Observability
+    lead: Y
+    concerns: [X8]
+    dpc: [DPC-0057, DPC-0058]
+    ports: [evidence, telemetry]
+    gap_filled: true
+  - deck: C20
+    name: Agent assistance
+    group: Agentic Solutions
+    lead: Y
+    concerns: [X21]
+    dpc: [DPC-0101]
+    ports: [agent_runtime]
+    gap_filled: true
+  - deck: C21
+    name: Self-healing
+    group: Agentic Solutions
+    lead: Y
+    concerns: [X20]
+    dpc: [DPC-0100]
+    ports: [agent_runtime]
+    gap_filled: true
+  - deck: C22
+    name: Agent Harness Framework
+    group: Agentic Solutions
+    lead: Y
+    concerns: [X21]
+    dpc: [DPC-0101, DPC-0102]
+    ports: [agent_runtime]
+    gap_filled: true
+    note: "The harness itself is specified by the AI family's AI Harness Catalog; DPC covers only how the platform runs and gates its agents."
+  - deck: C23
+    name: Guardrails and evals
+    group: Agentic Solutions
+    lead: Y
+    concerns: [X21]
+    dpc: [DPC-0102]
+    ports: [agent_runtime]
+    gap_filled: true
+    note: "Guard rules and evaluation sets follow the AI family's AI Assurance Catalog."
+  - deck: C24
+    name: Pull
+    group: 'In Port: Ingestion'
+    lead: Y
+    concerns: [X15, X3]
+    dpc: [DPC-0037]
+    ports: [source_reader]
+    gap_filled: true
+  - deck: C25
+    name: Push
+    group: 'In Port: Ingestion'
+    lead: X
+    concerns: [X3]
+    dpc: [DPC-0038, DPC-0023]
+    ports: [mover, landing_store]
+    gap_filled: false
+  - deck: C26
+    name: Event-driven
+    group: 'In Port: Ingestion'
+    lead: X
+    concerns: [X2]
+    dpc: [DPC-0036, DPC-0004]
+    ports: [orchestrator]
+    gap_filled: false
+  - deck: C27
+    name: Streaming
+    group: 'In Port: Ingestion'
+    lead: X
+    concerns: [X15, X9, X18]
+    dpc: [DPC-0060, DPC-0086, DPC-0096]
+    ports: [stream_bus]
+    gap_filled: true
+  - deck: C28
+    name: PII tokenised at entry
+    group: 'In Port: Ingestion'
+    lead: Y
+    concerns: [X12]
+    dpc: [DPC-0070]
+    ports: [tokenizer]
+    gap_filled: true
+  - deck: C29
+    name: Metrics
+    group: Semantic layer
+    lead: Z
+    concerns: [X13]
+    dpc: [DPC-0073]
+    ports: [semantic_layer]
+    gap_filled: true
+  - deck: C30
+    name: Dimensions
+    group: Semantic layer
+    lead: Z
+    concerns: [X13]
+    dpc: [DPC-0074]
+    ports: [model_runner, semantic_layer]
+    gap_filled: true
+  - deck: C31
+    name: Self-serve analytics
+    group: BI Engineering
+    lead: X
+    concerns: [X7, X11]
+    dpc: [DPC-0055, DPC-0066]
+    ports: [experience, access_control]
+    gap_filled: true
+  - deck: C32
+    name: Dashboards
+    group: BI Engineering
+    lead: Z
+    concerns: [X7]
+    dpc: [DPC-0055]
+    ports: [experience]
+    gap_filled: true
+  - deck: C33
+    name: Plain-word Q&A
+    group: BI Engineering
+    lead: X
+    concerns: [X13]
+    dpc: [DPC-0076]
+    ports: [conversation]
+    gap_filled: true
+  - deck: C34
+    name: Apps and agents
+    group: AI Engineering
+    lead: Z
+    concerns: [X21, X13]
+    dpc: [DPC-0101, DPC-0076]
+    ports: [agent_runtime, conversation]
+    gap_filled: true
+  - deck: C35
+    name: Retrieval (RAG)
+    group: AI Engineering
+    lead: X
+    concerns: [X12]
+    dpc: [DPC-0072]
+    ports: [vector_index]
+    gap_filled: true
+  - deck: C36
+    name: Features
+    group: ML Engineering
+    lead: Z
+    concerns: [X4]
+    dpc: [DPC-0050]
+    ports: [feature_store]
+    gap_filled: true
+  - deck: C37
+    name: Training
+    group: ML Engineering
+    lead: Z
+    concerns: [X13]
+    dpc: [DPC-0077]
+    ports: [model_registry]
+    gap_filled: true
+  - deck: C38
+    name: Serving
+    group: ML Engineering
+    lead: X
+    concerns: [X9]
+    dpc: [DPC-0061]
+    ports: [model_server]
+    gap_filled: true
+  - deck: C39
+    name: APIs
+    group: Out Port
+    lead: X
+    concerns: [X3]
+    dpc: [DPC-0040]
+    ports: [data_api]
+    gap_filled: true
+  - deck: C40
+    name: Events
+    group: Out Port
+    lead: Y
+    concerns: [X3]
+    dpc: [DPC-0041]
+    ports: [event_publisher]
+    gap_filled: true
+  - deck: C41
+    name: Feeds
+    group: Out Port
+    lead: Y
+    concerns: [X15]
+    dpc: [DPC-0087]
+    ports: [feed_writer]
+    gap_filled: true
+  - deck: C42
+    name: Sharing
+    group: Out Port
+    lead: X
+    concerns: [X3]
+    dpc: [DPC-0039]
+    ports: [product_publisher]
+    gap_filled: true
+  - deck: C43
+    name: Catalog and search
+    group: Data Governance
+    lead: X
+    concerns: [X13]
+    dpc: [DPC-0075]
+    ports: [data_catalog]
+    gap_filled: true
+  - deck: C44
+    name: Lineage
+    group: Data Governance
+    lead: X
+    concerns: [X7]
+    dpc: [DPC-0018]
+    ports: [lineage_emitter]
+    gap_filled: false
+  - deck: C45
+    name: Owners and glossary
+    group: Data Governance
+    lead: Z
+    concerns: [X13]
+    dpc: [DPC-0075, DPC-0019]
+    ports: [data_catalog, telemetry]
+    gap_filled: false
+  - deck: C46
+    name: Master, reference data
+    group: Data Governance
+    lead: Z
+    concerns: [X13]
+    dpc: [DPC-0049]
+    ports: [stage_runner]
+    gap_filled: true
+  - deck: C47
+    name: Data products
+    group: Data Governance
+    lead: Z
+    concerns: [X3]
+    dpc: [DPC-0039]
+    ports: [product_publisher]
+    gap_filled: true
+  - deck: C48
+    name: Audit
+    group: Data Governance
+    lead: X
+    concerns: [X14]
+    dpc: [DPC-0078]
+    ports: [audit_log]
+    gap_filled: true
+  - deck: C49
+    name: Security and access
+    group: Security and Privacy
+    lead: X
+    concerns: [X11]
+    dpc: [DPC-0066, DPC-0069]
+    ports: [access_control, identity_provider]
+    gap_filled: true
+  - deck: C50
+    name: Privacy and PII lifecycle
+    group: Security and Privacy
+    lead: Y
+    concerns: [X12]
+    dpc: [DPC-0071]
+    ports: [tokenizer]
+    gap_filled: true
+  - deck: C51
+    name: Encryption, keys
+    group: Security and Privacy
+    lead: X
+    concerns: [X11]
+    dpc: [DPC-0067]
+    ports: [key_manager]
+    gap_filled: true
+  - deck: C52
+    name: Pre-CI checks (pre-commit)
+    group: Testing
+    lead: Y
+    concerns: [X17]
+    dpc: [DPC-0091]
+    ports: []
+    gap_filled: true
+    note: "Kernel-only capability: no port; enforced by the shift-left check bundle."
+  - deck: C53
+    name: Shift-left checks in CI/CD
+    group: Testing
+    lead: Y
+    concerns: [X17]
+    dpc: [DPC-0091, DPC-0009]
+    ports: []
+    gap_filled: false
+    note: "Kernel-only capability: no port; enforced by the shift-left check bundle."
+  - deck: C54
+    name: Unit, integration tests
+    group: Testing
+    lead: Z
+    concerns: [X17]
+    dpc: [DPC-0092, DPC-0093]
+    ports: []
+    gap_filled: true
+    note: "Kernel-only capability: no port."
+  - deck: C55
+    name: Simulation (DataTwin)
+    group: Testing
+    lead: Y
+    concerns: [X22]
+    dpc: [DPC-0031, DPC-0032]
+    ports: [clock, evidence]
+    gap_filled: false
+    note: "The simulator is the world (DWD) plus the clock and evidence ports; slice worlds plant the incidents."
+  - deck: C56
+    name: Parallel run, release gate
+    group: Testing
+    lead: Y
+    concerns: [X17]
+    dpc: [DPC-0094]
+    ports: [deployer]
+    gap_filled: true
+  - deck: C57
+    name: Infrastructure as code
+    group: DevOps and CI/CD
+    lead: Y
+    concerns: [X16]
+    dpc: [DPC-0088]
+    ports: [infra_provisioner]
+    gap_filled: true
+  - deck: C58
+    name: CI/CD and environments
+    group: DevOps and CI/CD
+    lead: Y
+    concerns: [X16]
+    dpc: [DPC-0030, DPC-0089, DPC-0090]
+    ports: [deployer]
+    gap_filled: false
+  - deck: C59
+    name: Resilience and DR
+    group: DevOps and CI/CD
+    lead: X
+    concerns: [X18]
+    dpc: [DPC-0095, DPC-0097]
+    ports: [object_store, deployer]
+    gap_filled: true
+  - deck: C60
+    name: Cost per data product
+    group: Cost and Performance Engineering
+    lead: Y
+    concerns: [X10]
+    dpc: [DPC-0062]
+    ports: [cost_ledger]
+    gap_filled: true
+  - deck: C61
+    name: Budgets and alerts
+    group: Cost and Performance Engineering
+    lead: X
+    concerns: [X10]
+    dpc: [DPC-0063]
+    ports: [cost_ledger]
+    gap_filled: true
+  - deck: C62
+    name: Waste and anomaly finder
+    group: Cost and Performance Engineering
+    lead: Y
+    concerns: [X10]
+    dpc: [DPC-0064]
+    ports: [cost_ledger]
+    gap_filled: true
+  - deck: C63
+    name: Performance, right-sizing
+    group: Cost and Performance Engineering
+    lead: X
+    concerns: [X19]
+    dpc: [DPC-0099, DPC-0098]
+    ports: [compute_pool, table_writer]
+    gap_filled: true
+  - deck: C64
+    name: Storage
+    group: Platform foundation
+    lead: X
+    concerns: [X18]
+    dpc: [DPC-0095]
+    ports: [object_store]
+    gap_filled: true
+  - deck: C65
+    name: Compute
+    group: Platform foundation
+    lead: X
+    concerns: [X10]
+    dpc: [DPC-0065]
+    ports: [compute_pool]
+    gap_filled: true
+  - deck: C66
+    name: Network
+    group: Platform foundation
+    lead: X
+    concerns: [X11]
+    dpc: [DPC-0068]
+    ports: [network_boundary]
+    gap_filled: true
+  - deck: C67
+    name: Identity and secrets
+    group: Platform foundation
+    lead: X
+    concerns: [X11]
+    dpc: [DPC-0069, DPC-0029]
+    ports: [identity_provider, secret_store]
+    gap_filled: false
+  - deck: C68
+    name: Environments and accounts
+    group: Platform foundation
+    lead: X
+    concerns: [X16]
+    dpc: [DPC-0088]
+    ports: [infra_provisioner]
+    gap_filled: true

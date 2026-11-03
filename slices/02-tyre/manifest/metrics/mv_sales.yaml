@@ -1,0 +1,31 @@
+kind: metric_view
+name: mv_sales
+domain: sales
+source: fact_sales
+joins: [dim_dealer, dim_material]
+dimensions:
+  - {name: Month, expr: sale_month}
+  - {name: Region, expr: dim_dealer.region}
+  - {name: Tyre class, expr: dim_material.tyre_class}
+measures:
+  - name: Sell-in units
+    expr: SUM(units_sold_in)
+    additive: true
+    time_dimension: Month
+    certification: certified
+    synonyms: [sell in, shipments to dealers, primary sales]
+    known_answer: {where: "month = 2026-10 AND region = 'north'", value: 118400}
+  - name: Sell-out units
+    expr: SUM(units_sold_out)
+    additive: true
+    time_dimension: Month
+    certification: certified
+    synonyms: [sell out, retail sales, secondary sales]
+    known_answer: {where: "month = 2026-10 AND region = 'north'", value: 109950}
+  - name: Net sales value
+    expr: SUM(net_value)
+    additive: true
+    time_dimension: Month
+    certification: draft
+    synonyms: [revenue, sales value]
+owners: {dataset: sales-data@tyre.example}

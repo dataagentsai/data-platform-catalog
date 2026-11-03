@@ -1,0 +1,21 @@
+# DPM v0.2 ML model (D16, ADR-021): a model is a data product; this is its model card. Features and target come
+# from gold, read as of the label's time.
+kind: ml_model
+name: dealer_demand_forecast
+domain: sales
+purpose: Forecast next month's sell-out units per dealer and tyre class, so plants plan production and stock.
+owners: {dataset: sales-data@tyre.example}
+status: draft
+risk_tier: low
+target: {source: fact_sales, column: units_sold_out, horizon: next month}
+features:
+  - {source: fact_sales, columns: [units_sold_in, units_sold_out, net_value]}
+  - {source: fact_otif, columns: [on_time_in_full]}
+training: {window_days: 730, as_of: sale_month, retrain: monthly}
+metric: {name: weighted absolute percentage error, threshold: 0.18, better: lower}
+monitoring: {drift_threshold: 0.2, feature_max_age_hours: 48}
+serving: batch
+intended_use: Monthly planning input for plant and stock planners; reviewed by a planner before use.
+limitations:
+  - Dealers with fewer than six months of sell-out are forecast at the regional average.
+  - Does not know about promotions unless they appear in sell-in.

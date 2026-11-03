@@ -1,0 +1,33 @@
+# Tyre company, slice 2: Dealer dimension (gold). ODCS v3.2.0, adopted not restated (validated by tests/test_tyre.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: tyre-gold-dim-dealer
+name: "Dealer dimension (gold)"
+version: 0.1.0
+status: draft
+domain: sales
+description:
+  purpose: "Dealers as of any date, with reserved members -1 (unknown) and -2 (not applicable)."
+  limitations: "From silver dealers."
+schema:
+  - name: dim_dealer
+    physicalName: gold_sales.dim_dealer
+    logicalType: object
+    dataGranularityDescription: "One row per dealer per version, plus the reserved members"
+    properties:
+      - {name: "dealer_sk", logicalType: "integer", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "dealer_code", logicalType: "string", required: true}
+      - {name: "dealer_name", logicalType: "string", required: true}
+      - {name: "region", logicalType: "string", required: true}
+      - {name: "valid_from", logicalType: "timestamp", required: true}
+      - {name: "valid_to", logicalType: "timestamp", required: true}
+      - {name: "is_current", logicalType: "boolean", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["dealer_sk"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+team:
+  name: sales-data
+  members:
+    - {username: sales-data@tyre.example, role: owner}
+slaProperties:
+  - {property: latency, value: 24, unit: h}
+  - {property: retention, value: 10, unit: y}

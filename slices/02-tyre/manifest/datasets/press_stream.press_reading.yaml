@@ -1,0 +1,36 @@
+# DPM v0.2: press sensor readings (PA4). The stream bus is the landing; event time with a late allowance;
+# replays dropped by reading id. Events, appended.
+source_name: press_stream
+source_env: prod
+dataset_name: press_reading
+is_enabled: true
+kind: dataset
+config:
+  load_type: INCREMENTAL
+  watermark_column: event_ts
+  sla_freshness_hours: "1"
+  sla_freshness_error_hours: "1"
+  schedule_timezone: Asia/Kolkata
+  cost_center: manufacturing-analytics
+dedup: {mode: business_key_first, business_keys: [reading_id]}
+contract: ../../contracts/press_reading.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA4]
+ingest: {mode: stream, read: events}
+history: {kind: event}
+load:
+  pattern: append
+  batch_key: [source_batch_id]
+  new_columns: hold_in_bronze
+  deletes: {detect: none, apply: none}
+  late_lookback_days: 2
+quality:
+  actions:
+    major: {rows: flag, dataset: alert_owner, page: false}
+reconciliation:
+  hops: [sources, bronze, silver]
+  measures:
+    - {name: row_count}
+  tolerance: {row_count: 0.001}
+owners: {dataset: manufacturing-data@tyre.example, alerts: plant-maintenance}
+concerns: {}

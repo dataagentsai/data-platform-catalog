@@ -19,6 +19,7 @@
   discharges:
   - DUP-01
   - DUP-02
+  - RAW-01
   realization_policy: own
   slice: 1
   see_also: []
@@ -45,6 +46,7 @@
   - DUP-01
   - DUP-02
   - ORCH-03
+  - IDEMP-01
   design_decisions:
   - key: batch_key_source
     question: Where does the batch key come from?
@@ -150,4 +152,191 @@
   - HIST-04
   realization_policy: own
   slice: 1
+  see_also: []
+- id: DPC-0079
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Gold windows replaced, never appended
+  concern: X15
+  stages:
+  - gold
+  archetypes:
+  - PA5
+  core: true
+  port: model_runner
+  requirement: A modelled fact MUST be written by replacing whole windows (or merging on the grain key) by its one
+    writer; it MUST NOT be appended to, and MUST be a table built by window recompute unless it is a simple single-input
+    aggregate.
+  failure_mode: A rerun appended a day again; the month's sales were up by a day's worth and looked like growth.
+  discharges:
+  - DUP-02
+  - LATE-01
+  - HIST-04
+  - GOLD-01
+  - IDEMP-01
+  realization_policy: own
+  adr:
+  - ADR-006
+  see_also: []
+- id: DPC-0080
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Changed windows read in full
+  concern: X15
+  stages:
+  - gold
+  archetypes:
+  - PA5
+  core: true
+  port: model_runner
+  requirement: The harness MUST find the windows changed in any input since its bookmark and MUST read every input
+    in full for those windows before building them.
+  failure_mode: Orders landed on Monday and deliveries on Wednesday; joining only the new rows missed every match
+    across the two days.
+  discharges:
+  - LATE-01
+  realization_policy: own
+  adr:
+  - ADR-003
+  see_also: []
+- id: DPC-0081
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Deterministic surrogate keys with reserved members
+  concern: X15
+  stages:
+  - gold
+  archetypes:
+  - PA5
+  core: true
+  port: model_runner
+  requirement: Surrogate keys MUST be a deterministic hash of the source and business key (plus the version start
+    for history dimensions), every dimension MUST hold the reserved members unknown and not applicable, and business
+    keys MUST be kept beside surrogate keys in facts.
+  failure_mode: A dimension rebuilt with sequence keys renumbered every member; every fact pointed at the wrong
+    customer.
+  discharges:
+  - DUP-02
+  - DES-04
+  - KEY-01
+  realization_policy: own
+  adr:
+  - ADR-004
+  see_also: []
+- id: DPC-0082
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Corrections applied through a backfill plan
+  concern: X15
+  stages:
+  - silver
+  - gold
+  archetypes:
+  - PA5
+  - PA10
+  core: true
+  port: model_runner
+  requirement: Corrections MUST be rows in a corrections table (entity, field, value, applies from and to, who,
+    why, status), MUST reach gold only through the window recompute, and only when a backfill plan activates them
+    and names the windows to rebuild.
+  failure_mode: A hand fix in gold was overwritten by the next rebuild, and nobody could explain the number in between.
+  discharges:
+  - HIST-04
+  - LATE-01
+  realization_policy: own
+  adr:
+  - ADR-017
+  see_also: []
+- id: DPC-0083
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: One harness for every modelled fact
+  concern: X15
+  stages:
+  - gold
+  archetypes:
+  - PA5
+  core: true
+  port: model_runner
+  requirement: Each modelled fact MUST supply exactly one declared, pure build() (a set-based query model or a pure
+    dataframe function) and the harness MUST own all reading, key lookup, checks and writing.
+  failure_mode: Every fact was its own notebook with reads and writes mixed in; none could be unit-tested.
+  discharges:
+  - DUP-02
+  - LATE-01
+  - DES-04
+  - PURE-01
+  realization_policy: own
+  adr:
+  - ADR-003
+  - ADR-013
+  see_also: []
+- id: DPC-0085
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: History kind follows the dataset kind
+  concern: X15
+  stages:
+  - silver
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  core: true
+  port: table_writer
+  requirement: Each dataset MUST declare its kind (master, transaction, event, snapshot), which MUST set its history
+    (type 2, type 1, append, snapshot) unless overridden; only listed columns MAY open a new version; deletes MUST
+    be soft.
+  failure_mode: A last-updated stamp opened a new version every night and the material table grew a hundred-fold.
+  discharges:
+  - SCD-02
+  - DES-04
+  realization_policy: own
+  adr:
+  - ADR-016
+  see_also: []
+- id: DPC-0086
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Stream replays dropped by event id
+  concern: X15
+  stages:
+  - bronze
+  - silver
+  archetypes:
+  - PA4
+  core: false
+  port: stream_bus
+  requirement: Stream readers MUST drop an event already seen, by its event id, within the declared replay window.
+  failure_mode: After a restart the stream replayed an hour and the press produced twice as many tyres that hour.
+  discharges:
+  - DUP-04
+  realization_policy: bind
+  see_also: []
+- id: DPC-0087
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: Feeds idempotent and from published products
+  concern: X15
+  stages:
+  - experiences
+  archetypes:
+  - PA8
+  core: false
+  port: feed_writer
+  requirement: Feeds MUST read only published products, and sending a window twice MUST leave the target unchanged.
+  failure_mode: A partner feed was resent after a timeout and the partner booked the same orders twice.
+  discharges:
+  - DUP-02
+  - FLOW-01
+  realization_policy: own
   see_also: []

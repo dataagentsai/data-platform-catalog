@@ -1,0 +1,27 @@
+# DPM v0.2 metric view (ADR-022): defined once; certified measures reach the conversation interface and agents.
+kind: metric_view
+name: mv_otif
+domain: sales
+source: fact_otif
+joins: [dim_dealer, dim_material]
+dimensions:
+  - {name: Promised month, expr: "DATE_TRUNC('MONTH', promised_date)"}
+  - {name: Region, expr: dim_dealer.region}
+  - {name: Tyre class, expr: dim_material.tyre_class}
+measures:
+  - name: OTIF %
+    expr: SUM(on_time_in_full) / COUNT(1)
+    additive: false
+    time_dimension: Promised month
+    description: Share of order lines delivered by the date first promised and in full.
+    certification: certified
+    synonyms: [on-time delivery, on time in full, OTIF, delivery performance]
+    known_answer: {where: "region = 'south' AND promised month = 2026-11", value: 0.942, tolerance: 0.0005}
+  - name: Order lines
+    expr: COUNT(1)
+    additive: true
+    time_dimension: Promised month
+    certification: certified
+    synonyms: [lines, order lines]
+    known_answer: {where: "promised month = 2026-11", value: 41230}
+owners: {dataset: sales-data@tyre.example}
