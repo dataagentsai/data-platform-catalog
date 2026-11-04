@@ -62,9 +62,9 @@ def test_index_is_generated_and_current():
 
 
 def test_index_misses_a_new_adr():
-    extra = broken(id="ADR-024", _file="ADR-024-x.md")
+    extra = broken(id="ADR-999", _file="ADR-999-x.md")  # an id no real ADR will use
     errs = lint_shape.lint_adrs(ADRS + [extra], VOCAB, CAPS, DAC, (ROOT / "adr" / "README.md").read_text())
-    assert any("index does not list ADR-024" in e for e in errs), errs
+    assert any("index does not list ADR-999" in e for e in errs), errs
 
 
 def test_capability_cites_unknown_adr():

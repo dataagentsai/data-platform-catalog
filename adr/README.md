@@ -55,4 +55,5 @@ product names the port, and the binding names the product), and the index below 
 | [ADR-021](ADR-021-a-machine-learning-model-is-a-data-product.md) | A machine-learning model is a data product | accepted | X13, X9 | DPC-0077, DPC-0050, DPC-0061 |
 | [ADR-022](ADR-022-metrics-are-certified-before-conversation-interfaces-and.md) | Metrics are certified before conversation interfaces and agents use them | accepted | X13 | DPC-0073, DPC-0076 |
 | [ADR-023](ADR-023-agents-propose-gates-decide-agents-follow-the-same-kernel.md) | Agents propose, gates decide; agents follow the same kernel and adapter split | accepted | X21, X20 | DPC-0100, DPC-0101, DPC-0102 |
+| [ADR-024](ADR-024-owners-judge-observability-reports-pushed-by-runs.md) | Owners judge, observability reports; pushed by runs; platform telemetry adopted, our metadata added | accepted | X8, X9, X14, X7 | DPC-0019, DPC-0020, DPC-0021, DPC-0056, DPC-0057, DPC-0058, DPC-0018, DPC-0078 |
 <!-- END index -->
