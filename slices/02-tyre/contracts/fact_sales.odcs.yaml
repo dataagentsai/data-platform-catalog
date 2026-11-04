@@ -8,7 +8,7 @@ status: draft
 domain: sales
 description:
   purpose: "Sell-in (from orders) and sell-out (from dealers) per dealer, material and month."
-  limitations: "Sell-out is as dealers report it."
+  limitations: "Sell-out is as dealers report it. Sell-in counts open lines only: lines whose line_status is cancelled or rejected are left out (as in fact_otif)."
 schema:
   - name: fact_sales
     physicalName: gold_sales.fact_sales

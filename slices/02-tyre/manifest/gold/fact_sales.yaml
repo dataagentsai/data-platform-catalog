@@ -1,5 +1,6 @@
 # DPM v0.2 gold fact: sell-in and sell-out per dealer, material and month. Modelled: one SQL build() in the harness.
 # Partner files arrive late and are corrected by re-sending, so months are rebuilt and logged as restatements.
+# Sell-in counts open lines only: line_status cancelled or rejected is left out (as fact_otif does).
 kind: gold_fact
 name: fact_sales
 domain: sales

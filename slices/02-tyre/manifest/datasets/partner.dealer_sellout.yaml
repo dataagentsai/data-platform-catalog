@@ -24,7 +24,7 @@ ingest: {mode: push, read: files}
 history: {kind: snapshot}
 load:
   pattern: overwrite_window
-  batch_key: [file_name, content_checksum]
+  batch_key: [content_checksum]  # a renamed resend is the same delivery (DUP-01): the name is not part of the key
   new_columns: hold_in_bronze
   deletes: {detect: none, apply: none}
   quarantine_stop_share: 0.05
