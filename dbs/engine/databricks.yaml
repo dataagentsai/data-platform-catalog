@@ -66,7 +66,7 @@ bindings:
     coverage: partial
     gap: The database holds tables; the manifest schema, key registry, merge view and procedures are ours.
     gap_filled_by: {approach: in-house, adapter: "dataplatform.meta (loader, procedures, dataset_view)"}
-    settings: {recovery: "point-in-time restore; a read replica in a second region for tier-1"}
+    settings: {recovery: "point-in-time restore; a read replica in a second region for tier-1", connection: "DP_META_DSN (Lakebase read_write_dns from Terraform, or any PostgreSQL DSN when Lakebase is not offered); same adapter dataplatform.adapters.postgres_meta either way"}
     proves: [CFG-01, CFG-02, REL-01, CFG-04]
   run_log:
     approach: platform
