@@ -1,4 +1,5 @@
 # DPM v0.2 metric view (ADR-022): defined once; certified measures reach the conversation interface and agents.
+# Known answers are the tyre world's seed-11 values after its 14-day run (9 to 22 November), from the oracle's last day.
 kind: metric_view
 name: mv_otif
 domain: sales
@@ -13,15 +14,15 @@ measures:
     expr: SUM(on_time_in_full) / COUNT(1)
     additive: false
     time_dimension: Promised month
-    description: Share of order lines delivered by the date first promised and in full.
+    description: Share of open order lines (not cancelled or rejected) delivered by the date first promised and in full.
     certification: certified
     synonyms: [on-time delivery, on time in full, OTIF, delivery performance]
-    known_answer: {where: "region = 'south' AND promised month = 2026-11", value: 0.942, tolerance: 0.0005}
+    known_answer: {where: "region = 'south' AND promised month = 2026-11", value: 0.8961, tolerance: 0.0005}
   - name: Order lines
     expr: COUNT(1)
     additive: true
     time_dimension: Promised month
     certification: certified
     synonyms: [lines, order lines]
-    known_answer: {where: "promised month = 2026-11", value: 41230}
+    known_answer: {where: "promised month = 2026-11", value: 107188}
 owners: {dataset: sales-data@tyre.example}

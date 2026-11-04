@@ -1,3 +1,6 @@
+# Known answers are the tyre world's seed-11 values after its 14-day run (9 to 22 November), from the oracle's last day.
+# Sell-in is asked for November: the clock starts on 9 November, so the world places no October orders.
+# Sell-out stays on October: days 1 to 5 of the clock are October's partner-file window (world.yaml).
 kind: metric_view
 name: mv_sales
 domain: sales
@@ -14,14 +17,14 @@ measures:
     time_dimension: Month
     certification: certified
     synonyms: [sell in, shipments to dealers, primary sales]
-    known_answer: {where: "month = 2026-10 AND region = 'north'", value: 118400}
+    known_answer: {where: "month = 2026-11 AND region = 'north'", value: 1279642}
   - name: Sell-out units
     expr: SUM(units_sold_out)
     additive: true
     time_dimension: Month
     certification: certified
     synonyms: [sell out, retail sales, secondary sales]
-    known_answer: {where: "month = 2026-10 AND region = 'north'", value: 109950}
+    known_answer: {where: "month = 2026-10 AND region = 'north'", value: 150803}
   - name: Net sales value
     expr: SUM(net_value)
     additive: true

@@ -373,6 +373,30 @@ def lint_model(md, gold_cols, name):
     return errs
 
 
+def _lint_params(e, days, w):
+    """An incident's exact values live in its params block (scalars only), never only in the does: sentence.
+    Keys ending in _day are clock days; keys ending in _share are fractions; until_day is not before the incident."""
+    if "params" not in e:
+        return [f"{w}: no params block (the incident's values must not live only in prose)"]
+    params = e["params"]
+    if not isinstance(params, dict):
+        return [f"{w}: params must be a mapping"]
+    errs = []
+    for k, v in params.items():
+        if not isinstance(v, (str, int, float, bool)) or v is None:
+            errs.append(f"{w}: params.{k} must be a single value (text, number or true/false)")
+        elif k.endswith("_day") and (isinstance(v, bool) or not isinstance(v, int) or not 1 <= v <= days):
+            errs.append(f"{w}: params.{k} = {v} is not a day of the clock's {days} days")
+        elif (k == "share" or k.endswith("_share")) and (isinstance(v, bool) or not isinstance(v, (int, float))
+                                                         or not 0 <= v <= 1):
+            errs.append(f"{w}: params.{k} = {v} is not a share between 0 and 1")
+    if isinstance(params.get("until_day"), int) and params["until_day"] < e.get("day", 0):
+        errs.append(f"{w}: params.until_day {params['until_day']} is before the incident's day {e.get('day')}")
+    if isinstance(params.get("from_day"), int) and params["from_day"] > e.get("day", 0):
+        errs.append(f"{w}: params.from_day {params['from_day']} is after the incident's day {e.get('day')}")
+    return errs
+
+
 def lint_world(world, datasets, cap_by_id, dac_ids, name, required_stories=None):
     errs = []
     if world.get("apiVersion") != "dwd/v0":
@@ -400,6 +424,7 @@ def lint_world(world, datasets, cap_by_id, dac_ids, name, required_stories=None)
             errs.append(f"{w}: no handling capability discharges the detector {ex.get('detector')}")
         if not ex.get("oracle"):
             errs.append(f"{w}: no oracle")
+        errs += _lint_params(e, days, w)
     stories = {e.get("story") for e in world.get("calendar") or []}
     declared = set(world.get("covers") or [])
     errs += [f"{name}: covers {s} but no incident has that story" for s in sorted(declared - stories)]

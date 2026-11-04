@@ -13,7 +13,7 @@ story, and the platform must notice and handle each one. Spec only: the build co
 | [manifest/metrics/](manifest/metrics/) | DPM v0.2 | 3 metric views with certification, synonyms and known-answer tests (ADR-022). |
 | [manifest/models/](manifest/models/) | DPM v0.2 | 1 model card, the dealer demand forecast (D16, ADR-021). |
 | [manifest/platform.yaml](manifest/platform.yaml) | DPM v0.2 | Business time zone, environments, default action per severity (ADR-009) and the agents enabled (ADR-023). |
-| [world.yaml](world.yaml) | DWD draft | The six mock source systems, volumes, the clock with two plants, and the incident calendar. |
+| [world.yaml](world.yaml) | DWD draft | The six mock source systems, volumes, the clock with two plants, and the incident calendar. Each incident carries a `params:` block with its exact values, which the world generator reads. |
 
 The same files serve every stack in [dbs/stacks/](../../dbs/stacks/) (M4): the managed free stack to build and
 test, the cloud stack for the client demo. Only the binding names products.
@@ -49,4 +49,6 @@ test, the cloud stack for the client demo. Only the binding names products.
 
 `tests/test_tyre.py` and `tests/test_dpm_v02.py`: every contract passes ODCS, every manifest lints clean, every
 gold input, dimension and metric source resolves, every incident's detector is a DAC obligation discharged by one of
-its handling capabilities, all nine demo stories are covered, and no product name appears anywhere in the slice.
+its handling capabilities, all nine demo stories are covered, every incident has a `params:` block whose values are
+single values, days inside the clock and shares between 0 and 1, the params equal the world generator's, order lines
+carry a line status, and no product name appears anywhere in the slice.

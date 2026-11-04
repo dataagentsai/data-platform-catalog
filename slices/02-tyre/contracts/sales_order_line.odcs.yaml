@@ -3,7 +3,7 @@ apiVersion: v3.2.0
 kind: DataContract
 id: tyre-erp-sales-order-line
 name: "ERP sales order lines (silver)"
-version: 0.1.0
+version: 0.2.0
 status: draft
 domain: sales
 description:
@@ -25,6 +25,8 @@ schema:
       - {name: "ordered_qty", logicalType: "integer", required: true, quality: [{"type": "sql", "description": "ordered_qty is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE ordered_qty < 0", "mustBe": 0, "dimension": "accuracy", "severity": "critical"}]}
       - {name: "net_value", logicalType: "number", required: true, quality: [{"type": "sql", "description": "net_value is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE net_value < 0", "mustBe": 0, "dimension": "accuracy", "severity": "critical"}]}
       - {name: "currency", logicalType: "string", required: true}
+      - {name: "line_status", logicalType: "string", required: true, description: "open, cancelled or rejected. A cancelled or rejected line keeps its quantity and value; OTIF leaves it out.", quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["open", "cancelled", "rejected"]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "rejection_reason", logicalType: "string", required: false, description: "Why the line was rejected; set only when line_status is rejected.", quality: [{"type": "sql", "description": "A rejected line has a reason and no other line has one.", "query": "SELECT COUNT(*) FROM ${object} WHERE (line_status = 'rejected') <> (rejection_reason IS NOT NULL)", "mustBe": 0, "dimension": "consistency", "severity": "major"}]}
       - {name: "change_seq", logicalType: "integer", required: true, description: "The source's change sequence; history is ordered by it (DPC-0025)."}
     quality:
       - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["order_id", "line_no", "change_seq"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}

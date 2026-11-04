@@ -5,6 +5,10 @@
 # incidents it plants. Each incident names the detector expected to fire (a DAC obligation), the capabilities that
 # must handle it (DPC) and an oracle judged from the world's own truth, never from the platform's logs (R9, SIM-01).
 # No product names (R1): systems are named by what they are (an ERP database, a lab system), not by vendor.
+#
+# Every calendar entry carries a `params:` block: the incident's exact values (dealer, share, hour, presses...), so
+# the generator reads them from here and never from its own table. `does:` stays the plain sentence for people; when
+# the two disagree, `params:` wins. Hours are on the business clock unless the key says local (the plant's own time).
 apiVersion: dwd/v0
 extends: awd/v0
 name: tyre-company
@@ -17,7 +21,8 @@ cites:
 
 fidelity:
   faithful_about:
-    - the order life cycle (placed, promised, partly or fully delivered, cancelled) and the change sequence the ERP assigns
+    - the order life cycle (placed, promised, partly or fully delivered, cancelled) and the change sequence the ERP assigns;
+      a cancelled or rejected line keeps its quantity and value and changes its line_status (it is not zeroed)
     - curing batches per press and shift, and the share scrapped at inspection
     - partner files arriving monthly per dealer, late and re-sent, as partners really do
     - sensor readings arriving out of order and replayed after a restart
@@ -28,6 +33,9 @@ fidelity:
 
 clock:
   start: 2026-11-09T00:00:00+05:30    # jobs read time only through the clock port (DPC-0032)
+  # Partner files are due in the first 5 days of a month, but the clock starts on 9 November. Days 1 to 5 of the
+  # clock (9 to 13 November) therefore stand in for October's file window: every dealer's October file is due on
+  # day 1, and a file that arrives later is late (see sellout-file-late). November's files fall after the clock ends.
   days: 14
   business_timezone: Asia/Kolkata
   plants:
@@ -75,10 +83,11 @@ population:
   lines_per_order: {min: 1, max: 6}
   on_time_share: 0.93
   in_full_share: 0.96
-  cancel_share: 0.03
+  cancel_share: 0.03                  # lines set to line_status cancelled; OTIF leaves them out (fact_otif)
   tyres_cured_per_press_hour: {min: 20, max: 34}
   scrap_share: {mean: 0.018, sd: 0.006}
-  generator: faker                    # behind the population port; never a hosted generator (REUSE.md)
+  generator: seeded_random            # a seeded deterministic random generator (Python's random, seed 11), behind
+                                      # the population port; no package and never a hosted generator (REUSE.md)
 
 calendar:                             # story: one of the demo stories this world must cover (see covers below)
   - id: readings-out-of-order
@@ -87,6 +96,7 @@ calendar:                             # story: one of the demo stories this worl
     kind: late_events
     dataset: press_stream.press_reading
     does: For two hours, 4% of readings from 6 presses arrive up to 90 seconds late and out of order.
+    params: {from_hour: 10, hours: 2, share: 0.04, presses: 6, max_delay_s: 90}
     expect:
       detector: LATE-03
       handled_by: [DPC-0060]
@@ -98,6 +108,7 @@ calendar:                             # story: one of the demo stories this worl
     dataset: erp.sales_order_line
     does: Hard-delete 5 cancelled order lines from day 1 at the source.
     pick: 5
+    params: {from_day: 1}
     expect:
       detector: DEL-01
       handled_by: [DPC-0017, DPC-0053]
@@ -108,6 +119,7 @@ calendar:                             # story: one of the demo stories this worl
     kind: late_delivery
     dataset: partner.dealer_sellout
     does: Dealer D-0042's October file, due on day 1, arrives on day 5.
+    params: {dealer: D-0042, month: "2026-10", due_day: 1}
     expect:
       detector: LATE-01
       handled_by: [DPC-0080, DPC-0059, DPC-0079]
@@ -118,6 +130,7 @@ calendar:                             # story: one of the demo stories this worl
     kind: duplicate_delivery
     dataset: partner.dealer_sellout
     does: Re-send D-0042's October file byte for byte under a new name.
+    params: {dealer: D-0042, month: "2026-10"}
     expect:
       detector: DUP-01
       handled_by: [DPC-0024, DPC-0023, DPC-0038]
@@ -128,6 +141,7 @@ calendar:                             # story: one of the demo stories this worl
     kind: renamed_column
     dataset: lims.inspection_result
     does: The lab system renames defect_code to defect in P-HUN's files from 10:00.
+    params: {plant: P-HUN, from_local_hour: 10, column: defect_code, renamed_to: defect, until_day: 7}  # reverts at the end of day 7; days 8 to 14 are clean
     expect:
       detector: SCH-02
       handled_by: [DPC-0008]
@@ -139,6 +153,7 @@ calendar:                             # story: one of the demo stories this worl
     dataset: erp.sales_order_line
     does: A promised-date change for a day-2 line arrives with a change sequence older than one already loaded.
     pick: 1
+    params: {from_day: 2}
     expect:
       detector: SCD-02
       handled_by: [DPC-0025, DPC-0026]
@@ -149,6 +164,7 @@ calendar:                             # story: one of the demo stories this worl
     kind: short_full_copy
     dataset: erp.material
     does: The daily full copy of materials comes back with 40% of rows missing.
+    params: {missing_share: 0.40}
     expect:
       detector: DEL-04
       handled_by: [DPC-0054]
@@ -158,18 +174,26 @@ calendar:                             # story: one of the demo stories this worl
     story: correction
     kind: correction
     dataset: erp.sales_order_line
-    does: The sales team records that 12 lines from day 2 were always promised a day later; a backfill plan activates it on day 11.
+    does: >-
+      The sales team records that 12 lines from day 2 were always promised a day later, as 12 rows in the metadata
+      store's corrections table (ADR-017, DPC-0082); a backfill plan activates them on day 11. The ERP is not
+      changed: the correction records come from that table, never from a source system.
     pick: 12
+    params: {from_day: 2, shift_days: 1, activate_day: 11}
     expect:
       detector: HIST-05
       handled_by: [DPC-0082]
-      oracle: silver is unchanged; only day 2's and day 3's promised-date windows are rebuilt on day 11; OTIF equals the corrected truth
+      oracle: >-
+        silver is unchanged; on day 11 only the promised-date windows of the 12 corrected lines are rebuilt (each
+        line's date as first promised and its corrected date, one day later); no other window changes; OTIF equals the
+        corrected truth
   - id: new-dealer-late
     day: 11
     story: late_dimension
     kind: late_dimension
     dataset: dealer_api.dealer
     does: Orders for new dealer D-9001 start on day 11; the dealer appears in the interface on day 13.
+    params: {dealer: D-9001, region: west, appears_day: 13}
     expect:
       detector: LATE-02
       handled_by: [DPC-0046]
@@ -181,6 +205,7 @@ calendar:                             # story: one of the demo stories this worl
     dataset: erp.delivery
     does: The change feed silently skips 7 delivery rows during a source maintenance window.
     pick: 7
+    params: {}                        # pick says how many; the skipped rows are the day's first 7 deliveries
     expect:
       detector: REC-05
       handled_by: [DPC-0052, DPC-0015]
@@ -191,6 +216,7 @@ calendar:                             # story: one of the demo stories this worl
     kind: replay
     dataset: press_stream.press_reading
     does: After a reader restart, the stream replays the last 45 minutes of readings.
+    params: {restart_hour: 14, minutes: 45}
     expect:
       detector: DUP-04
       handled_by: [DPC-0086, DPC-0096]

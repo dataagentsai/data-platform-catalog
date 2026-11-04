@@ -1,5 +1,8 @@
 # DPM v0.2: ERP sales order lines. Push: the change-capture mover lands change files; history type 2 on the promised
-# date and quantity, because OTIF needs the date first promised (ADR-016). No product names here (R1).
+# date, quantity and line status, because OTIF needs the date first promised (ADR-016) and leaves out cancelled and
+# rejected lines. A cancellation changes line_status; it never zeroes the quantity. Corrections to these lines are
+# not source changes: they are rows in the metadata store's corrections table (ADR-017), read by fact_otif's
+# recompute. No product names here (R1).
 source_name: erp
 source_env: prod
 dataset_name: sales_order_line
@@ -16,10 +19,10 @@ config:
   cost_center: sales-analytics
 dedup: {mode: business_key_latest, business_keys: [order_id, line_no], order_by: change_seq}
 contract: ../../contracts/sales_order_line.odcs.yaml
-contract_version: 0.1.0
+contract_version: 0.2.0
 archetypes: [PA2]
 ingest: {mode: push, read: change_feed}
-history: {kind: transaction, type: scd2, track_columns: [promised_date, ordered_qty]}
+history: {kind: transaction, type: scd2, track_columns: [promised_date, ordered_qty, line_status]}
 load:
   pattern: history
   history_order_by: change_seq

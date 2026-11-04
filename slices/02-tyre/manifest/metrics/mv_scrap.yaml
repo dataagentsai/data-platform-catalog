@@ -1,3 +1,4 @@
+# Known answers are the tyre world's seed-11 values after its 14-day run (9 to 22 November), from the oracle's last day.
 kind: metric_view
 name: mv_scrap
 domain: manufacturing
@@ -15,7 +16,7 @@ measures:
     description: Tyres scrapped at inspection as a share of tyres cured.
     certification: certified
     synonyms: [scrap rate, scrap, reject rate, yield loss]
-    known_answer: {where: "plant = 'P-CHN' AND day = 2026-11-12", value: 0.0185, tolerance: 0.0001}
+    known_answer: {where: "plant = 'P-CHN' AND day = 2026-11-12", value: 0.0180, tolerance: 0.0001}
   - name: Tyres cured
     expr: SUM(tyres_cured)
     additive: true

@@ -8,7 +8,7 @@ status: draft
 domain: sales
 description:
   purpose: "One row per order line: was it delivered on time (by the date first promised) and in full."
-  limitations: "Partial deliveries count as not in full."
+  limitations: "Partial deliveries count as not in full. Only open lines are measured: lines whose line_status is cancelled or rejected are left out."
 schema:
   - name: fact_otif
     physicalName: gold_sales.fact_otif

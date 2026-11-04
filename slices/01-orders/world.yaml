@@ -37,7 +37,7 @@ population:
   orders_per_day: {min: 200, max: 400}
   status_flow: [placed, paid, shipped, delivered]
   cancel_share: 0.05
-  generator: faker                         # behind the population port; never a hosted generator (REUSE.md)
+  generator: seeded_random                 # Python's random, seed 7: deterministic, no package; never a hosted generator (REUSE.md)
 
 calendar:                                  # each entry: when, what, what must notice, what must handle it
   - id: same-batch-twice

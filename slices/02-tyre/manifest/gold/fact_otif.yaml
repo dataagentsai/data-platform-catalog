@@ -1,6 +1,9 @@
 # DPM v0.2 gold fact: on time in full. Modelled: one pure build() (a SQL model) inside the gold harness (ADR-003, D18).
 # The harness finds the promised-date days changed in either input, reads them in full, joins dimensions as of the
 # order time (ADR-005), lays active corrections over silver (ADR-017), checks, and replaces the days (ADR-006).
+# Only open lines are built: line_status cancelled or rejected is left out, so the reconcile compares against silver's
+# open lines. Corrections are read from the corrections table in the metadata store (ADR-010, ADR-017), where the
+# day-10 correction in world.yaml is recorded; a backfill plan names the promised-date windows to rebuild.
 kind: gold_fact
 name: fact_otif
 domain: sales

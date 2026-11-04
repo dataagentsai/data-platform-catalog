@@ -76,6 +76,10 @@ def test_every_history_kind_is_exercised():
     assert {m["history"]["kind"] for _, m in DOM["dataset"].values()} == {"master", "transaction", "event", "snapshot"}
 
 
+def _entry(w, incident_id):
+    return next(e for e in w["calendar"] if e["id"] == incident_id)
+
+
 WORLD_CASES = [
     ("valid as written", lambda w: None, None),
     ("detector not in DAC", lambda w: w["calendar"][0]["expect"].update(detector="ZZZ-01"), "not a DAC obligation"),
@@ -94,6 +98,20 @@ WORLD_CASES = [
      "erp.invoice has no manifest"),
     ("product name in the world", lambda w: w["systems"]["erp_db"].update(note="SAP on Redshift"), "product name 'redshift'"),
     ("duplicate incident id", lambda w: w["calendar"].append(copy.deepcopy(w["calendar"][0])), "duplicate incident id"),
+    # params: the incident's exact values, read by the world's generator (session C gap 1)
+    ("no params block", lambda w: w["calendar"][0].pop("params"), "no params block"),
+    ("params not a mapping", lambda w: w["calendar"][0].update(params=["D-0042"]), "params must be a mapping"),
+    ("params value is a list", lambda w: w["calendar"][0]["params"].update(presses=[1, 2]), "must be a single value"),
+    ("params day outside the clock", lambda w: _entry(w, "new-dealer-late")["params"].update(appears_day=20),
+     "appears_day = 20 is not a day of the clock"),
+    ("params share above 1", lambda w: _entry(w, "material-copy-short")["params"].update(missing_share=40),
+     "missing_share = 40 is not a share"),
+    ("params until_day before the incident", lambda w: _entry(w, "lab-column-renamed")["params"].update(until_day=6),
+     "until_day 6 is before the incident's day 7"),
+    ("params from_day after the incident", lambda w: _entry(w, "order-lines-deleted")["params"].update(from_day=5),
+     "from_day 5 is after the incident's day 4"),
+    ("empty params allowed", lambda w: w["calendar"][0].update(params={}), None),
+    ("product name in params", lambda w: w["calendar"][0]["params"].update(note="Kafka topic"), "product name 'kafka'"),
 ]
 
 
@@ -124,3 +142,43 @@ def test_incident_has_its_own_detector(incident, detector, borrowed):
     e = next(x for x in WORLD["calendar"] if x["id"] == incident)
     assert e["expect"]["detector"] == detector != borrowed
     assert any(detector in CAPS[c]["discharges"] for c in e["expect"]["handled_by"])
+
+
+# The values session C's world generator holds (PARAMS in world/domains/tyre.py) must be in the spec, so the two agree.
+PARAMS_CASES = [
+    ("readings-out-of-order", {"from_hour": 10, "hours": 2, "share": 0.04, "presses": 6, "max_delay_s": 90}),
+    ("order-lines-deleted", {"from_day": 1}),
+    ("sellout-file-late", {"dealer": "D-0042", "due_day": 1, "month": "2026-10"}),
+    ("sellout-file-resent", {"dealer": "D-0042", "month": "2026-10"}),
+    ("lab-column-renamed", {"plant": "P-HUN", "from_local_hour": 10, "column": "defect_code", "renamed_to": "defect",
+                            "until_day": 7}),
+    ("promised-date-out-of-order", {"from_day": 2}),
+    ("material-copy-short", {"missing_share": 0.40}),
+    ("promised-date-corrected", {"from_day": 2, "shift_days": 1, "activate_day": 11}),
+    ("new-dealer-late", {"dealer": "D-9001", "appears_day": 13, "region": "west"}),
+    ("change-feed-drops-rows", {}),
+    ("stream-replayed", {"restart_hour": 14, "minutes": 45}),
+]
+
+
+@pytest.mark.parametrize("incident,params", PARAMS_CASES, ids=[c[0] for c in PARAMS_CASES])
+def test_incident_params_match_the_world(incident, params):
+    assert _entry(WORLD, incident)["params"] == params
+
+
+LINE_STATUS_CASES = [
+    # (file, what must hold)
+    ("contract has line_status with three values", lambda c, m: next(
+        p for p in c["schema"][0]["properties"] if p["name"] == "line_status")["quality"][0]["arguments"]["validValues"]
+        == ["open", "cancelled", "rejected"]),
+    ("contract has an optional rejection_reason", lambda c, m: next(
+        p for p in c["schema"][0]["properties"] if p["name"] == "rejection_reason")["required"] is False),
+    ("manifest tracks line_status history", lambda c, m: "line_status" in m["history"]["track_columns"]),
+    ("manifest cites the contract version", lambda c, m: m["contract_version"] == c["version"]),
+]
+
+
+@pytest.mark.parametrize("name,check", LINE_STATUS_CASES, ids=[c[0] for c in LINE_STATUS_CASES])
+def test_order_line_status(name, check):
+    contract = yaml.safe_load((D / "contracts" / "sales_order_line.odcs.yaml").read_text())
+    assert check(contract, DOM["dataset"]["erp.sales_order_line"][1])
