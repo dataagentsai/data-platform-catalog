@@ -7,7 +7,6 @@ is_enabled: true
 kind: dataset
 config:
   load_type: FULL
-  extraction_mode: full
   sla_freshness_hours: "24"
   sla_freshness_error_hours: "48"
   schedule_trigger: cron

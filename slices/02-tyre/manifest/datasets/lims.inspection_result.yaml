@@ -7,7 +7,7 @@ is_enabled: true
 kind: dataset
 config:
   load_type: INCREMENTAL
-  file_format: csv
+  file_format_data: csv               # the source file's format (file_format is the sink format)
   file_pattern: "inspection_*.csv"
   csv_delimiter: ";"
   csv_has_header: "true"
@@ -29,7 +29,7 @@ load:
   deletes: {detect: none, apply: none}
   quarantine_stop_share: 0.02
 volume:
-  expected_rows_per_delivery: {min: 10, max: 2000}
+  expected_rows_per_delivery: {min: 1, max: 2000}   # a plant's first and last hour carry few inspections; empty is held
 quality:
   actions:
     major: {rows: quarantine, dataset: alert_owner, page: false}
