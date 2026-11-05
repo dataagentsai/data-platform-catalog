@@ -1,0 +1,54 @@
+id: bronze
+order: 3
+title: Bronze
+purpose: Keep every record exactly as delivered, traceable to its delivery, so anything later can be rebuilt.
+components: [lander, metadata_store]
+challenges:
+  - id: BRZ-01
+    title: Changing data on the way in
+    goes_wrong: Cleaning or removing duplicates in bronze destroys the evidence needed to rebuild or audit.
+    example: Stream replays and late readings are kept and flagged, not dropped.
+    solution: Bronze is append-only and raw; cleaning starts in silver.
+    verdict: solve
+    status: built
+    dac: [RAW-01]
+    practices: [BP-056]
+  - id: BRZ-02
+    title: Rows that cannot be traced
+    goes_wrong: Nobody can say which file or run a row came from.
+    example: Every bronze row carries its batch key, run id, source file and window.
+    solution: Load metadata on every row, and every run recorded with its configuration.
+    verdict: solve
+    status: built
+    dac: [OPS-03, CFG-03]
+  - id: BRZ-03
+    title: Personal data stored in clear text
+    goes_wrong: The rawest layer becomes the biggest privacy risk.
+    example: Dealer contact columns.
+    solution: Restricted columns are tokenised before the first write; the token key lives outside code.
+    verdict: solve
+    status: built
+    dac: [PII-01]
+    practices: [BP-035]
+  - id: BRZ-04
+    title: Replays and late events
+    goes_wrong: Dropping them hides problems; keeping them unflagged doubles counts downstream.
+    example: Day 3, 188 readings up to 90 seconds late; day 13, a 45-minute stream replay.
+    solution: Kept as delivered with arrival time and position; silver applies event time and de-duplication.
+    verdict: solve
+    status: built
+    dac: [DUP-04, LATE-03]
+    world_day: 13
+  - id: BRZ-05
+    title: Table layout decay
+    goes_wrong: Thousands of small files make every read slow.
+    example: Many small lab files a day.
+    solution: Automatic clustering and maintenance declared once in the binding, not hand-written jobs.
+    verdict: solve
+    status: built
+    dac: [PERF-05]
+    adr: [ADR-011]
+anti_patterns:
+  - practice: BP-056
+  - practice: BP-035
+  - practice: BP-134

@@ -1,0 +1,84 @@
+id: bronze_to_silver
+order: 4
+title: Bronze to silver
+purpose: Make one source faithful (typed, de-duplicated, history kept, deletes marked) with the same steps for every source.
+components: [silver_engine, des, metadata_store]
+challenges:
+  - id: B2S-01
+    title: A different pipeline per table
+    goes_wrong: Every table gets its own hand-written code, so each fixes the same problems differently.
+    example: Nine tyre datasets, one engine.
+    solution: One engine with thirteen standard stages driven by settings; stages are pure functions and reads and writes happen only at the edges.
+    verdict: solve
+    status: built
+    dac: [ENG-01, PURE-01]
+    adr: [ADR-007, ADR-013]
+  - id: B2S-02
+    title: Changes arriving out of order
+    goes_wrong: An older change applied after a newer one overwrites the current value.
+    example: Day 8, a promised-date change from earlier arrives after a newer one.
+    solution: History is ordered by the source's own sequence, never by arrival; the late change is inserted in its place.
+    verdict: solve
+    status: built
+    dac: [SCD-02]
+    world_day: 8
+  - id: B2S-03
+    title: Deletes
+    goes_wrong: Deleted rows are either lost from history or still counted.
+    example: Day 4, five order lines deleted.
+    solution: Deletes are soft (marked, kept joinable) and flow through to derived tables.
+    verdict: solve
+    status: built
+    dac: [DEL-01, DEL-03]
+    adr: [ADR-016]
+    world_day: 4
+  - id: B2S-04
+    title: Duplicates inside the source and replayed events
+    goes_wrong: The same reading or row counted twice.
+    example: Day 13, 19,440 replayed readings.
+    solution: De-duplicate by the declared key (for example the reading id) with a declared rule for which copy wins.
+    verdict: solve
+    status: built
+    dac: [DUP-03, DUP-04]
+    world_day: 13
+  - id: B2S-05
+    title: A bad full copy
+    goes_wrong: A short copy marks hundreds of records deleted.
+    example: Day 9, 720 of 1,800 materials missing.
+    solution: The mass-delete guard compares the copy with silver's current keys and holds the batch above the declared share.
+    verdict: solve
+    status: built
+    dac: [DEL-04]
+    world_day: 9
+  - id: B2S-06
+    title: Bad values
+    goes_wrong: Values that fail a rule are silently nulled or dropped, or one bad row stops the whole load.
+    example: An impossible cure temperature in a press reading.
+    solution: Rules in configuration with a severity that sets the action (warn, quarantine, block); quarantined rows are reviewed and released through the same checks.
+    verdict: solve
+    status: designed
+    dac: [DQ-02, DQ-03, SEV-01, QUAR-01]
+    adr: [ADR-009]
+  - id: B2S-07
+    title: A bad load that got through
+    goes_wrong: Found days later, after good loads built on it; restoring old versions throws the good loads away.
+    example: The day-9 short copy slipping past the guard.
+    solution: Void the batch, rebuild the silver table from bronze, rerun the gold windows that use it; recon and known answers prove it.
+    verdict: solve
+    status: designed
+    dac: [HIST-04, TEST-05]
+    adr: [ADR-025]
+  - id: B2S-08
+    title: Columns lost on the way
+    goes_wrong: A hand-picked column list silently drops a column a consumer needs.
+    example: A new contract column never reaches silver.
+    solution: Every contract column reaches silver unless a selection is declared.
+    verdict: solve
+    status: built
+    dac: [PROJ-01]
+    adr: [ADR-008]
+anti_patterns:
+  - practice: BP-072
+  - practice: BP-073
+  - practice: BP-074
+  - practice: BP-096

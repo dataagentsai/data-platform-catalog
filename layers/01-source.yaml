@@ -1,0 +1,79 @@
+id: source
+order: 1
+title: Source systems
+purpose: Know exactly what each source promises and how it changes, before reading a single row.
+components: [contracts, metadata_store, puller, lander]
+challenges:
+  - id: SRC-01
+    title: No contract with the source
+    goes_wrong: The source team renames or drops a column without telling anyone; loads break or quietly load the wrong thing.
+    example: Day 7, one plant's lab system renames defect_code to defect.
+    solution: One data contract per source dataset (columns, types, keys, personal-data class, freshness), checked at every load; a change outside the contract stops the batch and names the column.
+    verdict: assist
+    status: built
+    dac: [SCH-01, SCH-02, GATE-02]
+    world_day: 7
+  - id: SRC-02
+    title: Deletes are not signalled
+    goes_wrong: Rows vanish at the source and nothing downstream knows, so deleted orders keep counting.
+    example: Day 4, five order lines deleted in the order system; day 9, a nightly full copy arrives 40% short.
+    solution: Change feeds carry a delete marker; full copies are compared with what silver holds now, and a copy that would delete more than the declared share is held, not loaded.
+    verdict: solve
+    status: built
+    dac: [DEL-01, DEL-04]
+    adr: [ADR-016]
+    world_day: 4
+  - id: SRC-03
+    title: Full copies versus change feeds
+    goes_wrong: Reading a full copy every run is slow and hides deletes; reading a change feed without a starting copy misses history.
+    example: Materials arrive as a nightly full copy; order lines as a change feed.
+    solution: Each dataset declares how it is extracted (full copy, change feed, stream, paged interface) and how history is handed over to incremental loads.
+    verdict: assist
+    status: built
+    dac: [ING-01, HIST-03]
+  - id: SRC-04
+    title: Time zones and business dates
+    goes_wrong: Timestamps without a zone, or a day cut at midnight UTC, put production on the wrong business day.
+    example: Plants in India and Hungary record press readings in local time.
+    solution: Each source declares its time zone; the business date per plant is computed once in gold from a shared calendar.
+    verdict: solve
+    status: gap
+    dac: [LATE-04]
+  - id: SRC-05
+    title: Paged interfaces and rate limits
+    goes_wrong: A page fails halfway or the interface throttles, and the load either stops or skips records.
+    example: The dealer interface serves 200 records a page; a new dealer appears late (days 11 and 12).
+    solution: One batch per page with a cursor bookmark; retries only for passing failures; a reload of a paged interface is logged as a no-op because bronze is the replay point.
+    verdict: solve
+    status: built
+    dac: [ORCH-02, IDEMP-01]
+    adr: [ADR-002]
+    world_day: 11
+  - id: SRC-06
+    title: Files resent or late
+    goes_wrong: A partner sends the same file twice under a new name, or sends last month's file weeks late.
+    example: Day 5, dealer D-0042's October file arrives late; day 6, it is resent.
+    solution: The batch key is the file's content checksum, so a resend is refused; each file drop declares how many deliveries a period expects, so lateness is visible from the due day.
+    verdict: solve
+    status: built
+    dac: [DUP-01, LATE-01]
+    world_day: 6
+  - id: SRC-07
+    title: Personal data at the source
+    goes_wrong: Contact details flow into every layer in clear text.
+    example: Dealer contact email and phone, lab inspector ids.
+    solution: The contract marks each column's personal-data class; restricted columns are tokenised before they are first stored.
+    verdict: assist
+    status: built
+    dac: [PII-01, SEC-01]
+anti_patterns:
+  - id: AP-SRC-01
+    new: true
+    title: Trusting the source to announce its changes
+    why: Changes arrive unannounced; the first sign is a wrong number in a report.
+    instead: Check every load against a written contract and stop on a change.
+  - id: AP-SRC-02
+    new: true
+    title: Copying the whole source every run when a change feed exists
+    why: Slow and costly, and deletes stay invisible unless every copy is compared.
+    instead: Declare the extraction kind per dataset; use change feeds where offered and guard full copies.

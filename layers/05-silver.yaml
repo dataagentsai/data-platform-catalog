@@ -1,0 +1,53 @@
+id: silver
+order: 5
+title: Silver
+purpose: Hold each source's truth, cleaned and with history, without mixing sources yet.
+components: [silver_engine, des, observability]
+challenges:
+  - id: SLV-01
+    title: Conforming too early
+    goes_wrong: Joining sources in silver ties them together, so one late source blocks another and changes ripple everywhere.
+    example: Orders and dealers stay separate in silver.
+    solution: Silver is source-aligned; conforming and joining happen in gold. Data flows one way through the layers.
+    verdict: solve
+    status: built
+    dac: [FLOW-01]
+    adr: [ADR-001]
+  - id: SLV-02
+    title: The wrong kind of history
+    goes_wrong: History kept where it is not needed, or lost where it is.
+    example: Dealer region keeps history; a phone number is simply overwritten.
+    solution: History kind per dataset (and per attribute where needed) is declared; the engine applies it.
+    verdict: assist
+    status: built
+    dac: [SCD-02]
+    adr: [ADR-016]
+  - id: SLV-03
+    title: Late stream events
+    goes_wrong: Late readings land in the wrong hour or are dropped.
+    example: Day 3, 188 late readings.
+    solution: Event time with a declared late allowance; readings counted in their event hour.
+    verdict: solve
+    status: built
+    dac: [LATE-03]
+    world_day: 3
+  - id: SLV-04
+    title: Drift nobody sees
+    goes_wrong: A column's values shift slowly and nothing notices until a report is wrong.
+    example: Scrap reason codes changing mix.
+    solution: Every dataset is profiled on load and drift is visible and alertable.
+    verdict: solve
+    status: designed
+    dac: [PROF-01]
+  - id: SLV-05
+    title: Writes that are not repeatable
+    goes_wrong: A rerun adds rows or versions.
+    example: Rerunning day 8.
+    solution: Merge on a row key computed from the data; the bookmark records which bronze batches each run consumed.
+    verdict: solve
+    status: built
+    dac: [IDEMP-01, DUP-02]
+anti_patterns:
+  - practice: BP-074
+  - practice: BP-053
+  - practice: BP-134

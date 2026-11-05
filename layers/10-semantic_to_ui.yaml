@@ -1,0 +1,76 @@
+id: semantic_to_ui
+order: 10
+title: Semantic to experiences
+purpose: Serve dashboards, conversation interfaces, agents and apps the same certified numbers, cheaply and visibly fresh.
+components: [semantic_generators, observability, agents, app]
+challenges:
+  - id: UI-01
+    title: Dashboards re-querying raw tables
+    goes_wrong: Every open and every click scans large raw tables, and the warehouse bill grows with viewers.
+    example: A monitoring dashboard over raw platform telemetry.
+    solution: Dashboards read certified definitions over compact summary tables, with stored results refreshed when data changes.
+    verdict: solve
+    status: designed
+    dac: [COST-04, SERV-04]
+  - id: UI-02
+    title: A conversation interface roaming raw tables
+    goes_wrong: Plain-language questions produce heavy or wrong queries on raw data.
+    example: Asking for OTIF straight from silver.
+    solution: The conversation interface sees only certified definitions and verified functions for frequent questions.
+    verdict: solve
+    status: building
+    dac: [SERV-06]
+  - id: UI-03
+    title: One number, many tools
+    goes_wrong: The dashboard, the conversation interface and an agent disagree.
+    example: OTIF south November.
+    solution: All of them read the same certified definitions; known answers are tested.
+    verdict: solve
+    status: building
+    dac: [SERV-04]
+  - id: UI-04
+    title: Agents writing their own queries
+    goes_wrong: An agent's ad-hoc query is untested, unpermissioned and can be wrong.
+    example: A triage agent explaining a failed run.
+    solution: Agents call typed tools with fixed, tested queries; anything they propose goes to the owner's gate.
+    verdict: solve
+    status: designed
+    dac: [SERV-06, GATE-03]
+    adr: [ADR-023]
+  - id: UI-05
+    title: The cost of looking
+    goes_wrong: Watching and asking cost more than the pipelines themselves.
+    example: A monitoring template and plain-language questions over raw telemetry.
+    solution: Summary tables, stored results and verified functions under monitoring and conversation screens.
+    verdict: solve
+    status: designed
+    dac: [COST-04]
+  - id: UI-06
+    title: Stale screens
+    goes_wrong: A cached screen shows yesterday's number as today's.
+    example: A dashboard cached before a restatement.
+    solution: Refresh on data change; freshness and the provisional flag shown on the screen.
+    verdict: solve
+    status: designed
+    dac: [PERF-02, SERV-02]
+  - id: UI-07
+    title: Rebuilding what the platform gives
+    goes_wrong: A custom portal duplicates dashboards and catalog screens and falls behind.
+    example: Viewing dashboards in a custom app.
+    solution: Native screens for viewing; our own app only for actions (alerts, approvals, quarantine release, recovery, declarations).
+    verdict: people_decide
+    status: designed
+    dac: [GATE-03]
+anti_patterns:
+  - practice: BP-094
+  - practice: BP-107
+  - id: AP-UI-01
+    new: true
+    title: Agents querying tables directly
+    why: Untested, unpermissioned queries; answers that differ from the dashboard.
+    instead: Typed tools over certified definitions, with proposals going to a gate.
+  - id: AP-UI-02
+    new: true
+    title: A custom portal that rebuilds native dashboards
+    why: Twice the work, and it drifts from the governed screens.
+    instead: Link out to native screens; build only screens that take actions.

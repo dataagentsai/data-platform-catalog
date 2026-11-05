@@ -1,0 +1,70 @@
+id: ingestion
+order: 2
+title: Ingestion
+purpose: Bring every delivery in exactly once, with a recorded outcome, through one set of entry steps.
+components: [lander, puller, metadata_store, observability]
+challenges:
+  - id: ING-01
+    title: Push and pull behave differently
+    goes_wrong: Files pushed by a source and data pulled by the platform go through different code, so the same problem is caught on one path and missed on the other.
+    example: Partner files are pushed; the order database is pulled.
+    solution: Pushed files land and go through the lander; pulled data runs the same lander steps in the same process, straight to bronze.
+    verdict: solve
+    status: built
+    dac: [ING-01]
+    adr: [ADR-002]
+  - id: ING-02
+    title: Reruns that double the data
+    goes_wrong: A retried load appends the same rows again.
+    example: A failed run is restarted halfway through a day.
+    solution: Every batch has a key; bronze writes replace by batch key, and a run restarts after the last batch the file log shows as loaded.
+    verdict: solve
+    status: built
+    dac: [DUP-02, IDEMP-01, ORCH-03]
+  - id: ING-03
+    title: Duplicate deliveries
+    goes_wrong: The same content arrives twice and is counted twice.
+    example: Day 6, the partner file resent under a new name.
+    solution: The content checksum is the batch key; the landing area refuses a second write of the same delivery.
+    verdict: solve
+    status: built
+    dac: [DUP-01]
+    world_day: 6
+  - id: ING-04
+    title: Partial or empty deliveries
+    goes_wrong: A half-written file or an empty batch is loaded as if complete.
+    example: A lab file arrives with three rows on a day that normally has hundreds.
+    solution: A declared volume band per dataset; empty and out-of-band batches are held with the reason in the file log; every file ends with a recorded outcome.
+    verdict: solve
+    status: built
+    dac: [DQ-04, FILE-01]
+  - id: ING-05
+    title: Large history loads and backfills
+    goes_wrong: Loading years of history through the daily path overwhelms it, or the handover to daily loads loses or repeats a day.
+    example: Backfilling a month of order lines.
+    solution: Reload and backfill are declared run types with a plan in the metadata store; the handover point is recorded.
+    verdict: solve
+    status: built
+    dac: [HIST-03, HIST-04]
+  - id: ING-06
+    title: Credentials in code
+    goes_wrong: Passwords in notebooks or repositories leak and cannot be rotated.
+    example: Database and interface credentials for four sources.
+    solution: Secrets resolved at run time from the secret store, per environment; never in the repository.
+    verdict: solve
+    status: built
+    dac: [REL-05, REL-04]
+  - id: ING-07
+    title: Schema drift at the door
+    goes_wrong: A changed column loads into the wrong place or as nulls.
+    example: Day 7, the renamed lab column.
+    solution: The contract check stops the batch and names the column; new columns are kept aside or stop the batch, as the dataset declares.
+    verdict: assist
+    status: built
+    dac: [SCH-01, SCH-02]
+    world_day: 7
+anti_patterns:
+  - practice: BP-045
+  - practice: BP-046
+  - practice: BP-022
+  - practice: BP-096

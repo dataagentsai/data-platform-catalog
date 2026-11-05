@@ -1,0 +1,129 @@
+id: silver_to_gold
+order: 6
+title: Silver to gold
+purpose: Make several sources agree on keys, grain, time and meaning, without losing or doubling a row.
+components: [gold_harness, metadata_store, des, observability]
+challenges:
+  - id: S2G-01
+    title: Rows dropped in joins
+    goes_wrong: An inner join to a missing dealer or material silently drops sales.
+    example: Sales naming a dealer not yet in the dealer table.
+    solution: Left join plus an unknown member; rows in must equal rows out, with unmatched rows and duplicate keys counted separately so they cannot cancel out.
+    verdict: solve
+    status: building
+    dac: [LATE-02, PUB-01]
+    adr: [ADR-004]
+    practices: [BP-088]
+  - id: S2G-02
+    title: Conforming keys across sources
+    goes_wrong: The same customer has different codes in different systems, so totals split or double.
+    example: An order-system customer code, a dealer interface id and a name in partner files.
+    solution: Mapping tables kept by a steward, with suggested matches; deterministic hash surrogate keys.
+    verdict: assist
+    status: designed
+    dac: [KEY-01]
+    adr: [ADR-004]
+  - id: S2G-03
+    title: Grain and double counting
+    goes_wrong: Joining one to many multiplies quantities.
+    example: Order lines joined to deliveries.
+    solution: Grain declared per fact and tested unique; joins aggregated to the fact's grain first; fan-out detected from captured query plans.
+    verdict: solve
+    status: building
+    dac: [DES-04]
+    practices: [BP-093]
+  - id: S2G-04
+    title: Which version of history applies
+    goes_wrong: A sale is joined to today's dealer region instead of the region on the day of the sale.
+    example: A dealer moving region mid-month.
+    solution: Joins as of the event date on history tables.
+    verdict: solve
+    status: building
+    dac: [SCD-04]
+    adr: [ADR-005]
+  - id: S2G-05
+    title: Completeness across sources
+    goes_wrong: Four of six inputs have arrived; publishing gives partial numbers that look final.
+    example: Lab results four hours late; partner files a day late.
+    solution: Inputs declared per fact, a completeness signal per input, and a declared policy per fact (wait, publish provisional, or wait then provisional with a maximum wait); every window carries a complete flag.
+    verdict: solve
+    status: building
+    dac: [ORCH-01, SERV-02]
+    adr: [ADR-018]
+  - id: S2G-06
+    title: Late facts and restatements
+    goes_wrong: October's numbers change in November, or late rows are ignored.
+    example: Day 5, dealer D-0042's October file.
+    solution: Recompute exactly the windows the new data touched (replace, never append) and log the restatement.
+    verdict: solve
+    status: building
+    dac: [LATE-01, GOLD-01]
+    adr: [ADR-006]
+    world_day: 5
+  - id: S2G-07
+    title: Late reference data
+    goes_wrong: A fact arrives before its dealer exists and is dropped or keyed wrong.
+    example: Days 11 and 12, new dealer D-9001.
+    solution: Unknown member first, re-keyed when the dealer arrives.
+    verdict: solve
+    status: building
+    dac: [LATE-02]
+    world_day: 11
+  - id: S2G-08
+    title: Corrections
+    goes_wrong: The source fixes a past value and old reports silently change, or never change.
+    example: Day 10, twelve promised dates corrected.
+    solution: Corrections live in their own table and reach gold only for the windows their plan names, logged as a restatement.
+    verdict: solve
+    status: building
+    dac: [HIST-05]
+    adr: [ADR-017]
+    world_day: 10
+  - id: S2G-09
+    title: Deletes reaching gold
+    goes_wrong: A deleted line still counts.
+    example: The day-4 deleted order lines.
+    solution: Gold reads current, non-deleted rows when windows recompute.
+    verdict: solve
+    status: building
+    dac: [DEL-03]
+  - id: S2G-10
+    title: Time zones and business calendars
+    goes_wrong: Days cut at the wrong hour; fiscal periods computed differently in each report.
+    example: Plants in India and Hungary.
+    solution: Business date per plant and one shared calendar, declared once.
+    verdict: solve
+    status: gap
+    dac: [LATE-04]
+  - id: S2G-11
+    title: Recompute cost
+    goes_wrong: Rebuilding everything every night is slow and costly.
+    example: Fourteen days of order lines.
+    solution: Only the windows the new data touched are recomputed.
+    verdict: solve
+    status: building
+    dac: [GOLD-01]
+  - id: S2G-12
+    title: Functional join mistakes in hand-written queries
+    goes_wrong: Inner instead of left, a wrong key, a many-to-many join; the query runs and the numbers are wrong.
+    example: Two dealers missing and one duplicated, so the net row count looks almost normal.
+    solution: Declared join shapes checked against captured plans and observed counts of unmatched rows and duplicate keys.
+    verdict: solve
+    status: designed
+    dac: [DES-04]
+  - id: S2G-13
+    title: Proving gold is right
+    goes_wrong: A quiet two percent error goes unnoticed for months.
+    example: OTIF south November must equal 0.8961.
+    solution: Known answers from the synthetic world in tests; reconciliation from silver to gold in production.
+    verdict: solve
+    status: building
+    dac: [REC-01, SIM-01]
+anti_patterns:
+  - practice: BP-088
+  - practice: BP-089
+  - practice: BP-090
+  - practice: BP-092
+  - practice: BP-095
+  - practice: BP-098
+  - practice: BP-100

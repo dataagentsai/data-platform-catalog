@@ -1,0 +1,50 @@
+id: semantic
+order: 9
+title: Semantic layer
+purpose: Keep every business definition in one governed place that people, tools and agents all read.
+components: [semantic_generators, metadata_store]
+challenges:
+  - id: SEM-01
+    title: Definitions nobody agreed
+    goes_wrong: Two teams certify different OTIF formulas.
+    example: Partial deliveries counted or not.
+    solution: The tool versions, certifies and tests definitions and flags two that disagree; the definition itself is a business decision.
+    verdict: people_decide
+    status: building
+    dac: [SERV-04]
+    adr: [ADR-022]
+  - id: SEM-02
+    title: Definitions that change silently
+    goes_wrong: Last year's number changes and nobody knows why.
+    example: OTIF definition changed in January.
+    solution: Versioned definitions with a restatement note.
+    verdict: solve
+    status: designed
+    dac: [SERV-04]
+  - id: SEM-03
+    title: Words people actually use
+    goes_wrong: Questions in plain language miss because people say sell-through, sell-out or sales.
+    example: Synonyms for OTIF.
+    solution: Synonyms and descriptions declared with each metric; new synonyms suggested from questions asked.
+    verdict: assist
+    status: building
+    dac: [SERV-06]
+  - id: SEM-04
+    title: Security inside metrics
+    goes_wrong: A regional manager sees other regions' totals through an aggregate.
+    example: Region-level sales.
+    solution: Row filters declared once and applied in every metric.
+    verdict: solve
+    status: building
+    dac: [SEC-02]
+  - id: SEM-05
+    title: Provisional numbers that look final
+    goes_wrong: A partial window is read as final.
+    example: Sales while one dealer's file is missing.
+    solution: The complete flag from gold is carried into every metric and shown.
+    verdict: solve
+    status: building
+    dac: [SERV-02]
+anti_patterns:
+  - practice: BP-094
+  - practice: BP-107

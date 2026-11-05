@@ -1,0 +1,50 @@
+id: gold_to_semantic
+order: 8
+title: Gold to semantic
+purpose: Turn gold into numbers people use, each defined once, aggregated correctly and honest about completeness.
+components: [semantic_generators, metadata_store]
+challenges:
+  - id: G2S-01
+    title: Aggregating ratios wrongly
+    goes_wrong: Averaging OTIF percentages across plants gives the wrong total; inventory summed over months is meaningless.
+    example: OTIF by region.
+    solution: Each measure declares whether it is additive, semi-additive or non-additive; ratios are built from their parts.
+    verdict: solve
+    status: designed
+    dac: [SERV-04]
+  - id: G2S-02
+    title: One number, many definitions
+    goes_wrong: The dashboard, the conversation interface and a spreadsheet each compute OTIF differently.
+    example: OTIF counting or not counting cancelled lines.
+    solution: One certified definition per metric, generated from the manifest, as the only source for every consumer.
+    verdict: solve
+    status: building
+    dac: [SERV-04, SERV-06]
+    adr: [ADR-022]
+  - id: G2S-03
+    title: Comparing across facts
+    goes_wrong: OTIF and sales by region cannot be compared because the regions differ.
+    example: Region from the dealer table versus region from the plant table.
+    solution: Conformed dimensions declared once and reused by every metric.
+    verdict: solve
+    status: designed
+    dac: [SERV-04]
+  - id: G2S-04
+    title: Time intelligence
+    goes_wrong: Year to date and fiscal periods computed differently each time.
+    example: Fiscal year starting in April.
+    solution: One shared calendar with business dates and fiscal periods.
+    verdict: solve
+    status: gap
+    dac: [LATE-04]
+  - id: G2S-05
+    title: Incomplete windows inside a ratio
+    goes_wrong: Lines not yet due count as missed, so the ratio looks worse than the truth.
+    example: OTIF counted every line of the month; over complete windows it is 0.8961.
+    solution: Ratios count complete windows only; counts of rows still cover every row.
+    verdict: solve
+    status: building
+    dac: [SERV-02]
+anti_patterns:
+  - practice: BP-094
+  - practice: BP-102

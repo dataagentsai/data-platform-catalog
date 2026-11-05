@@ -1,0 +1,73 @@
+id: gold
+order: 7
+title: Gold
+purpose: Model the business correctly (grain, fact type, shared dimensions, history) and publish only what passed its checks.
+components: [gold_harness, metadata_store, des]
+challenges:
+  - id: GLD-01
+    title: Undeclared grain
+    goes_wrong: Nobody can say what one row means, so numbers cannot be added up safely.
+    example: Is OTIF per order line or per delivery?
+    solution: Grain declared per fact and tested unique; a grain is suggested from key profiling and confirmed by the modeller.
+    verdict: assist
+    status: building
+    dac: [DES-04]
+    practices: [BP-093]
+  - id: GLD-02
+    title: The wrong fact type
+    goes_wrong: Snapshots summed over time, or an order's current stage impossible to answer.
+    example: Sales are transactions; inventory is a periodic snapshot; order to delivery is an accumulating snapshot.
+    solution: Fact type declared per fact; the harness builds the matching pattern.
+    verdict: assist
+    status: designed
+    dac: [DES-04]
+  - id: GLD-03
+    title: Dimensions that do not conform
+    goes_wrong: Two dashboards disagree on the same region.
+    example: One plant dimension shared by OTIF and scrap.
+    solution: Shared dimensions declared once; the bus matrix (which facts share which dimensions) generated from the declarations.
+    verdict: assist
+    status: designed
+    dac: [SERV-04]
+  - id: GLD-04
+    title: History per attribute
+    goes_wrong: Sales move to a new region retroactively, or history that matters is lost.
+    example: Dealer region keeps history; phone does not.
+    solution: History type declared per attribute; joins as of the event.
+    verdict: assist
+    status: building
+    dac: [SCD-04]
+  - id: GLD-05
+    title: Roles, bridges and facts about absence
+    goes_wrong: Order date and delivery date confused; a dealer in two groups counted twice; nothing counts what did not happen.
+    example: One date dimension used as order, promised and delivery date.
+    solution: Role-playing dimensions, bridge tables with weights and factless facts declared and generated; which absences matter is a business decision.
+    verdict: people_decide
+    status: designed
+    dac: [DES-04]
+  - id: GLD-06
+    title: Keys that change on every rebuild
+    goes_wrong: Identity or sequence keys differ after a rerun, breaking every join and saved report.
+    example: Rebuilding gold after a correction.
+    solution: Deterministic hash surrogate keys with reserved members for unknown and not applicable.
+    verdict: solve
+    status: building
+    dac: [KEY-01]
+    adr: [ADR-004]
+    practices: [BP-091]
+  - id: GLD-07
+    title: Publishing unchecked numbers
+    goes_wrong: A broken build reaches dashboards before anyone looks.
+    example: A gold window with orphan rows above the limit.
+    solution: Checks before publish (keys, totals against the build, orphan rate); a failure publishes nothing.
+    verdict: solve
+    status: building
+    dac: [PUB-01]
+    practices: [BP-099]
+anti_patterns:
+  - practice: BP-093
+  - practice: BP-102
+  - practice: BP-091
+  - practice: BP-099
+  - practice: BP-097
+  - practice: BP-101
