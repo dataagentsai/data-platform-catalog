@@ -11,10 +11,10 @@ dimensions:
   - {name: Tyre class, expr: dim_material.tyre_class}
 measures:
   - name: OTIF %
-    expr: SUM(on_time_in_full) / COUNT(1)
+    expr: SUM(on_time_in_full) FILTER (WHERE _is_complete) / COUNT(1) FILTER (WHERE _is_complete)
     additive: false
     time_dimension: Promised month
-    description: Share of open order lines (not cancelled or rejected) delivered by the date first promised and in full.
+    description: Share of open order lines (not cancelled or rejected) delivered by the date first promised and in full, over complete windows only (a line not yet due is neither on time nor missed; W1d finding, 5 Nov).
     certification: certified
     synonyms: [on-time delivery, on time in full, OTIF, delivery performance]
     known_answer: {where: "region = 'south' AND promised month = 2026-11", value: 0.8961, tolerance: 0.0005}
