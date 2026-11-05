@@ -37,16 +37,16 @@ bindings:
     proves: [SCH-02, HIST-04, DEL-01, DEL-04]
   table_writer:
     approach: platform
-    adapter: Lakeflow Declarative Pipelines AUTO CDC (SCD type 1 and 2, SEQUENCE BY, apply_as_deletes), append with txnAppId/txnVersion for bronze, replaceWhere for gold windows
+    adapter: Delta MERGE from our history processor (SCD type 1 and 2, change order, soft deletes), append with txnAppId/txnVersion for bronze, replaceWhere for gold windows; AUTO CDC dropped (ADR-026)
     coverage: partial
-    gap: AUTO CDC needs a batch key and load columns it does not make, and does not refuse a resend.
+    gap: Delta gives MERGE and idempotent append; ordering, history, the batch key and refusing a resend are ours.
     gap_filled_by: {approach: in-house, adapter: "dataplatform.lander (batch key, load columns, resend skipped)"}
     metadata_keys: [load.pattern, load.history_order_by, load.deletes, dedup.business_keys, history.kind, history.track_columns]
-    settings: {layout: "CLUSTER BY AUTO", maintenance: predictive optimization}
+    settings: {layout: "liquid clustering: bronze by batch key, silver by business key", maintenance: predictive optimization}
     proves: [DUP-01, DUP-02, SCD-02, DEL-01, HIST-04, PERF-05]
   stage_runner:
     approach: framework
-    adapter: one generated Declarative Pipeline per source running our thirteen stage functions (PySpark), tables defined in a loop from metadata
+    adapter: our thirteen processors (PySpark, one interface) as a Lakeflow Job task on job compute; Declarative Pipelines dropped (ADR-026)
     coverage: partial
     gap: Pipelines run any code; the stage list, per-column settings and cast-failure rules are ours.
     gap_filled_by: {approach: in-house, adapter: dataplatform.stages}
