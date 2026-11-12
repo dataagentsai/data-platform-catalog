@@ -170,3 +170,9 @@ proposed:
 - key: gaps_allowed
   why: 'For history kind source_versioned (ADR-032): whether the source may leave gaps between versions; default false.'
   add_to_registry: B5
+- key: circuit_failure_threshold
+  why: 'Failed calls in a row after which a source is left alone for circuit_reset_seconds (B7, X18); default 3.'
+  add_to_registry: B7
+- key: circuit_reset_seconds
+  why: 'How long an open circuit keeps a source from being called before one trial call (B7, X18); default 1800.'
+  add_to_registry: B7
