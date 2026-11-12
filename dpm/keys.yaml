@@ -176,3 +176,15 @@ proposed:
 - key: circuit_reset_seconds
   why: 'How long an open circuit keeps a source from being called before one trial call (B7, X18); default 1800.'
   add_to_registry: B7
+- key: mover
+  why: 'Which mover delivers this dataset into landing (ADR-033, GP2): the binding names the product per value, e.g.
+    change_capture | file_transfer | pull_job | pull_function | drop (the source writes landing itself).'
+  add_to_registry: B5
+- key: mover_secret_ref
+  why: 'The secret://<name> reference the mover uses to reach the source (DPC-0029); never a value. The legacy
+    connection_secret_name (kv://) stays for the old realm.'
+  add_to_registry: B5
+- key: mover_parallelism
+  why: 'How many parallel reads a pull mover may open against the source (JDBC partitions, concurrent pages); bounded
+    by the source''s max_concurrent_datasets.'
+  add_to_registry: B5
