@@ -125,3 +125,48 @@ proposed:
   why: 'The registry schedules by cron only; slice 1 starts a load when the delivery manifest exists (DPC-0004).
     Values: cron | on_delivery.'
   add_to_registry: DE-037
+- key: table_format
+  why: 'The open table format a dataset''s tables are written in (ADR-027). Values: iceberg | delta | hudi; the binding
+    sets the default, a dataset may override.'
+  add_to_registry: B5
+- key: lane_path
+  why: 'Which golden path moves this dataset (ADR-030), e.g. p1_files | p2_stream | p4_other_compute; the binding
+    sets the default, chosen per dataset after the benchmark.'
+  add_to_registry: B5
+- key: cdc_op_column
+  why: 'Column in a change-capture delivery that holds the operation (I, U, D); default op. A change-capture service
+    may name it differently (ADR-031, B3).'
+  add_to_registry: B5
+- key: cdc_position_column
+  why: 'Column that holds an integer feed position used for the feed bookmark; default feed_pos. Empty when the
+    service gives none (its change sequence then orders history through load.history_order_by).'
+  add_to_registry: B5
+- key: cdc_commit_column
+  why: 'Column that holds the source commit time of a change; default committed_at (ADR-034 stamps it).'
+  add_to_registry: B5
+- key: landing_hot_days
+  why: 'Days a delivery stays in landing before it moves to the landing archive (ADR-029); default 30.'
+  add_to_registry: B5
+- key: landing_archive_days
+  why: 'Days a delivery stays in the landing archive (ADR-029); default as long as bronze, 90 when the dataset holds
+    personal data.'
+  add_to_registry: B5
+- key: bronze_retention_days
+  why: 'Days bronze keeps a batch before a baseline batch replaces the oldest history (ADR-029); default 1095.'
+  add_to_registry: B5
+- key: bronze_baseline
+  why: 'Whether a baseline batch is written before old bronze ages out (ADR-029); default true; small reference
+    tables may keep bronze forever instead.'
+  add_to_registry: B5
+- key: version_history_days
+  why: 'Days of table version history kept for undo (time travel), ADR-029; default 7.'
+  add_to_registry: B5
+- key: valid_from_column
+  why: 'For history kind source_versioned (ADR-032): the source column that holds a version''s start.'
+  add_to_registry: B5
+- key: valid_to_column
+  why: 'For history kind source_versioned (ADR-032): the source column that holds a version''s end.'
+  add_to_registry: B5
+- key: gaps_allowed
+  why: 'For history kind source_versioned (ADR-032): whether the source may leave gaps between versions; default false.'
+  add_to_registry: B5
