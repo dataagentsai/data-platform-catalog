@@ -5,7 +5,7 @@
 # cloud. The base bindings below are Databricks on a paid workspace; the free-edition profile replaces what Free
 # Edition lacks and carries over everything slice 1 proved (it was slices/01-orders/binding-databricks.yaml).
 #
-# Sources: the deck's AWS + Databricks big picture and "who provides what" (apollo-deck xyz.py, bigpic_aws.py),
+# Sources: the deck's AWS + Databricks big picture and "who provides what" (the client deck sources),
 # ~/clean-data-engineering/FREE-EDITION.md, and the slice 1 build (data-platform-framework branch slice1).
 apiVersion: data-binding-layer/v0.1
 layer: engine

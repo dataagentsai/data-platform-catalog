@@ -4,7 +4,7 @@
 # streams, identity, keys, network, infrastructure and the cloud's own logs. It never names an
 # engine feature; dbs/engine/*.yaml does, and a stack in dbs/stacks/ composes the two.
 #
-# Sources: the deck's AWS + Databricks big picture and "who provides what" (apollo-deck xyz.py, bigpic_aws.py) and
+# Sources: the deck's AWS + Databricks big picture and "who provides what" (the client deck sources) and
 # the ETL page (cleandataengineering-site _guides/etl_aws.py: sources, landing contract, movers, alerts, jobs).
 apiVersion: data-binding-layer/v0.1
 layer: cloud

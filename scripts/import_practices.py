@@ -7,10 +7,10 @@
 Kept for provenance, like import_dac_v0.py. Do not run it again: practices/*.yaml are now the source, edited by
 hand, and the page is generated from them by build_practices_page.py.
 
-    git -C ~/apollo-deck show cbf5283:site/Engineering-Best-Practices.html > /tmp/original.html
+    git -C <client deck repo> show <commit>:site/Engineering-Best-Practices.html > /tmp/original.html
     uv run scripts/import_practices.py /tmp/original.html
 
-The input must be the original hand-written page (apollo-deck commit cbf5283), not the generated one.
+The input must be the original hand-written page (the client deck repo, its first hand-written commit), not the generated one.
 """
 import json
 import re
