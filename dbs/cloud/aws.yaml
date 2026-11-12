@@ -15,7 +15,9 @@ catalog:
   dpc: 0.2.0
 decisions:
   landing_layout: {value: "s3://<env>-landing/<source>/<dataset>/<date>/; a separate personal-data landing bucket", source: chosen}
-  pick_order: {value: "machines: Kinesis; SAP: AppFlow OData; changing databases: DMS CDC; small tables: our puller; SaaS: AppFlow; partners: Transfer Family SFTP", source: chosen}
+  pick_order: {value: "machines: AWS IoT Core rule to S3 files (platform lane) plus a second rule action for the live lane (streaming on hold); SAP: AppFlow OData; changing databases: DMS full load + CDC to S3 as Parquet with a change-sequence header column; existing AWS Glue jobs that drop files: kept as push movers; new pulls: AWS Glue jobs (JDBC) and AWS Lambda (APIs) writing landing (ADR-033); SaaS: AppFlow; partners: Transfer Family SFTP; Kinesis only when replay or several live readers are needed", source: chosen}
+  federated_catalog: {value: "AWS Glue Data Catalog federation to the Unity Catalog Iceberg REST API, with a resource link per domain; Lake Formation vends S3 credentials and holds grants generated from the same manifest as Unity Catalog (ADR-028); AWS engines read only", source: chosen}
+  file_formats: {value: "landing as delivered (ADR-031): DMS and Firehose asked for Parquet; IoT payloads JSON (Protobuf if bandwidth matters) with schemas in AWS Glue Schema Registry; tables Iceberg on Parquet", source: chosen}
 thresholds:
   dms_source_log_retention_hours: 72
   personal_landing_max_hours: 23
@@ -24,7 +26,7 @@ thresholds:
 bindings:
   mover:
     approach: cloud-native
-    adapter: AWS DMS (full load then CDC to Parquet), Amazon AppFlow (SAP OData, SaaS), AWS Transfer Family SFTP with a rename workflow; each generated from source_config
+    adapter: AWS DMS (full load then CDC to Parquet), Amazon AppFlow (SAP OData, SaaS), AWS Transfer Family SFTP with a rename workflow, the clients existing AWS Glue jobs (file drops), and new pull movers on AWS Glue (JDBC) and AWS Lambda (APIs) that meet the landing contract (ADR-033); each generated from source_config
     coverage: partial
     gap: AppFlow and SFTP write no row-count manifest; DMS cannot write one at all.
     gap_filled_by: {approach: in-house, adapter: "EventBridge rule + Lambda writes the manifest and starts the lander; DMS reconciled daily against its table statistics"}

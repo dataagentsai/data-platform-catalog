@@ -69,9 +69,16 @@
   kernel_owns: >-
     Which pattern a dataset uses (from the manifest), the business key, the batch key that makes a rerun change
     nothing, and the load metadata columns on every row.
-  supplied_outside: The table format, its transactions, and how a merge or overwrite is executed.
+  supplied_outside: >-
+    The open table format (a binding choice, ADR-027), its transactions, and how a merge or overwrite is executed.
+    Tables are addressed by catalog name, never by folder path; whether a batch is already written is answered by the
+    kernel's file log, not by a format feature.
   operations:
-    - {name: write, intent: Write a batch to a table by the dataset's declared pattern and batch key, in one transaction.}
+    - {name: read, intent: Read a table's current rows or one window of it.}
+    - {name: append, intent: Append a batch once; skip it when the file log says its batch key is already committed.}
+    - {name: merge, intent: Apply rows carrying an action (upsert or delete) by key, in one transaction.}
+    - {name: replace_window, intent: Replace one window of a table and leave every other window untouched.}
+    - {name: upkeep, intent: Compact files, expire old versions and refresh statistics; a no-op where the platform does it automatically.}
     - {name: fingerprint, intent: Return row count and key totals for a table or a window of it.}
     - {name: restore, intent: Return a table to an earlier version., optional: true}
   invariants:
@@ -86,6 +93,10 @@
     - must: History tables end with one current row per key whatever the arrival order.
       because: Out-of-order changes are normal in change capture.
       obligation: SCD-02
+      checkable: dynamic
+    - must: Upkeep never changes a table's row count or key totals, and every format adapter gives the same results.
+      because: The format is a binding choice; a client's answer must not depend on it.
+      obligation: PERF-05
       checkable: dynamic
 
 - port: contract_enforcer
