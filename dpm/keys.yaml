@@ -188,3 +188,6 @@ proposed:
   why: 'How many parallel reads a pull mover may open against the source (JDBC partitions, concurrent pages); bounded
     by the source''s max_concurrent_datasets.'
   add_to_registry: B5
+- key: silver_engine
+  why: "Which engine builds silver for this dataset (ADR-035): job (our stages on job compute, the default) or declarative (the same stages inside a declarative pipeline, history by its managed change capture); the binding sets the default, a dataset may override; the loader refuses a combination the engine cannot honour."
+  add_to_registry: B16

@@ -229,3 +229,25 @@
   - BLD-01
   realization_policy: own
   see_also: []
+- id: DPC-0115
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: "Selectable bronze-to-silver engine"
+  concern: X1
+  stages:
+  - silver
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  core: true
+  port: stage_runner
+  requirement: "The platform MUST run bronze to silver through a stage-runner port with at least a job engine and a declarative engine, chosen per dataset by the setting silver_engine, both calling the same stage functions and writing the same tables and run log."
+  failure_mode: "Clients asking for declarative pipelines got a separate hand-written pipeline per dataset that drifted from the platform's rules."
+  discharges:
+  - ENG-02
+  realization_policy: own
+  see_also:
+  - DPC-0114

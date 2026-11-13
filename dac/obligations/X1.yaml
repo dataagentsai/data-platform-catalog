@@ -183,3 +183,28 @@
     runtime: false
     review: "Code review: a per-table build that reads or writes a table, moves a watermark or looks up a key is rejected."
     gap: "No build-time check yet: a static check that a build function does no input or output is proposed."
+- id: ENG-02
+  status: draft
+  since: 0.2.0
+  title: "Every bronze-to-silver engine runs the same stages and passes the same proof"
+  concern: X1
+  level: MUST
+  core: true
+  dimension: consistency
+  stages:
+  - silver
+  statement: "When more than one engine can build silver, each engine MUST call the same stage functions from the same metadata, MUST write the same tables and run log, MUST pass the same contract tests and the full simulated world against the oracle, and MUST refuse a dataset whose settings it cannot honour."
+  failure_mode: "A second engine was added with its own copy of the cleaning rules; a fix to one was never made in the other, and two datasets disagreed on what a valid date was."
+  test: "Run every dataset of the simulated world on each engine; silver must equal the oracle on both, and a dataset asking one engine for a feature it lacks must be refused at load."
+  evidence: "One stage package, an engine setting per dataset, one contract test table for the stage runner, and world runs per engine in continuous integration."
+  cites: []
+  related:
+  - ENG-01
+  - PURE-01
+  - BLD-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: "Design review of any new engine: it must call the shared stage functions, not copies."
+    gap: "No build-time check yet: the second engine and its contract table are being built (ADR-035)."

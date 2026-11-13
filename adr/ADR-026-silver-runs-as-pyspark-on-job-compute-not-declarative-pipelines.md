@@ -54,3 +54,5 @@ append, SCD 1, SCD 2, snapshot window; full overwrite to be added as a snapshot 
 
 Revisit if the managed change-capture feature becomes available on job compute at job-compute prices. Product names
 for this decision live in the engine binding (`dbs/engine/`) (silver writer).
+
+Amended 13 Nov 2026 by ADR-035: this decision is now the `job` engine; a `declarative` engine is offered beside it, chosen per dataset.

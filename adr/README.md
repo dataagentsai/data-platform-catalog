@@ -66,4 +66,5 @@ product names the port, and the binding names the product), and the index below 
 | [ADR-032](ADR-032-history-a-source-already-keeps-is-validated-not-rebuilt.md) | History a source already keeps is validated, not rebuilt: a fifth history kind, source-versioned | accepted | X15, X4 | DPC-0085, DPC-0025, DPC-0011 |
 | [ADR-033](ADR-033-a-pull-mover-outside-the-engine-writes-landing-like-a-push-mover.md) | A pull mover outside the engine writes landing like a push mover | accepted | X3, X15, X12 | DPC-0038, DPC-0037, DPC-0023 |
 | [ADR-034](ADR-034-every-hop-stamps-its-time-delay-is-reported-end-to-end-and-per-hop.md) | Every hop stamps its own time; delay is reported end to end and per hop, measured or modeled | accepted | X8, X9 | DPC-0020, DPC-0022, DPC-0057 |
+| [ADR-035](ADR-035-two-bronze-to-silver-engines-behind-one-port-chosen-per-dataset.md) | Two bronze-to-silver engines behind one port, chosen per dataset | accepted | X1, X15, X17 | DPC-0115 |
 <!-- END index -->
