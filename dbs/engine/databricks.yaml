@@ -15,7 +15,7 @@ catalog:
   dac: 0.2.0
   dpc: 0.2.0
 decisions:
-  D6: {value: "silver engine per dataset (ADR-035): job = our PySpark stages in Lakeflow Jobs on job compute (ADR-026, default); declarative = the same stages inside Spark Declarative Pipelines (open source, or Lakeflow on Databricks for expectations, AUTO CDC from snapshot and the event log), history by AUTO CDC; gold modelled facts in the harness as SQL or pure PySpark (D18)", source: chosen}
+  D6: {value: "silver engine per dataset (ADR-035): job = our PySpark stages in Lakeflow Jobs on job compute (ADR-026, default); declarative = the same stages inside Spark Declarative Pipelines (open source, or Lakeflow on Databricks for expectations, AUTO CDC from snapshot and the event log), history by AUTO CDC (checked 13 Nov: open-source AUTO CDC SCD2 needs Spark 4.3, which no Iceberg or Delta release supports yet, so the declarative engine binds to Lakeflow first; open source when a format supports Spark 4.3); gold modelled facts in the harness as SQL or pure PySpark (D18)", source: chosen}
   D11: {value: "push movers write landing; the lander and the puller are our PySpark code", source: chosen}
   ADR-011: {value: "liquid clustering CLUSTER BY AUTO; predictive optimization on every managed table", source: golden-path}
   ADR-012: {value: "catalogs <env>_<layer> (landing, bronze, silver, gold, ops), schemas per source or domain", source: chosen}

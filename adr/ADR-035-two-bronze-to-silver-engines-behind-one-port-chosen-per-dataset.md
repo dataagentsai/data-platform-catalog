@@ -73,3 +73,5 @@ the two engines is generated from the binding and published with the comparison.
 Amends ADR-026 (which stays accepted for the `job` engine). Product names, editions and the open-source question
 about managed change capture live in the engine binding (`dbs/engine/`). First build: the spike of 13 Nov (one
 dataset through the open-source declarative engine on the default table format (ADR-027), compressed world), then all datasets.
+
+Spike step 1 (13 Nov 2026): the open-source declarative engine's managed change capture keeps SCD Type 2 history only in an engine version that no open table format supports yet (details in the binding and in the framework's spikes/sdp_silver). Until then the declarative engine binds to the vendor's product; the open-source binding is rerun when a format catches up.
