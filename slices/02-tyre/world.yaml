@@ -222,6 +222,26 @@ calendar:                             # story: one of the demo stories this worl
       handled_by: [DPC-0086, DPC-0096]
       oracle: no reading is counted twice; press-hour totals equal the world's truth
 
+calendars:                            # the same incidents on other days; chosen by name at run time, never by default
+  compressed:
+    purpose: >-
+      The 3-day development loop (user, 13 Nov): every incident above lands on day 2 or 3, so a short run on the
+      platform still meets all eleven. Day 1 stays clean, because several incidents reach back to it. The loader
+      refuses a move that breaks the order (a source day after the incident, an effect before it).
+    days: 3
+    moves:
+      readings-out-of-order: {day: 2}
+      order-lines-deleted: {day: 2, from_day: 1}
+      sellout-file-late: {day: 2, due_day: 1}
+      sellout-file-resent: {day: 3}
+      lab-column-renamed: {day: 2, until_day: 2}
+      promised-date-out-of-order: {day: 3, from_day: 1}
+      material-copy-short: {day: 2}
+      promised-date-corrected: {day: 2, from_day: 1, activate_day: 3}
+      new-dealer-late: {day: 2, appears_day: 3}
+      change-feed-drops-rows: {day: 3}
+      stream-replayed: {day: 3}
+
 covers: [late_data, resend, schema_change, deletes, out_of_order, mass_delete, correction, late_dimension, recon_mismatch]
 
 oracles:                              # judged from world state, never from the platform's own logs
