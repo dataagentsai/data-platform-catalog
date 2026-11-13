@@ -52,3 +52,24 @@
   - PERF-05
   realization_policy: own
   see_also: []
+- id: DPC-0112
+  status: draft
+  since: 0.2.0
+  level: SHOULD
+  title: "Aggregate register"
+  concern: X19
+  stages:
+  - gold
+  - semantic
+  archetypes:
+  - PA5
+  - PA9
+  - PA10
+  core: false
+  port: semantic_layer
+  requirement: "The platform SHOULD keep a register of aggregate tables and stored query results with their question, grain, owner and last read, SHOULD refresh them only for changed windows, and SHOULD report unread ones for removal."
+  failure_mode: "Summary tables built for a dashboard that was retired kept refreshing for a year."
+  discharges:
+  - AGG-01
+  realization_policy: bind
+  see_also: []

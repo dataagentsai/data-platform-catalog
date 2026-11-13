@@ -139,3 +139,25 @@
   adr:
   - ADR-021
   see_also: []
+- id: DPC-0113
+  status: draft
+  since: 0.2.0
+  level: SHOULD
+  title: "Business glossary feeding catalog and metrics"
+  concern: X13
+  stages:
+  - silver
+  - gold
+  - semantic
+  archetypes:
+  - PA5
+  - PA9
+  - PA10
+  core: false
+  port: data_catalog
+  requirement: "The platform SHOULD keep business concepts, identifiers, relationships and definitions in version control and SHOULD push them to the catalog's glossary and the metric descriptions."
+  failure_mode: "Glossary terms were typed into the catalog by hand and drifted from the metric definitions within a month."
+  discharges:
+  - ONT-01
+  realization_policy: bind
+  see_also: []

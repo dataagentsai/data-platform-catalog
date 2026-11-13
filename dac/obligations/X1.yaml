@@ -159,3 +159,27 @@
     runtime: true
     review: Review rejects code written for one dataset that writes a platform table.
     gap: null
+- id: BLD-01
+  status: draft
+  since: 0.2.0
+  title: "Per-table code holds only the business rule"
+  concern: X1
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - gold
+  statement: "Code written for one gold table MUST hold only its business rule; reading inputs, watermarks, windows, keys, completeness, checks, writing and logging MUST be done by the shared engine from declared metadata."
+  failure_mode: "Each of thirty notebooks handled late data its own way; a fix for one was never made in the other twenty-nine."
+  test: "Read every per-table build: none may read or write a table, move a watermark or look up a surrogate key itself."
+  evidence: "One shared engine, metadata per table, per-table builds that take inputs and return rows, and a test that fails if a build does input or output."
+  cites: []
+  related:
+  - ENG-01
+  - PURE-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: false
+    review: "Code review: a per-table build that reads or writes a table, moves a watermark or looks up a key is rejected."
+    gap: "No build-time check yet: a static check that a build function does no input or output is proposed."

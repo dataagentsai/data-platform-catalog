@@ -176,3 +176,33 @@
     review: Every conversation space and agent tool is reviewed to read certified metrics only.
     gap: 'No build-time check yet: SL-SEM-07 (a metric with no known-answer test) catches part of it but does not
       name this obligation; nothing checks before deploy that a conversation space reads certified metrics only.'
+- id: ONT-01
+  status: draft
+  since: 0.2.0
+  title: "Business concepts are written down once"
+  concern: X13
+  level: SHOULD
+  core: false
+  dimension: null
+  stages:
+  - silver
+  - gold
+  - semantic
+  statement: "Business concepts, what identifies each one, how they relate and what their words mean SHOULD be written once, and gold names, keys, conformed dimensions and metric descriptions SHOULD be derived from that record."
+  failure_mode: "Three teams each defined 'active customer' differently; the AI assistant gave three answers to the same question."
+  test: "Pick ten gold columns and metrics; each must trace to a concept and definition in the shared record."
+  evidence: "A glossary or ontology in version control with concepts, identifiers, relationships and definitions, feeding the catalog and the semantic layer."
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Metadata Management, chapter 12
+  - standard: Ossie
+    ref: metric
+  related:
+  - SERV-04
+  - DIM-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: false
+    review: "Design review: every new gold table and metric names the concept and definition it comes from."
+    gap: "No build-time check yet: a glossary file and a link check from gold to it are proposed."

@@ -35,3 +35,30 @@
     runtime: true
     review: null
     gap: null
+- id: AGG-01
+  status: draft
+  since: 0.2.0
+  title: "Pre-aggregates exist only for a named question"
+  concern: X19
+  level: SHOULD
+  core: false
+  dimension: null
+  stages:
+  - gold
+  - semantic
+  statement: "Aggregate tables and stored query results SHOULD exist only for a named slow or costly question, at the coarsest grain that question needs, built from additive measures only, refreshed only for changed windows, owned, and removed when query history shows nobody reads them."
+  failure_mode: "Forty summary tables refreshed every hour; query history showed six were ever read, and the refreshes cost more than every dashboard together."
+  test: "Compare each aggregate against query history for the last thirty days; unread ones must be listed for removal, and each kept one must name its question."
+  evidence: "A register of aggregates with their question, grain, owner and last read, and a monthly report from query history."
+  cites:
+  - standard: Kimball-DWTK
+    ref: Kimball Dimensional Modeling Techniques Overview, chapter 2
+  related:
+  - MEAS-01
+  - PERF-05
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: "No build-time check yet: found only by the runtime test."

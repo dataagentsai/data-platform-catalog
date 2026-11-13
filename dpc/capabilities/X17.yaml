@@ -128,3 +128,45 @@
   - REL-07
   realization_policy: bind
   see_also: []
+- id: DPC-0110
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: "Release data diff"
+  concern: X17
+  stages:
+  - gold
+  - semantic
+  archetypes:
+  - PA5
+  - PA9
+  - PA10
+  core: false
+  port: deployer
+  requirement: "The release process MUST run a changed build on production's inputs into a separate place, MUST compare outputs per window and per known answer with current outputs, and MUST block release until every difference is explained."
+  failure_mode: "A changed join passed code review and unit tests and silently removed a region's sales in production."
+  discharges:
+  - DIFF-01
+  realization_policy: own
+  see_also: []
+- id: DPC-0111
+  status: draft
+  since: 0.2.0
+  level: SHOULD
+  title: "Step inspection and window replay"
+  concern: X17
+  stages:
+  - silver
+  - gold
+  archetypes:
+  - PA5
+  - PA9
+  - PA10
+  core: false
+  port: run_log
+  requirement: "The shared engine SHOULD log each step's query with its values, SHOULD keep step outputs for a chosen run for a few days on request, and SHOULD rebuild one window locally from the inputs its run log names."
+  failure_mode: "Developers debugged by copying production tables into notebooks, which broke access rules and took days."
+  discharges:
+  - INSP-01
+  realization_policy: own
+  see_also: []

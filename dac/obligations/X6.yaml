@@ -198,3 +198,29 @@
     review: Design review checks that every full-copy dataset declares its maximum delete share.
     gap: 'No build-time check yet: a full copy that declares no maximum delete share is not caught before deploy;
       found only by the runtime test.'
+- id: LEDG-01
+  status: draft
+  since: 0.2.0
+  title: "Every run keeps a row ledger"
+  concern: X6
+  level: MUST
+  core: true
+  dimension: completeness
+  stages:
+  - silver
+  - gold
+  statement: "Each run MUST count rows per step (read per input, removed per named filter, in and out per join, given an unknown key, rejected with a reason, written) and the counts MUST balance, so the step where rows were lost or added can be named without rerunning."
+  failure_mode: "Gold was short by 3,000 rows; it took two days to find that a filter added for one dealer was removing every dealer's cancelled lines."
+  test: "In test, plant rows that a filter removes and a join drops; the ledger must name both steps with the right counts, and an unbalanced ledger must fail the run."
+  evidence: "Per-step counts in the run log, a balance check before publish, and the ledger shown on the operations screen."
+  cites: []
+  related:
+  - REC-01
+  - REC-05
+  - JOIN-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: "No build-time check yet: found only by the runtime test."

@@ -156,3 +156,24 @@
   adr:
   - ADR-016
   see_also: []
+- id: DPC-0109
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: "Row ledger per step"
+  concern: X6
+  stages:
+  - silver
+  - gold
+  archetypes:
+  - PA5
+  - PA9
+  - PA10
+  core: true
+  port: run_log
+  requirement: "Every run MUST record rows per step (read per input, removed per named filter, in and out per join, unknown keys, rejected, written) and MUST fail before publish when the ledger does not balance."
+  failure_mode: "Only the final row count was logged; a loss inside a join was found weeks later by a business user."
+  discharges:
+  - LEDG-01
+  realization_policy: own
+  see_also: []

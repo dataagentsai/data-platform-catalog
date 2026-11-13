@@ -111,3 +111,53 @@
     runtime: true
     review: null
     gap: null
+- id: DIFF-01
+  status: draft
+  since: 0.2.0
+  title: "A change is compared with today's output before release"
+  concern: X17
+  level: MUST
+  core: false
+  dimension: consistency
+  stages:
+  - gold
+  - semantic
+  statement: "A change to a gold build, its metadata or the shared engine MUST be run on the same inputs as production into a separate place, compared with current outputs per window (rows, keys, measure totals) and per known answer, and every difference MUST be explained before release."
+  failure_mode: "A tidy-up of a SQL build changed a join from left to inner; unit tests passed, and a region's sales vanished from the dashboard after release."
+  test: "Plant a change that drops one dealer's rows; the comparison must show the difference and block release until it is explained."
+  evidence: "A comparison report per release, known-answer results, and the release record linking them."
+  cites: []
+  related:
+  - TEST-03
+  - DUP-02
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: false
+    review: "Release review: the comparison report is attached to the pull request and every difference is explained."
+    gap: "No build-time check yet: the comparison run is proposed, not built."
+- id: INSP-01
+  status: draft
+  since: 0.2.0
+  title: "Developers can see every step"
+  concern: X17
+  level: SHOULD
+  core: false
+  dimension: null
+  stages:
+  - silver
+  - gold
+  statement: "For any run and window, a developer SHOULD be able to see the exact query each step ran with its values filled in, inspect each step's intermediate result on demand, and rebuild that one window on their own machine from the inputs the run log names."
+  failure_mode: "A wrong total could only be debugged by copying production data into a notebook and guessing which step to print; it took a week."
+  test: "Pick a past run; reproduce one window locally from its run log and get the same rows as production."
+  evidence: "Logged queries per step, an inspect mode that keeps step outputs for a run for a short time, and a replay command."
+  cites: []
+  related:
+  - PURE-01
+  - LEDG-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: false
+    review: "Design review of the engine's logging and replay before a new step type is added."
+    gap: "No build-time check yet: inspect mode and window replay are proposed, not built."

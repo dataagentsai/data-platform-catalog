@@ -365,3 +365,31 @@
     runtime: true
     review: null
     gap: 'No build-time check yet: found only by the runtime test.'
+- id: JOIN-01
+  status: draft
+  since: 0.2.0
+  title: "A lookup join never adds or loses rows"
+  concern: X4
+  level: MUST
+  core: true
+  dimension: accuracy
+  stages:
+  - gold
+  - semantic
+  statement: "Facts MUST link to dimensions only by surrogate key, every dimension MUST be unique on that key, and every lookup join MUST return exactly as many rows as it was given; a fact MUST NOT be joined row to row to another fact."
+  failure_mode: "A report joined order lines to the dealer table on the dealer code; dealers with three history versions tripled their sales."
+  test: "On every run, count rows before and after each lookup join (they must be equal) and check each dimension is unique on its key; in tests, join a member with several history versions."
+  evidence: "Row counts per join in the run log, a uniqueness check per dimension, and drill-across queries that aggregate each fact to a common grain before combining."
+  cites:
+  - standard: Kimball-DWTK
+    ref: Kimball Dimensional Modeling Techniques Overview, chapter 2
+  related:
+  - SCD-04
+  - DIM-01
+  - LEDG-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: "No build-time check yet: found only by the runtime test."

@@ -211,3 +211,25 @@
   - DUP-02
   realization_policy: bind
   see_also: []
+- id: DPC-0103
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: "Gold model declaration: bus matrix, fact kinds, measure additivity"
+  concern: X3
+  stages:
+  - gold
+  archetypes:
+  - PA5
+  - PA9
+  - PA10
+  core: true
+  port: model_runner
+  requirement: "The platform MUST hold, per gold table, its kind, grain sentence, change mode, conformed dimensions and each measure's additivity, validated when loaded, and MUST generate the bus matrix from these declarations so a dimension used by two facts is built once."
+  failure_mode: "Two teams built their own dealer table and declared nothing; the overlap was found only when two reports disagreed in a board meeting."
+  discharges:
+  - DIM-01
+  - FACT-01
+  - MEAS-01
+  realization_policy: own
+  see_also: []

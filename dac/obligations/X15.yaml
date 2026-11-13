@@ -441,3 +441,60 @@
     runtime: true
     review: A correction and the backfill plan that activates it are approved in the pull request.
     gap: 'No build-time check yet: found only by the runtime test.'
+- id: WM-01
+  status: draft
+  since: 0.2.0
+  title: "Watermarks are safe to rely on"
+  concern: X15
+  level: MUST
+  core: true
+  dimension: completeness
+  stages:
+  - silver
+  - gold
+  statement: "Each table's watermark per input MUST be kept in the metadata store in a unit that never ties or goes backwards, the run MUST fix its high mark when it starts, the watermark MUST move only after the write and its checks succeed, and moving it back MUST be a logged action with a reason."
+  failure_mode: "A job moved its timestamp watermark before writing; it crashed after the move, and the next run skipped two hours of orders."
+  test: "In test, crash a run after the write but before the checks, and after the checks but before the watermark moves; the rerun must leave no gap and no double."
+  evidence: "Watermark rows in the metadata store with the run that moved them, a fixed high mark in each run's record, and a log of every reset."
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Integration and Interoperability, chapter 8
+  related:
+  - IDEMP-01
+  - ORCH-03
+  - HIST-03
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: "No build-time check yet: found only by the runtime test."
+- id: VOID-01
+  status: draft
+  since: 0.2.0
+  title: "A bad batch can be withdrawn"
+  concern: X15
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - bronze
+  - silver
+  - gold
+  - semantic
+  statement: "A batch found bad after it was published MUST be withdrawable: marked void with a reason, removed from every layer it reached by rebuilding the affected windows from the nearest correct copy, hidden from readers or flagged until then, and logged; rows MUST NOT be deleted by hand."
+  failure_mode: "A corrupt file was found a day late; someone deleted its rows from gold by hand, the next run brought them back, and nobody could say what had been removed."
+  test: "In test, publish a planted bad batch, void it, and check every layer and every metric equals the truth without it, with the void and the rebuilds in the run log."
+  evidence: "Batch keys on every row, a void record in the metadata store, lineage from batch to gold windows, and rebuild runs that name the void."
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Integration and Interoperability, chapter 8
+  related:
+  - HIST-04
+  - LATE-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: "No build-time check yet: found only by the runtime test."

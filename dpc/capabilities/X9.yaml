@@ -88,3 +88,24 @@
   adr:
   - ADR-021
   see_also: []
+- id: DPC-0107
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: "Window completeness from inputs and owed feeds"
+  concern: X9
+  stages:
+  - gold
+  - semantic
+  archetypes:
+  - PA5
+  - PA9
+  - PA10
+  core: true
+  port: model_runner
+  requirement: "The shared engine MUST mark each fact window complete only when every input's watermark is past the window's end and every feed that owes data for it has delivered, and MUST write the flag on the window's rows."
+  failure_mode: "Completeness was taken from the newest file's date, so a month looked complete while dealers' files were still owed."
+  discharges:
+  - COMP-01
+  realization_policy: own
+  see_also: []

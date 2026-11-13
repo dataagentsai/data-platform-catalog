@@ -125,3 +125,31 @@
     runtime: true
     review: null
     gap: 'No build-time check yet: found only by the runtime test.'
+- id: RSTM-01
+  status: draft
+  since: 0.2.0
+  title: "A published number that changes is recorded"
+  concern: X14
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - gold
+  - semantic
+  statement: "When a window already published changes, the run MUST record the window, its old and new numbers, the reason (late data, correction plan, rebuild) and the run, and the record MUST be readable by the people who use the numbers."
+  failure_mode: "Last month's sales changed by two percent overnight; finance asked why, and nobody could say what had changed or when."
+  test: "In test, deliver a late row into a published window; a restatement record with old and new totals and the reason must appear."
+  evidence: "A restatement table or run-log entries per changed window, and a screen or report that lists them."
+  cites:
+  - standard: OpenLineage
+    ref: RunEvent
+  related:
+  - COMP-01
+  - HIST-05
+  - LATE-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: "No build-time check yet: found only by the runtime test."

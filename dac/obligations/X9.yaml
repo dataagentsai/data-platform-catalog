@@ -130,3 +130,28 @@
     runtime: true
     review: null
     gap: 'No build-time check yet: found only by the runtime test.'
+- id: COMP-01
+  status: draft
+  since: 0.2.0
+  title: "A window is complete only when everything owed has arrived"
+  concern: X9
+  level: MUST
+  core: true
+  dimension: completeness
+  stages:
+  - gold
+  - semantic
+  statement: "A window of a fact MUST be marked complete only when every input has loaded past the window's end and every feed that owes data for that window has delivered it; until then readers MUST see it flagged incomplete."
+  failure_mode: "A monthly sales figure was published as final when the late dealer file arrived, while forty other dealers' files were still missing."
+  test: "In test, deliver all but one owed feed, then the last; the window must stay incomplete until the last arrives."
+  evidence: "A completeness flag per window, the inputs and owed feeds behind it in the run log, and the flag exposed in the semantic layer."
+  cites: []
+  related:
+  - SERV-02
+  - LATE-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: null
+    gap: "No build-time check yet: found only by the runtime test."

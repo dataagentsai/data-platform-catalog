@@ -240,3 +240,87 @@
     runtime: true
     review: The owner and the main consumers agree the contract before first publish.
     gap: null
+- id: DIM-01
+  status: draft
+  since: 0.2.0
+  title: "Conformed dimensions are built once and shared"
+  concern: X3
+  level: MUST
+  core: true
+  dimension: consistency
+  stages:
+  - gold
+  statement: "A dimension that more than one fact uses (date, customer, product, site) MUST be built once, in one shared place, by one owner, and every fact MUST link to that one table; copies per domain MUST NOT exist."
+  failure_mode: "Sales and deliveries each kept their own dealer list; a renamed dealer showed under two names, and the two reports never agreed."
+  test: "List every fact's dimensions; each dimension name must resolve to exactly one table, and no two tables may hold the same business key set for the same concept."
+  evidence: "A bus matrix (processes against dimensions), one table per conformed dimension with a named owner, and a shared date dimension used in roles."
+  cites:
+  - standard: Kimball-DWTK
+    ref: Kimball Dimensional Modeling Techniques Overview, chapter 2
+  - standard: DAMA-DMBOK
+    ref: Data Warehousing and Business Intelligence, chapter 11
+  related:
+  - DES-04
+  - KEY-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: false
+    review: "Design review of the bus matrix: every dimension used by two facts resolves to one shared table with an owner."
+    gap: "No build-time check yet: a generated bus matrix that flags two tables for one concept is proposed."
+- id: FACT-01
+  status: draft
+  since: 0.2.0
+  title: "Every fact declares its kind and how its rows change"
+  concern: X3
+  level: MUST
+  core: true
+  dimension: null
+  stages:
+  - gold
+  statement: "Every fact MUST declare its kind (transaction, periodic snapshot, accumulating snapshot, factless, aggregate or consolidated), its grain in one sentence, and how its rows change (append, replace by window, update by grain key, versioned, or reversal rows)."
+  failure_mode: "An order-lifecycle fact was loaded as append-only events; every status change added a row, and order counts tripled."
+  test: "For each fact, read the declaration and load the same change twice in test; the result must match the declared change mode."
+  evidence: "The fact's metadata (kind, grain sentence, change mode) and a test per change mode."
+  cites:
+  - standard: Kimball-DWTK
+    ref: Kimball Dimensional Modeling Techniques Overview, chapter 2
+  - standard: DAMA-DMBOK
+    ref: Data Warehousing and Business Intelligence, chapter 11
+  related:
+  - DES-04
+  - GOLD-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: false
+    review: "Design review of each new fact: kind, grain sentence and change mode declared before its build is written."
+    gap: "No build-time check yet: the gold manifest loader should refuse a fact with no kind or change mode."
+- id: MEAS-01
+  status: draft
+  since: 0.2.0
+  title: "Every measure says how it adds up"
+  concern: X3
+  level: MUST
+  core: true
+  dimension: accuracy
+  stages:
+  - gold
+  - semantic
+  statement: "Every measure MUST declare whether it is additive, semi-additive (and how it rolls up over time) or non-additive; a non-additive measure such as a ratio MUST be stored as its numerator and denominator and divided only in the metric definition."
+  failure_mode: "A dashboard averaged each dealer's on-time percentage to get a company figure, and showed 91% when the true figure was 84%."
+  test: "For each ratio in the semantic layer, check the fact stores both parts and the metric divides the sums; for each semi-additive measure, check the metric does not sum it over time."
+  evidence: "Additivity on every measure in the contract, ratios defined once in the semantic layer, and a test per non-additive measure."
+  cites:
+  - standard: Kimball-DWTK
+    ref: Kimball Dimensional Modeling Techniques Overview, chapter 2
+  - standard: Ossie
+    ref: metric
+  related:
+  - SERV-04
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: false
+    review: "Design review of each measure's additivity, and of every ratio's numerator and denominator in the metric definition."
+    gap: "No build-time check yet: the metric generator should refuse a ratio stored as a single measure."

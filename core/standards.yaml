@@ -37,3 +37,9 @@ Ossie:
   licence: Apache-2.0
   ref_style: object name, for example metric
   verified: true
+Kimball-DWTK:
+  name: The Data Warehouse Toolkit, The Definitive Guide to Dimensional Modeling (Kimball and Ross)
+  version: "3rd edition (2013)"
+  licence: copyright; cite chapter name and number only, never quote
+  ref_style: chapter name and number, for example "Kimball Dimensional Modeling Techniques Overview, chapter 2"
+  verified: false   # chapter names from memory of the table of contents, not yet checked on a copy

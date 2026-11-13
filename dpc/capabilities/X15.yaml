@@ -341,3 +341,50 @@
   - FLOW-01
   realization_policy: own
   see_also: []
+- id: DPC-0105
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: "Watermark store with fixed high marks"
+  concern: X15
+  stages:
+  - silver
+  - gold
+  archetypes:
+  - PA5
+  - PA9
+  - PA10
+  - PA2
+  core: true
+  port: run_log
+  requirement: "The run log MUST keep a watermark per table and input, MUST fix each run's high mark at its start, MUST move watermarks only after the write and checks, and MUST record every reset with its reason and author."
+  failure_mode: "A watermark kept in a notebook variable was lost when the job was moved; the new job started from the beginning and loaded a year twice."
+  discharges:
+  - WM-01
+  realization_policy: own
+  see_also: []
+- id: DPC-0106
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: "Batch void and downstream rebuild"
+  concern: X15
+  stages:
+  - bronze
+  - silver
+  - gold
+  - semantic
+  archetypes:
+  - PA5
+  - PA9
+  - PA10
+  - PA1
+  - PA2
+  core: true
+  port: metadata_service
+  requirement: "The platform MUST let an operator void a batch with a reason, MUST find the windows it reached in every layer from lineage, MUST rebuild them from the nearest correct copy, and MUST flag those windows to readers until the rebuild is done."
+  failure_mode: "A bad batch was removed from silver but gold kept its numbers for a week, because nothing knew which gold windows it had touched."
+  discharges:
+  - VOID-01
+  realization_policy: own
+  see_also: []

@@ -75,3 +75,24 @@
   - SEC-04
   realization_policy: bind
   see_also: []
+- id: DPC-0108
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: "Restatement log"
+  concern: X14
+  stages:
+  - gold
+  - semantic
+  archetypes:
+  - PA5
+  - PA9
+  - PA10
+  core: true
+  port: run_log
+  requirement: "The shared engine MUST record every published window whose numbers change, with old and new totals, the reason and the run, and the platform MUST show the records to the numbers' users."
+  failure_mode: "A correction changed last quarter's totals and nobody could show an auditor what the report had said before."
+  discharges:
+  - RSTM-01
+  realization_policy: own
+  see_also: []
