@@ -82,3 +82,5 @@ dataset through the open-source declarative engine on the default table format (
 Spike step 1 (13 Nov 2026): the open-source declarative engine's managed change capture keeps SCD Type 2 history only in an engine version that no open table format supports yet (details in the binding and in the framework's spikes/sdp_silver). Until then the declarative engine binds to the vendor's product; the open-source binding is rerun when a format catches up.
 
 Spike step 1b (14 Nov 2026): on the vendor's declarative product, the same flow with our stage code inside passed all five history checks, for both the default format and the format readable as the open format; findings in the binding and the framework's spikes/sdp_silver/README.md.
+
+Step 4 (14 Nov 2026): the generic declarative definition over the metadata store gives silver equal to the job engine on all six tyre datasets it accepts (two SCD Type 2, one SCD Type 1, three append), 0 differing rows; the loader refuses the other three with reasons. The shared SCD Type 2 contract (8 cases) passes on both engines.
