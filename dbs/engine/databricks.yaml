@@ -41,7 +41,7 @@ bindings:
     approach: platform
     adapter: "one small adapter per open table format behind the port (ADR-027): Apache Iceberg (default; Unity Catalog managed Iceberg, MERGE INTO, INSERT OVERWRITE by window, snapshot expiry and compaction as upkeep), Delta Lake (MERGE, replaceWhere, OPTIMIZE/VACUUM or predictive optimization), Apache Hudi (benchmark only, open-source Spark libraries outside Unity Catalog); tables addressed as catalog.schema.table; AUTO CDC dropped (ADR-026)"
     coverage: partial
-    gap: The formats give MERGE, window overwrite and versions; ordering, history, the batch key, refusing a resend (via our file log) and the upkeep schedule are ours. Check whether predictive optimization covers managed Iceberg on our workspace tier.
+    gap: 'The formats give MERGE, window overwrite and versions; ordering, history, the batch key, refusing a resend (via our file log) and the upkeep schedule are ours. Probed on Free Edition 13 Nov: Unity Catalog managed Iceberg works (Type MANAGED, Provider iceberg) with insert, MERGE upsert/delete, MERGE ... WHEN NOT MATCHED BY SOURCE (window replace), ADD COLUMNS, CLUSTER BY AUTO and OPTIMIZE; liquid clustering needs TBLPROPERTIES delta.enableDeletionVectors = false and delta.enableRowTracking = false at creation.'
     gap_filled_by: {approach: in-house, adapter: "dataplatform.lander (batch key, load columns, resend skipped)"}
     metadata_keys: [table_format, load.pattern, load.history_order_by, load.deletes, dedup.business_keys, history.kind, history.track_columns]
     settings: {layout: "liquid clustering: bronze by batch key, silver by business key", maintenance: "predictive optimization where offered, else the upkeep operation on a schedule", formats: "iceberg (default), delta, hudi"}
