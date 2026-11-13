@@ -65,6 +65,7 @@ systems:                              # each is a mock source system the world w
     resolution: mock
     datasets: [partner.dealer_sellout]
     delivers: {partner.dealer_sellout: one CSV per dealer per month, in the first 5 days of the month}
+    file_window_days: 5               # each dealer's monthly file arrives on one of the first N days of the clock
   dealer_api:
     kind: rest_api
     resolution: mock
@@ -229,9 +230,11 @@ calendars:                            # the same incidents on other days; chosen
       platform still meets all eleven. Day 1 stays clean, because several incidents reach back to it. The loader
       refuses a move that breaks the order (a source day after the incident, an effect before it).
     days: 3
+    world:                            # existing world settings this calendar changes (a path that is not there is an error)
+      systems.partner_drop.file_window_days: 1   # every on-time October file on day 1, so October can complete in 3 days
     moves:
       readings-out-of-order: {day: 2}
-      order-lines-deleted: {day: 2, from_day: 1}
+      order-lines-deleted: {day: 3, from_day: 1}   # lines are cancelled the day after from_day, deleted after that
       sellout-file-late: {day: 2, due_day: 1}
       sellout-file-resent: {day: 3}
       lab-column-renamed: {day: 2, until_day: 2}
