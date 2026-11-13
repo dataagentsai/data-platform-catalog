@@ -61,6 +61,11 @@ reason, never silently run another way.
 * Bad, because two shells to keep working and a second world run in continuous integration (about two minutes)
 * Bad, because per-batch void and rebuild is weaker on the declarative engine (a full refresh, or the rebuild run on the job engine)
 * Neutral: quarantine with reasons stays ours on both; the vendor's quality rules may feed it, never replace it
+* Restriction: a table built by the declarative engine is owned by its pipeline; no job may write to it, so a void-and-rebuild on such a dataset is a full refresh of the table or a correction fed through its change feed (ADR-025 weaker)
+* Restriction: tables of definitions that are removed or renamed stay behind and keep their owner; teardown drops them explicitly
+* Restriction: properties that must be set at creation (format features) need a new table; a full refresh keeps the old features
+* Restriction: changing a flow's logic or schema may force a full refresh, which replays only what the source still holds; the baseline batch before bronze ages out (retention rule) keeps history rebuildable
+* Restriction: the vendor's declarative tables are its own format with the open format's metadata added (the binding says which); a dataset whose contract demands the native open format MUST stay on the job engine, and the loader refuses `declarative` for it
 
 ### Confirmation
 
@@ -75,3 +80,5 @@ about managed change capture live in the engine binding (`dbs/engine/`). First b
 dataset through the open-source declarative engine on the default table format (ADR-027), compressed world), then all datasets.
 
 Spike step 1 (13 Nov 2026): the open-source declarative engine's managed change capture keeps SCD Type 2 history only in an engine version that no open table format supports yet (details in the binding and in the framework's spikes/sdp_silver). Until then the declarative engine binds to the vendor's product; the open-source binding is rerun when a format catches up.
+
+Spike step 1b (14 Nov 2026): on the vendor's declarative product, the same flow with our stage code inside passed all five history checks, for both the default format and the format readable as the open format; findings in the binding and the framework's spikes/sdp_silver/README.md.
