@@ -91,3 +91,32 @@
     runtime: true
     review: null
     gap: null
+- id: RET-01
+  status: draft
+  since: 0.2.0
+  title: "Bronze ages out only behind a checked baseline"
+  concern: X18
+  level: MUST
+  core: true
+  dimension: completeness
+  stages:
+  - bronze
+  - silver
+  statement: "A bronze batch MUST be removed only by the housekeeping job, only when it is older than both the latest baseline whose row count and key totals equal silver's and the dataset's correction window, only after it is archived with a manifest, and every removal MUST be logged with the batches, rows and baseline used."
+  failure_mode: "Old change batches were deleted to save space; a silver bug was found a month later and silver could not be rebuilt, because no full copy existed after the deleted changes."
+  test: "In test, run housekeeping on a change-feed dataset with no recent full copy; it must write and check a baseline before removing anything, and rebuilding silver from what is left must equal silver before."
+  evidence: "A scheduled housekeeping job, baseline batches recorded as rebase points, an archive manifest per removal, and the removal log."
+  cites:
+  - standard: DAMA-DMBOK
+    ref: Data Storage and Operations, chapter 6
+  related:
+  - HIST-04
+  - HIST-03
+  - SEC-03
+  - ENG-01
+  enforced_by:
+    shift_left: []
+    proposed: []
+    runtime: true
+    review: "Design review of each dataset's retention and correction window before housekeeping is switched on for it."
+    gap: "No build-time check yet: the housekeeping job is designed (TODO B8), not built."

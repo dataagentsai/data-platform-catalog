@@ -61,3 +61,24 @@
   - REL-07
   realization_policy: bind
   see_also: []
+- id: DPC-0116
+  status: draft
+  since: 0.2.0
+  level: MUST
+  title: "Housekeeping job for bronze, archive and table upkeep"
+  concern: X18
+  stages:
+  - bronze
+  archetypes:
+  - PA1
+  - PA2
+  - PA3
+  - PA4
+  core: true
+  port: table_writer
+  requirement: "The platform MUST run housekeeping as its own scheduled job, separate from loads: per dataset it takes the table's writer lock, writes and checks a baseline batch when no recent full copy exists, archives and then removes batches older than both the baseline and the correction window, expires old snapshots and compacts files, and logs every removal."
+  failure_mode: "Clean-up ran inside the nightly load, overlapped the lander on the same table, and removed a batch the lander was still writing."
+  discharges:
+  - RET-01
+  realization_policy: own
+  see_also: []
