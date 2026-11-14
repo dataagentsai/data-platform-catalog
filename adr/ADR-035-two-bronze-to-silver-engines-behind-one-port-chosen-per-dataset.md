@@ -65,6 +65,7 @@ reason, never silently run another way.
 * Restriction: tables of definitions that are removed or renamed stay behind and keep their owner; teardown drops them explicitly
 * Restriction: properties that must be set at creation (format features) need a new table; a full refresh keeps the old features
 * Restriction: changing a flow's logic or schema may force a full refresh, which replays only what the source still holds; the baseline batch before bronze ages out (retention rule) keeps history rebuildable
+* Restriction: a critical quality rule (ADR-009) holds the whole batch on the job engine; the declarative engine cannot hold a batch (a stream has none), so it quarantines the failing rows and alerts; a dataset that needs the batch hold stays on the job engine
 * Restriction: the vendor's declarative tables are its own format with the open format's metadata added (the binding says which); a dataset whose contract demands the native open format MUST stay on the job engine, and the loader refuses `declarative` for it
 
 ### Confirmation
