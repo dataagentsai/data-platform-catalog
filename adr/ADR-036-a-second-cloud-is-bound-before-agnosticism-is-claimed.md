@@ -70,6 +70,15 @@ it forces in the kernel, the ports or the engine layer is a real finding about a
 | F8 | The second cloud's stream capture writes a row format the lander cannot read; the registry allows file formats the lander cannot read either | `stream_bus` binding, settings dictionary | Streams are read from partitions, never from capture output; the registry-versus-parser mismatch is tracked in the TODO |
 | F9 | No port reports a stream's retention, so the retention invariant (ORCH-06) can only be a binding setting | `stream_bus` port | Recorded; the optional `retention` operation has no adapter yet |
 
+**Status note, 19 Nov 2026 (still `proposed`).** The infrastructure for the second cloud is now written and validated
+offline: the platform repository's realm for this cloud holds infrastructure code per environment (resource group,
+storage accounts and containers, key vault, workspace, storage identity, catalogs, the metadata store's database
+project, budget), a deployment bundle target for the engine job, a runbook and table-driven tests; the code's validation
+and a plan on mocked providers pass. Nothing was applied: the owner's subscription is a disabled free trial (upgrading it
+is the only blocker found). Still NOT BUILT: the stream service adapter (AZ-4), the data movement service's mover
+(AZ-6), network injection and private links, customer-managed keys, and the metadata store's region check on a live
+subscription (AZ-7). No finding of the table above changed.
+
 ### Confirmation
 
 The DBS linter accepts the new cloud layer and stack, and the generated coverage file for the stack is current. The shared

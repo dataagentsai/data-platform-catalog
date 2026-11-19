@@ -3,7 +3,13 @@
 # STATUS: written 19 Nov 2026, before any run on an Azure account. What is built and tested is stated per binding in
 # `adapter`, and `proves` lists only the obligations a test in the platform repository names. The adapters that exist
 # (storage landing, file drop, object store, secret store) pass the shared contract tables against a FAKE of the SDK
-# surface: not against the storage emulator and not against a real subscription. The decision record stays `proposed`
+# surface: not against the storage emulator and not against a real subscription. The infrastructure realm
+# (realms/azure-databricks: Terraform for the resource group, storage accounts and containers, Key Vault, workspace,
+# access connector, Unity Catalog, Lakebase project and budget, plus the bundle target) is WRITTEN and VALIDATED OFFLINE
+# only: `terraform validate`, a plan against mocked providers and table-driven tests on names, layers, secrets,
+# budget and dev/prod isolation. Nothing has been applied; the owner's subscription is a Disabled Free Trial. NOT BUILT:
+# the event hub stream adapter, the Data Factory mover, network injection and Private Link, customer-managed keys, the
+# log workspace and the Lakebase region check against a live subscription. The decision record stays `proposed`
 # until the 3-day compressed run has passed on a real account (ADR-036, Confirmation).
 #
 # The cloud layer binds the ports a cloud provides (binds_in includes cloud in dpc/ports.yaml): storage, movers,
@@ -34,7 +40,7 @@ decisions:
   pick_order: {value: "changing databases: Data Factory change data capture where its sources fit (preview), otherwise the source's log read into the event hub's Kafka-compatible endpoint by an open-source log reader (NOT YET VALIDATED); files: storage SFTP and Data Factory copy; APIs: Data Factory REST copy or a function; machines and sensors: event hub; every mover meets the landing contract (ADR-033)", source: chosen}
   federated_catalog: {value: "not bound: no second engine reads this platform's tables on this cloud yet. The first cloud's federation decision does not carry over; bind one here when a reader exists", source: chosen}
   file_formats: {value: "landing as delivered (ADR-031); the lander reads JSON lines and Parquet; event capture's Avro files are NOT read, so streams are read from the hub's partitions and never from Capture output; tables Iceberg on Parquet", source: chosen}
-  metadata_store_region: {value: "the engine's managed PostgreSQL must exist in the chosen region (check the region list before choosing one); otherwise the store falls back to a PostgreSQL flexible server behind the same stored procedures (ADR-010) - NOT BUILT", source: chosen}
+  metadata_store_region: {value: "the engine's managed PostgreSQL must exist in the chosen region (check the region list before choosing one); the written infrastructure defaults to eastus2, which the vendor's release notes list, read on 19 Nov 2026 and NOT checked against a live subscription; otherwise the store falls back to a PostgreSQL flexible server behind the same stored procedures (ADR-010) - NOT BUILT", source: chosen}
 thresholds:
   event_retention_days: 7
   personal_landing_max_hours: 23
@@ -51,7 +57,7 @@ bindings:
     proves: []
   landing_store:
     approach: cloud-native
-    adapter: "Azure Data Lake Storage Gen2, container landing in the environment's storage account (a separate account for personal data with a 23-hour purge), read by the engine through a storage credential the engine layer registers. BUILT: dataplatform.adapters.azure_blob.AzureLanding, tested against a fake of the storage SDK surface only"
+    adapter: "Azure Data Lake Storage Gen2, container landing in the environment's storage account (a separate account for personal data with a 23-hour purge), read by the engine through a storage credential the engine layer registers. BUILT: dataplatform.adapters.azure_blob.AzureLanding, tested against a fake of the storage SDK surface only. The accounts, containers, personal-data account (lifecycle purge after 1 day, the finest the cloud allows; the 23-hour purge is the platform's own), access connector and external landing volume are WRITTEN as Terraform and validated offline, not applied"
     coverage: full
     metadata_keys: [target_path_template, lifecycle_delete_days]
     proves: [DUP-02, ORCH-01]
@@ -78,34 +84,34 @@ bindings:
     proves: []
   cost_ledger:
     approach: cloud-native
-    adapter: Microsoft Cost Management exports with tags, and budgets
+    adapter: "Microsoft Cost Management exports with tags, and budgets. WRITTEN offline, not applied: a monthly budget per environment resource group with 80% actual and 100% forecast alerts, and cost tags on every resource; exports NOT BUILT"
     coverage: partial
     gap: The bill is per service and tag, not per dataset or data product.
     gap_filled_by: {approach: in-house, adapter: "dataplatform.ops cost split"}
     proves: []
   secret_store:
     approach: cloud-native
-    adapter: "Azure Key Vault with role-based access, read by managed identities; the engine's secret scopes are backed by it. BUILT: dataplatform.adapters.secrets.AzureKeyVault, tested against a fake of the SDK surface only"
+    adapter: "Azure Key Vault with role-based access, read by managed identities; the engine's secret scopes are backed by it (scopes NOT BUILT). BUILT: dataplatform.adapters.secrets.AzureKeyVault, tested against a fake of the SDK surface only. The vault (role-based access) is WRITTEN as Terraform and validated offline, not applied"
     coverage: full
     proves: [REL-05]
   identity_provider:
     approach: cloud-native
-    adapter: Microsoft Entra ID groups and managed identities for services, provisioned to the engine's account groups
+    adapter: "Microsoft Entra ID groups and managed identities for services, provisioned to the engine's account groups. WRITTEN offline, not applied: the access connector's managed identity holds Storage Blob Data Contributor on its environment's account; group provisioning to the engine is NOT BUILT"
     coverage: full
     proves: []
   key_manager:
     approach: cloud-native
-    adapter: Azure Key Vault (Premium or managed HSM), one customer-managed key per storage account, the metadata store and the vault
+    adapter: "Azure Key Vault (Premium or managed HSM), one customer-managed key per storage account, the metadata store and the vault. NOT BUILT: the written infrastructure uses the platform-managed keys and a standard vault"
     coverage: full
     proves: []
   network_boundary:
     approach: cloud-native
-    adapter: virtual network injection for the engine's compute, Private Link for storage and Key Vault, no public data paths
+    adapter: "virtual network injection for the engine's compute, Private Link for storage and Key Vault, no public data paths. NOT BUILT: the written infrastructure leaves public network access on"
     coverage: full
     proves: []
   object_store:
     approach: cloud-native
-    adapter: "Azure Data Lake Storage Gen2, one storage account per environment and one container per layer (abfss://<layer>@<account>.dfs.core.windows.net/). BUILT: dataplatform.adapters.azure_blob.AzureObjectStore, tested against a fake only"
+    adapter: "Azure Data Lake Storage Gen2, one storage account per environment and one container per layer (abfss://<layer>@<account>.dfs.core.windows.net/). BUILT: dataplatform.adapters.azure_blob.AzureObjectStore, tested against a fake only. The accounts and one container per layer (landing, bronze, silver, gold, quarantine, ops) are WRITTEN as Terraform and validated offline, not applied"
     coverage: partial
     gap: Blob versioning on a storage account with a hierarchical namespace is not confirmed (container soft delete is supported), and versioning is an account setting the data-plane client cannot read, so versioned() asks the management plane.
     gap_filled_by: {approach: in-house, adapter: "dataplatform.retention and the table format's own history (ADR-029) carry the recovery targets until versioning is confirmed on a real account"}
@@ -129,12 +135,12 @@ bindings:
     proves: []
   infra_provisioner:
     approach: open-source
-    adapter: "Terraform with the azurerm and engine providers (subscription, network, storage accounts, Key Vault, event hubs, Data Factory). NOT BUILT: the repository's infrastructure modules are for the first cloud only"
+    adapter: "Terraform with the azurerm and engine providers, one run per environment (realms/azure-databricks/infra). WRITTEN and validated offline (validate, plan on mocked providers, table-driven tests; never applied): resource group, storage accounts and containers, Key Vault, workspace, access connector, Unity Catalog, Lakebase project, budget. NOT BUILT: virtual network, Private Link, event hubs, Data Factory, log workspace, customer-managed keys"
     coverage: full
     proves: []
 accepted_gaps:
   - {obligation: ORCH-06, reason: "No stream adapter exists for this cloud, so a stream's restart from its checkpoint and its retention are not tested here; the first cloud's stand-in is the only proof", owner: platform owner, review: "2026-12-15"}
   - {obligation: DUP-04, reason: "A replayed stream event is dropped by its id in silver, tested on the engine, but not through this cloud's stream service because no adapter exists", owner: platform owner, review: "2026-12-15"}
-  - {obligation: REL-06, reason: "No infrastructure module exists for this cloud; the repository's modules cover the first cloud only", owner: platform owner, review: "2026-12-15"}
-  - {obligation: SEC-02, reason: "Keys, network boundary and encryption are specified here but nothing has been deployed or checked on a real subscription", owner: platform owner, review: "2026-12-15"}
+  - {obligation: REL-06, reason: "The infrastructure modules for this cloud (realms/azure-databricks) are written and validated offline only: nothing has been applied, so recreating an environment from code is not shown", owner: platform owner, review: "2026-12-15"}
+  - {obligation: SEC-02, reason: "Keys, network boundary and encryption are specified here; the written infrastructure leaves public network access on and uses platform-managed keys, and nothing has been deployed or checked on a real subscription", owner: platform owner, review: "2026-12-15"}
   - {obligation: ENV-02, reason: "Identity and group provisioning to the engine is specified here but has not been run on a real tenant", owner: platform owner, review: "2026-12-15"}

@@ -1,7 +1,11 @@
 # DBS stack: Databricks on Azure (decision D17's twin; ADR-036, the second cloud). Written 19 Nov 2026 before any run on a
 # real subscription: the decision record stays `proposed` until the 3-day compressed run has passed on one.
 # A stack names one engine layer, one cloud layer and an engine profile, and says which layer wins wherever both bind
-# a port (`prefer`). The composed binding and its coverage are generated: scripts/coverage.py --stack <this file>.
+# a port (`prefer`).
+# STATUS 19 Nov 2026: the infrastructure for this stack (realms/azure-databricks: Terraform per environment and the
+# bundle target for the engine job) is WRITTEN and VALIDATED OFFLINE (terraform validate, plan on mocked providers,
+# table-driven tests). It has not been applied: the subscription is a Disabled Free Trial. NOT BUILT: event hub stream
+# adapter, Data Factory mover, network injection, Lakebase region check on a live subscription. The composed binding and its coverage are generated: scripts/coverage.py --stack <this file>.
 apiVersion: data-binding-stack/v0.1
 name: azure-databricks
 subject:
