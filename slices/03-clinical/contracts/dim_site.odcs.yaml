@@ -1,0 +1,34 @@
+# Clinical trial, slice 3: Site dimension (gold). ODCS v3.2.0, adopted not restated (validated by tests/test_clinical.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: clinical-gold-dim-site
+name: "Site dimension (gold)"
+version: 0.1.0
+status: draft
+domain: operations
+description:
+  purpose: "Sites as of any date, with reserved members -1 (unknown) and -2 (not applicable)."
+  limitations: "From silver sites; the investigator's contact details stay in silver."
+schema:
+  - name: dim_site
+    physicalName: gold_operations.dim_site
+    logicalType: object
+    dataGranularityDescription: "One row per site per version, plus the reserved members"
+    properties:
+      - {name: "site_sk", logicalType: "integer", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "site_id", logicalType: "string", required: true}
+      - {name: "site_name", logicalType: "string", required: true}
+      - {name: "country", logicalType: "string", required: true}
+      - {name: "site_status", logicalType: "string", required: true}
+      - {name: "valid_from", logicalType: "timestamp", required: true}
+      - {name: "valid_to", logicalType: "timestamp", required: true}
+      - {name: "is_current", logicalType: "boolean", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["site_sk"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+team:
+  name: clinical-operations-data
+  members:
+    - {username: clinical-operations-data, role: owner}
+slaProperties:
+  - {property: latency, value: 24, unit: h}
+  - {property: retention, value: 15, unit: y}

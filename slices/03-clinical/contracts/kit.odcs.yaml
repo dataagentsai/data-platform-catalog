@@ -1,0 +1,34 @@
+# Clinical trial, slice 3: Trial drug kits (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_clinical.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: clinical-supply-kit
+name: "Trial drug kits (silver)"
+version: 0.1.0
+status: draft
+domain: supply
+description:
+  purpose: "Kits of trial drug with their lot, expiry and depot, from the randomisation and drug supply system; history kept (type 2)."
+  limitations: "treatment_arm is blinded: it stays in this table and is never joined into a gold table or a metric."
+schema:
+  - name: kit
+    physicalName: silver_supply.kit
+    logicalType: object
+    dataGranularityDescription: "One row per kit per version"
+    properties:
+      - {name: "kit_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "kit_type", logicalType: "string", required: true, quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["bottle", "blister_pack"]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "lot_number", logicalType: "string", required: true}
+      - {name: "expiry_date", logicalType: "date", required: true}
+      - {name: "depot_code", logicalType: "string", required: true}
+      - {name: "treatment_arm", logicalType: "string", required: true, classification: "confidential", description: "The treatment group the kit belongs to. Blinded: never copied into gold or a metric.", quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["arm_1", "arm_2"]}, "mustBe": 0, "dimension": "conformity", "severity": "critical"}]}
+      - {name: "extracted_at", logicalType: "timestamp", required: true, description: "When the full copy was taken; orders versions of a full copy."}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["kit_id", "extracted_at"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: trial-supply-data
+  members:
+    - {username: trial-supply-data, role: owner}
+slaProperties:
+  - {property: latency, value: 24, unit: h}
+  - {property: retention, value: 15, unit: y}

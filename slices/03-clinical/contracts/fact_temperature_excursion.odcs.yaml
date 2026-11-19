@@ -1,0 +1,34 @@
+# Clinical trial, slice 3: Cold-chain temperature excursions (gold). ODCS v3.2.0, adopted not restated (validated by tests/test_clinical.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: clinical-gold-fact-temperature-excursion
+name: "Cold-chain temperature excursions (gold)"
+version: 0.1.0
+status: draft
+domain: supply
+description:
+  purpose: "Temperature readings and readings outside the 2 to 8 degree range per shipment of trial drug and day of reading."
+  limitations: "A reading outside the range is an excursion; whether the drug can still be used is a quality decision, not made here. Counted by the day of the reading, in the business time zone."
+schema:
+  - name: fact_temperature_excursion
+    physicalName: gold_supply.fact_temperature_excursion
+    logicalType: object
+    dataGranularityDescription: "One row per shipment and day of reading"
+    properties:
+      - {name: "shipment_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "reading_date", logicalType: "date", required: true, primaryKey: true, primaryKeyPosition: 2}
+      - {name: "readings", logicalType: "integer", required: true}
+      - {name: "excursion_readings", logicalType: "integer", required: true}
+      - {name: "max_temperature_c", logicalType: "number", required: true}
+      - {name: "_is_complete", logicalType: "boolean", required: true}
+      - {name: "_run_id", logicalType: "string", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["shipment_id", "reading_date"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: trial-supply-data
+  members:
+    - {username: trial-supply-data, role: owner}
+slaProperties:
+  - {property: latency, value: 24, unit: h}
+  - {property: retention, value: 15, unit: y}

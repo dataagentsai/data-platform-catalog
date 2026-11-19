@@ -1,0 +1,51 @@
+# DPM v0.2: kits dispensed, from the randomisation and drug supply system. Push change capture; events, appended
+# (ADR-016). The live source is compared with silver every night, because a change feed can skip rows silently.
+source_name: supply
+source_env: prod
+dataset_name: dispensing
+is_enabled: true
+kind: dataset
+config:
+  load_type: INCREMENTAL
+  watermark_column: change_seq
+  sla_freshness_hours: "1"
+  sla_freshness_error_hours: "2"
+  schedule_trigger: cron
+  schedule_cron: "*/15 * * * *"
+  schedule_timezone: Asia/Kolkata
+  cost_center: trial-supply
+dedup: {mode: business_key_first, business_keys: [dispensing_id]}
+contract: ../../contracts/dispensing.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA2]
+ingest: {mode: push, read: change_feed}
+history: {kind: event}
+load:
+  pattern: append
+  batch_key: [delivery_window, content_checksum]
+  new_columns: hold_in_bronze
+  deletes: {detect: none, apply: none}
+  quarantine_stop_share: 0.01
+volume:
+  expected_rows_per_delivery: {min: 1, max: 2000}
+reconciliation:
+  hops: [sources, landing, bronze, silver]
+  measures:
+    - {name: row_count}
+    - {name: kits_dispensed_total, column: kits_dispensed}
+  tolerance: {row_count: 0, kits_dispensed_total: 0.0}
+  signed_off_by: trial-supply-lead
+  entries:
+    - name: live_source_vs_silver
+      left: sources
+      right: silver
+      keys: [dispensing_id]
+      measures:
+        - {name: dispensings, agg: count}
+        - {name: kits_dispensed_total, agg: sum, column: kits_dispensed}
+      window: {column: dispensed_ts, days: 35}
+      buckets: 64
+      tolerance: {dispensings: 0, kits_dispensed_total: 0}
+      schedule: daily 02:00
+owners: {dataset: trial-supply-data, alerts: supply-data-rota}
+concerns: {}

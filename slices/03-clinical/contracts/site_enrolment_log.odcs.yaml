@@ -1,0 +1,33 @@
+# Clinical trial, slice 3: Site enrolment logs (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_clinical.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: clinical-site-site-enrolment-log
+name: "Site enrolment logs (silver)"
+version: 0.1.0
+status: draft
+domain: operations
+description:
+  purpose: "Subjects each site screened and randomised per month and cohort, from the log the site sends."
+  limitations: "A re-sent or corrected file replaces that site's month."
+schema:
+  - name: site_enrolment_log
+    physicalName: silver_site.site_enrolment_log
+    logicalType: object
+    dataGranularityDescription: "One row per site, month and cohort"
+    properties:
+      - {name: "site_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "enrolment_month", logicalType: "date", required: true, primaryKey: true, primaryKeyPosition: 2}
+      - {name: "cohort", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 3, quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["A", "B", "C"]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "subjects_screened", logicalType: "integer", required: true, quality: [{"type": "sql", "description": "subjects_screened is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE subjects_screened < 0", "mustBe": 0, "dimension": "accuracy", "severity": "major"}]}
+      - {name: "subjects_randomised", logicalType: "integer", required: true, quality: [{"type": "sql", "description": "A site never randomises more subjects than it screened.", "query": "SELECT COUNT(*) FROM ${object} WHERE subjects_randomised > subjects_screened OR subjects_randomised < 0", "mustBe": 0, "dimension": "accuracy", "severity": "major"}]}
+      - {name: "file_name", logicalType: "string", required: true, description: "Not in the delivered file: filled by the lander from the delivered file's name."}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["site_id", "enrolment_month", "cohort"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: clinical-operations-data
+  members:
+    - {username: clinical-operations-data, role: owner}
+slaProperties:
+  - {property: latency, value: 72, unit: h}
+  - {property: retention, value: 15, unit: y}

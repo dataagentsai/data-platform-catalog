@@ -1,0 +1,33 @@
+# Clinical trial, slice 3: Shipment temperature readings (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_clinical.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: clinical-coldchain-stream-temperature-reading
+name: "Shipment temperature readings (silver)"
+version: 0.1.0
+status: draft
+domain: supply
+description:
+  purpose: "Temperature and humidity readings from the loggers travelling with shipments of trial drug, one row per reading, by event time."
+  limitations: "Readings are never deleted or corrected."
+schema:
+  - name: temperature_reading
+    physicalName: silver_coldchain_stream.temperature_reading
+    logicalType: object
+    dataGranularityDescription: "One row per reading (append)"
+    properties:
+      - {name: "reading_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "shipment_id", logicalType: "string", required: true}
+      - {name: "event_ts", logicalType: "timestamp", required: true}
+      - {name: "temperature_c", logicalType: "number", required: true}
+      - {name: "humidity_pct", logicalType: "number", required: true, quality: [{"type": "sql", "description": "humidity_pct is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE humidity_pct < 0", "mustBe": 0, "dimension": "accuracy", "severity": "major"}]}
+      - {name: "logger_state", logicalType: "string", required: true, quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["in_transit", "at_depot", "at_site"]}, "mustBe": 0, "dimension": "conformity", "severity": "minor"}]}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["reading_id"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "major"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: trial-supply-data
+  members:
+    - {username: trial-supply-data, role: owner}
+slaProperties:
+  - {property: latency, value: 1, unit: h}
+  - {property: retention, value: 15, unit: y}

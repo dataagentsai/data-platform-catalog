@@ -1,0 +1,29 @@
+# DPM v0.2 metric view (ADR-022): defined once; certified measures reach the conversation interface and agents.
+# Known answers are the clinical world's seed-23 values after its 14-day run (9 to 22 November) at scale 1.0, from the
+# oracle's last day. A smaller scale gives other numbers; the run's console says so beside each one.
+kind: metric_view
+name: mv_visit_compliance
+domain: operations
+source: fact_visit_compliance
+joins: [dim_site]
+dimensions:
+  - {name: Planned month, expr: "DATE_TRUNC('MONTH', planned_date)"}
+  - {name: Country, expr: dim_site.country}
+  - {name: Visit code, expr: visit_code}
+measures:
+  - name: Visit compliance %
+    expr: SUM(compliant) FILTER (WHERE _is_complete) / COUNT(1) FILTER (WHERE _is_complete)
+    additive: false
+    time_dimension: Planned month
+    description: Share of scheduled or completed visits (not cancelled) done inside their window with every form recorded and every expected kit dispensed, over complete windows only (a visit not yet due is neither compliant nor missed).
+    certification: certified
+    synonyms: [visit compliance, protocol compliance, visits done on time, visit adherence]
+    known_answer: {where: "country = 'IN' AND planned month = 2026-11", value: 0.8175, tolerance: 0.0005}
+  - name: Planned visits
+    expr: COUNT(1)
+    additive: true
+    time_dimension: Planned month
+    certification: certified
+    synonyms: [visits, number of visits, planned visits]
+    known_answer: {where: "planned month = 2026-11", value: 5142}
+owners: {dataset: clinical-operations-data}

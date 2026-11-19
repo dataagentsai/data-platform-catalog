@@ -1,0 +1,29 @@
+# DPM v0.2 gold fact: subjects screened and randomised per site, cohort and month. Modelled: one SQL build() in the
+# harness. Sites send their logs late and correct them by re-sending, so months are rebuilt and logged as
+# restatements. Counts only: no treatment group is read.
+kind: gold_fact
+name: fact_enrolment
+domain: operations
+pipeline: modelled
+contract: ../../contracts/fact_enrolment.odcs.yaml
+contract_version: 0.1.0
+grain: [site_id, cohort, enrolment_month]
+inputs:
+  - {dataset: site.site_enrolment_log, role: driver}
+dimensions:
+  - {name: dim_site, key: site_sk, business_key: [site_id], as_of: enrolment_month}
+keys: {surrogate: hash, unknown_member: -1, not_applicable: -2}
+window: {column: enrolment_month, unit: month, lookback: 3}
+build: {kind: sql, ref: gold/operations/fact_enrolment.sql}
+materialize: table
+corrections: true
+completeness: {on_incomplete: flag}
+checks:
+  grain_unique: true
+  orphan_rate_max: 0.03
+  reconcile:
+    against: silver
+    measures:
+      - {name: screened_total, column: subjects_screened}
+    tolerance: {screened_total: 0}
+owners: {dataset: clinical-operations-data, alerts: clinical-operations-rota}

@@ -1,0 +1,16 @@
+# DPM v0.2 gold dimension: one silver table reshaped through the common pipeline (ADR-003), history kept,
+# deterministic hash keys with reserved members -1 and -2 (ADR-004). No build: the common pipeline does it all.
+# Its contract leaves out treatment_arm, so the common pipeline never copies it: gold is blinded.
+kind: gold_dimension
+name: dim_kit
+domain: supply
+pipeline: one_to_one
+contract: ../../contracts/dim_kit.odcs.yaml
+contract_version: 0.1.0
+grain: [kit_sk]
+inputs:
+  - {dataset: supply.kit, role: driver}
+history: scd2
+keys: {surrogate: hash, unknown_member: -1, not_applicable: -2}
+materialize: table
+owners: {dataset: trial-supply-data}

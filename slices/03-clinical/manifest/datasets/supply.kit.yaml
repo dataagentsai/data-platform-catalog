@@ -1,0 +1,37 @@
+# DPM v0.2: kits of trial drug from the randomisation and drug supply system. Pull, full copy, master data with
+# history (type 2). treatment_arm is blinded: it stays in silver and no gold table or metric reads it.
+source_name: supply
+source_env: prod
+dataset_name: kit
+is_enabled: true
+kind: dataset
+config:
+  load_type: FULL
+  sla_freshness_hours: "24"
+  sla_freshness_error_hours: "48"
+  schedule_trigger: cron
+  schedule_cron: "0 1 * * *"
+  schedule_timezone: Asia/Kolkata
+  cost_center: trial-supply
+dedup: {mode: business_key_latest, business_keys: [kit_id], order_by: extracted_at}
+contract: ../../contracts/kit.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA2]
+ingest: {mode: pull, read: full_copy}
+history: {kind: master, track_columns: [lot_number, expiry_date, depot_code]}
+load:
+  pattern: history
+  history_order_by: extracted_at
+  batch_key: [source_batch_id]
+  new_columns: hold_in_bronze
+  deletes: {detect: key_compare, apply: mark_deleted}
+  mass_delete_max_share: 0.05
+volume:
+  expected_rows_per_delivery: {min: 200, max: 5000}
+reconciliation:
+  hops: [sources, bronze, silver]
+  measures:
+    - {name: row_count}
+  tolerance: {row_count: 0}
+owners: {dataset: trial-supply-data, alerts: supply-data-rota}
+concerns: {}

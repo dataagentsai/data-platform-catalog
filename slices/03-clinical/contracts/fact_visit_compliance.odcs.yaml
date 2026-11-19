@@ -1,0 +1,45 @@
+# Clinical trial, slice 3: Visit compliance (gold). ODCS v3.2.0, adopted not restated (validated by tests/test_clinical.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: clinical-gold-fact-visit-compliance
+name: "Visit compliance (gold)"
+version: 0.1.0
+status: draft
+domain: operations
+description:
+  purpose: "One row per planned visit: was it done within its allowed window around the planned date, with every form recorded and every expected kit dispensed."
+  limitations: "Only visits that are scheduled or completed are measured: cancelled visits are left out. A visit not yet done is not compliant."
+schema:
+  - name: fact_visit_compliance
+    physicalName: gold_operations.fact_visit_compliance
+    logicalType: object
+    dataGranularityDescription: "One row per planned visit"
+    properties:
+      - {name: "visit_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "subject_sk", logicalType: "integer", required: true}
+      - {name: "site_sk", logicalType: "integer", required: true}
+      - {name: "kit_sk", logicalType: "integer", required: true}
+      - {name: "subject_id", logicalType: "string", required: true, classification: "restricted", description: "The token silver holds for the subject identifier."}
+      - {name: "site_id", logicalType: "string", required: true}
+      - {name: "kit_id", logicalType: "string", required: false, description: "The kit dispensed at the visit; empty when none was."}
+      - {name: "visit_code", logicalType: "string", required: true}
+      - {name: "planned_date", logicalType: "date", required: true}
+      - {name: "forms_expected", logicalType: "integer", required: true}
+      - {name: "forms_recorded", logicalType: "integer", required: true}
+      - {name: "kits_expected", logicalType: "integer", required: true}
+      - {name: "kits_dispensed", logicalType: "integer", required: true}
+      - {name: "in_window", logicalType: "boolean", required: true}
+      - {name: "all_recorded", logicalType: "boolean", required: true}
+      - {name: "compliant", logicalType: "integer", required: true}
+      - {name: "_is_complete", logicalType: "boolean", required: true}
+      - {name: "_run_id", logicalType: "string", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["visit_id"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: clinical-operations-data
+  members:
+    - {username: clinical-operations-data, role: owner}
+slaProperties:
+  - {property: latency, value: 2, unit: h}
+  - {property: retention, value: 15, unit: y}

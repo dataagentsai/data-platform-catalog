@@ -1,0 +1,43 @@
+# DPM v0.2: laboratory results. Push: one CSV per site per day dropped by the central laboratory (PA1); events,
+# appended. subject_id is restricted: tokenised before bronze.
+source_name: lab
+source_env: prod
+dataset_name: lab_result
+is_enabled: true
+kind: dataset
+config:
+  load_type: INCREMENTAL
+  file_format_data: csv               # the source file's format (file_format is the sink format)
+  file_pattern: "labresults_*.csv"
+  csv_delimiter: ";"
+  csv_has_header: "true"
+  sla_freshness_hours: "24"
+  sla_freshness_error_hours: "48"
+  schedule_trigger: on_delivery
+  schedule_timezone: Asia/Kolkata
+  cost_center: clinical-laboratory
+dedup: {mode: business_key_first, business_keys: [result_id]}
+contract: ../../contracts/lab_result.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA1]
+ingest: {mode: push, read: files}
+history: {kind: event}
+load:
+  pattern: append
+  batch_key: [file_name, content_checksum]
+  new_columns: stop
+  deletes: {detect: none, apply: none}
+  quarantine_stop_share: 0.02
+volume:
+  expected_rows_per_delivery: {min: 1, max: 2000}   # a site with one visit sends one sample's results; empty is held
+quality:
+  actions:
+    major: {rows: quarantine, dataset: alert_owner, page: false}
+reconciliation:
+  hops: [sources, landing, bronze, silver]
+  measures:
+    - {name: row_count}
+    - {name: out_of_range_total, column: out_of_range}
+  tolerance: {row_count: 0, out_of_range_total: 0.0}
+owners: {dataset: laboratory-data, alerts: laboratory-data-rota}
+concerns: {}

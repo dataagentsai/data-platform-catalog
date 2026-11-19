@@ -1,0 +1,35 @@
+# Clinical trial, slice 3: Kit dispensing (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_clinical.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: clinical-supply-dispensing
+name: "Kit dispensing (silver)"
+version: 0.1.0
+status: draft
+domain: supply
+description:
+  purpose: "One row each time a kit of trial drug is handed to a subject at a visit."
+  limitations: "Returns and replacements are not modelled."
+schema:
+  - name: dispensing
+    physicalName: silver_supply.dispensing
+    logicalType: object
+    dataGranularityDescription: "One row per kit handed to a subject (append)"
+    properties:
+      - {name: "dispensing_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "visit_id", logicalType: "string", required: true}
+      - {name: "subject_id", logicalType: "string", required: true, classification: "restricted", description: "Personal data class subject identifier; tokenised before bronze, so every table holds the same token."}
+      - {name: "site_id", logicalType: "string", required: true}
+      - {name: "kit_id", logicalType: "string", required: true}
+      - {name: "dispensed_ts", logicalType: "timestamp", required: true}
+      - {name: "kits_dispensed", logicalType: "integer", required: true, quality: [{"type": "sql", "description": "kits_dispensed is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE kits_dispensed < 0", "mustBe": 0, "dimension": "accuracy", "severity": "critical"}]}
+      - {name: "change_seq", logicalType: "integer", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["dispensing_id"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: trial-supply-data
+  members:
+    - {username: trial-supply-data, role: owner}
+slaProperties:
+  - {property: latency, value: 1, unit: h}
+  - {property: retention, value: 15, unit: y}

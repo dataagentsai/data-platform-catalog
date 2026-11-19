@@ -1,0 +1,41 @@
+# DPM v0.2: enrolment logs from the sites (PA1). Each file covers one site and month; a re-sent or corrected file
+# replaces that site's month (overwrite_window), so a resend changes nothing and a correction restates.
+source_name: site
+source_env: prod
+dataset_name: site_enrolment_log
+is_enabled: true
+kind: dataset
+config:
+  load_type: INCREMENTAL
+  file_format_data: csv               # the source file's format (file_format is the sink format)
+  file_pattern: "enrolment_*.csv"
+  csv_delimiter: ","
+  csv_has_header: "true"
+  sla_freshness_hours: "72"
+  sla_freshness_error_hours: "120"
+  schedule_trigger: on_delivery
+  schedule_timezone: Asia/Kolkata
+  cost_center: clinical-operations
+dedup: {mode: business_key_latest, business_keys: [site_id, enrolment_month, cohort], order_by: file_name}
+contract: ../../contracts/site_enrolment_log.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA1]
+ingest: {mode: push, read: files}
+history: {kind: snapshot}
+load:
+  pattern: overwrite_window
+  batch_key: [content_checksum]  # a renamed resend is the same delivery (DUP-01): the name is not part of the key
+  new_columns: hold_in_bronze
+  deletes: {detect: none, apply: none}
+  quarantine_stop_share: 0.05
+  late_lookback_days: 90
+volume:
+  expected_rows_per_delivery: {min: 1, max: 50}   # one row per cohort the site enrols; empty is held
+reconciliation:
+  hops: [sources, landing, bronze, silver]
+  measures:
+    - {name: row_count}
+    - {name: screened_total, column: subjects_screened}
+  tolerance: {row_count: 0, screened_total: 0.0}
+owners: {dataset: clinical-operations-data, alerts: site-data-rota}
+concerns: {}

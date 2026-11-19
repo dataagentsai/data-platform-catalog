@@ -1,0 +1,26 @@
+# DPM v0.2 metric view (ADR-022). Known answers are the clinical world's seed-23 values after its 14-day run at scale 1.0.
+# Counts only: no treatment group is read.
+kind: metric_view
+name: mv_enrolment
+domain: operations
+source: fact_enrolment
+joins: [dim_site]
+dimensions:
+  - {name: Enrolment month, expr: "DATE_TRUNC('MONTH', enrolment_month)"}
+  - {name: Country, expr: dim_site.country}
+measures:
+  - name: Subjects randomised
+    expr: SUM(subjects_randomised) FILTER (WHERE _is_complete)
+    additive: true
+    time_dimension: Enrolment month
+    description: Subjects randomised in the month as the sites report it, over complete months only (every site's log is in).
+    certification: certified
+    synonyms: [enrolment, randomised subjects, subjects enrolled, randomisations]
+    known_answer: {where: "enrolment month = 2026-10", value: 519}
+  - name: Subjects screened
+    expr: SUM(subjects_screened) FILTER (WHERE _is_complete)
+    additive: true
+    time_dimension: Enrolment month
+    certification: reviewed
+    synonyms: [screened subjects, screenings]
+owners: {dataset: clinical-operations-data}

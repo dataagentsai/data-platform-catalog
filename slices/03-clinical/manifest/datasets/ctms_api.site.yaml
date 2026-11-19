@@ -1,0 +1,42 @@
+# DPM v0.2: sites and their investigators from the trial management interface (PA3). Pull by pages since the last
+# cursor, straight to bronze through the lander steps (contact details tokenised). Master data with history (type 2).
+source_name: ctms_api
+source_env: prod
+dataset_name: site
+is_enabled: true
+kind: dataset
+config:
+  load_type: INCREMENTAL
+  watermark_column: updated_at
+  rest_endpoint_path: /v1/sites
+  rest_method: GET
+  pagination_style: cursor
+  pagination_cursor_param: after
+  retry_count: "3"
+  sla_freshness_hours: "24"
+  sla_freshness_error_hours: "48"
+  schedule_trigger: cron
+  schedule_cron: "0 */6 * * *"
+  schedule_timezone: Asia/Kolkata
+  cost_center: clinical-operations
+dedup: {mode: business_key_latest, business_keys: [site_id], order_by: updated_at}
+contract: ../../contracts/site.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA3]
+ingest: {mode: pull, read: pages}
+history: {kind: master, track_columns: [site_name, country, site_status]}
+load:
+  pattern: history
+  history_order_by: updated_at
+  batch_key: [source_batch_id]
+  new_columns: stop
+  deletes: {detect: none, apply: none}
+volume:
+  expected_rows_per_delivery: {min: 0, max: 500}
+reconciliation:
+  hops: [sources, bronze, silver]
+  measures:
+    - {name: row_count}
+  tolerance: {row_count: 0}
+owners: {dataset: clinical-operations-data, alerts: site-data-rota}
+concerns: {}

@@ -1,0 +1,40 @@
+# DPM v0.2: subjects from the trial data capture system. Pull: our reader takes a full copy (rows can be deleted) and
+# runs the lander steps in-process straight to bronze, so there is no landing hop (ADR-002). The mass-delete guard
+# holds a short copy. The subject identifier is restricted: tokenised before bronze, the same token in every table.
+source_name: edc
+source_env: prod
+dataset_name: subject
+is_enabled: true
+kind: dataset
+config:
+  load_type: FULL
+  sla_freshness_hours: "24"
+  sla_freshness_error_hours: "48"
+  schedule_trigger: cron
+  schedule_cron: "0 1 * * *"
+  schedule_timezone: Asia/Kolkata
+  cost_center: clinical-operations
+dedup: {mode: business_key_latest, business_keys: [subject_id], order_by: extracted_at}
+contract: ../../contracts/subject.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA2]
+ingest: {mode: pull, read: full_copy}
+history: {kind: master, track_columns: [site_id, cohort, subject_status]}
+load:
+  pattern: history
+  history_order_by: extracted_at
+  batch_key: [source_batch_id]
+  new_columns: hold_in_bronze
+  deletes: {detect: key_compare, apply: mark_deleted}
+  quarantine_stop_share: 0.0
+  mass_delete_max_share: 0.05
+volume:
+  expected_rows_per_delivery: {min: 100, max: 2000}
+reconciliation:
+  hops: [sources, bronze, silver]
+  measures:
+    - {name: row_count}
+  tolerance: {row_count: 0}
+  signed_off_by: clinical-operations-lead
+owners: {dataset: clinical-operations-data, alerts: edc-data-rota}
+concerns: {}

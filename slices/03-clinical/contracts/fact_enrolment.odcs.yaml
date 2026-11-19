@@ -1,0 +1,35 @@
+# Clinical trial, slice 3: Enrolment (gold). ODCS v3.2.0, adopted not restated (validated by tests/test_clinical.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: clinical-gold-fact-enrolment
+name: "Enrolment (gold)"
+version: 0.1.0
+status: draft
+domain: operations
+description:
+  purpose: "Subjects screened and randomised per site, cohort and month, from the sites' enrolment logs."
+  limitations: "As the sites report it. Counts only: no treatment group, gold is blinded."
+schema:
+  - name: fact_enrolment
+    physicalName: gold_operations.fact_enrolment
+    logicalType: object
+    dataGranularityDescription: "One row per site, cohort and month"
+    properties:
+      - {name: "site_sk", logicalType: "integer", required: true}
+      - {name: "site_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "cohort", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 2}
+      - {name: "enrolment_month", logicalType: "date", required: true, primaryKey: true, primaryKeyPosition: 3}
+      - {name: "subjects_screened", logicalType: "integer", required: true}
+      - {name: "subjects_randomised", logicalType: "integer", required: true}
+      - {name: "_is_complete", logicalType: "boolean", required: true}
+      - {name: "_run_id", logicalType: "string", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["site_id", "cohort", "enrolment_month"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: clinical-operations-data
+  members:
+    - {username: clinical-operations-data, role: owner}
+slaProperties:
+  - {property: latency, value: 72, unit: h}
+  - {property: retention, value: 15, unit: y}

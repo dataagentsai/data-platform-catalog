@@ -1,0 +1,34 @@
+# Clinical trial, slice 3: Sites (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_clinical.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: clinical-ctms-api-site
+name: "Sites (silver)"
+version: 0.1.0
+status: draft
+domain: operations
+description:
+  purpose: "Trial sites with their country, status and investigator, from the trial management interface; history kept (type 2)."
+  limitations: "The investigator's name and phone number are tokenised before bronze."
+schema:
+  - name: site
+    physicalName: silver_ctms_api.site
+    logicalType: object
+    dataGranularityDescription: "One row per site per version"
+    properties:
+      - {name: "site_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "site_name", logicalType: "string", required: true}
+      - {name: "country", logicalType: "string", required: true, quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["IN", "HU", "GB", "AU", "DE", "ZA"]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "site_status", logicalType: "string", required: true, quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["active", "on_hold", "closed"]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "investigator_name", logicalType: "string", required: true, classification: "restricted", description: "Personal data class name; tokenised before bronze."}
+      - {name: "contact_phone", logicalType: "string", required: false, classification: "restricted", description: "Personal data class phone; tokenised before bronze."}
+      - {name: "updated_at", logicalType: "timestamp", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["site_id", "updated_at"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: clinical-operations-data
+  members:
+    - {username: clinical-operations-data, role: owner}
+slaProperties:
+  - {property: latency, value: 24, unit: h}
+  - {property: retention, value: 15, unit: y}

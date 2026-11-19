@@ -1,0 +1,35 @@
+# Clinical trial, slice 3: Laboratory results out of range (gold). ODCS v3.2.0, adopted not restated (validated by tests/test_clinical.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: clinical-gold-fact-lab-out-of-range
+name: "Laboratory results out of range (gold)"
+version: 0.1.0
+status: draft
+domain: laboratory
+description:
+  purpose: "Laboratory results ordered, reported and out of range per site and day of sample collection."
+  limitations: "A result is out of range against the laboratory's own reference range; clinical significance is not judged."
+schema:
+  - name: fact_lab_out_of_range
+    physicalName: gold_laboratory.fact_lab_out_of_range
+    logicalType: object
+    dataGranularityDescription: "One row per site and collection day"
+    properties:
+      - {name: "site_sk", logicalType: "integer", required: true}
+      - {name: "site_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "collection_date", logicalType: "date", required: true, primaryKey: true, primaryKeyPosition: 2}
+      - {name: "results_expected", logicalType: "integer", required: true}
+      - {name: "results_reported", logicalType: "integer", required: true}
+      - {name: "results_out_of_range", logicalType: "integer", required: true}
+      - {name: "_is_complete", logicalType: "boolean", required: true}
+      - {name: "_run_id", logicalType: "string", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["site_id", "collection_date"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: laboratory-data
+  members:
+    - {username: laboratory-data, role: owner}
+slaProperties:
+  - {property: latency, value: 24, unit: h}
+  - {property: retention, value: 15, unit: y}

@@ -1,0 +1,27 @@
+# DPM v0.2 gold fact: readings and excursions (outside 2 to 8 degrees) per shipment and day. Modelled: one SQL build()
+# in the harness. No dimension: a shipment has no master table in this domain. Late and replayed readings land in
+# their event day (silver drops the replays), so an excursion shows in gold once, on its own day.
+kind: gold_fact
+name: fact_temperature_excursion
+domain: supply
+pipeline: modelled
+contract: ../../contracts/fact_temperature_excursion.odcs.yaml
+contract_version: 0.1.0
+grain: [shipment_id, reading_date]
+inputs:
+  - {dataset: coldchain_stream.temperature_reading, role: driver}
+keys: {surrogate: hash, unknown_member: -1, not_applicable: -2}
+window: {column: reading_date, unit: day, lookback: 3}
+build: {kind: sql, ref: gold/supply/fact_temperature_excursion.sql}
+materialize: table
+corrections: false
+completeness: {on_incomplete: flag}
+checks:
+  grain_unique: true
+  reconcile:
+    against: silver
+    measures:
+      - {name: readings_total, column: readings}
+      - {name: excursion_readings_total, column: excursion_readings}
+    tolerance: {readings_total: 0, excursion_readings_total: 0}
+owners: {dataset: trial-supply-data, alerts: supply-quality-rota}

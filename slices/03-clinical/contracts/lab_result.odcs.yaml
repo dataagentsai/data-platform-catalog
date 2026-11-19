@@ -1,0 +1,39 @@
+# Clinical trial, slice 3: Laboratory results (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_clinical.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: clinical-lab-lab-result
+name: "Laboratory results (silver)"
+version: 0.1.0
+status: draft
+domain: laboratory
+description:
+  purpose: "One row per analyte measured on a sample taken at a visit, with the reference range and whether the value is outside it."
+  limitations: "Files from the central laboratory; one file per site per day."
+schema:
+  - name: lab_result
+    physicalName: silver_lab.lab_result
+    logicalType: object
+    dataGranularityDescription: "One row per analyte result (append)"
+    properties:
+      - {name: "result_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "visit_id", logicalType: "string", required: true}
+      - {name: "subject_id", logicalType: "string", required: true, classification: "restricted", description: "Personal data class subject identifier; tokenised before bronze, so every table holds the same token."}
+      - {name: "site_id", logicalType: "string", required: true}
+      - {name: "analyte_code", logicalType: "string", required: true, quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["ALT", "AST", "CREA", "GLUC", "HGB", "K", "PLT", "WBC"]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "collected_ts", logicalType: "timestamp", required: true}
+      - {name: "result_value", logicalType: "number", required: true}
+      - {name: "unit", logicalType: "string", required: true}
+      - {name: "reference_low", logicalType: "number", required: true}
+      - {name: "reference_high", logicalType: "number", required: true}
+      - {name: "range_flag", logicalType: "string", required: true, description: "low, normal or high against the reference range.", quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["low", "normal", "high"]}, "mustBe": 0, "dimension": "conformity", "severity": "critical"}]}
+      - {name: "out_of_range", logicalType: "integer", required: true, description: "1 when range_flag is low or high, else 0.", quality: [{"type": "sql", "description": "out_of_range says what range_flag says.", "query": "SELECT COUNT(*) FROM ${object} WHERE (out_of_range = 1) <> (range_flag <> 'normal')", "mustBe": 0, "dimension": "consistency", "severity": "critical"}]}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["result_id"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: laboratory-data
+  members:
+    - {username: laboratory-data, role: owner}
+slaProperties:
+  - {property: latency, value: 24, unit: h}
+  - {property: retention, value: 15, unit: y}

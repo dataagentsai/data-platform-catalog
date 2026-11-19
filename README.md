@@ -19,6 +19,7 @@ Part of [Clean Data Engineering](https://cleandataengineering.ai/).
 | [dbs/](dbs/) | DBS, the Data Binding Spec: **which product** fills each port, as an engine layer plus a cloud layer composed by stacks | v0.2: Databricks engine (with a Free Edition profile), AWS cloud, 2 stacks |
 | [slices/01-orders/](slices/01-orders/) | Slice 1, shop orders source to silver: contract, manifest, world with 4 incidents | spec draft, built and run |
 | [slices/02-tyre/](slices/02-tyre/) | Slice 2, the tyre company: 15 contracts, 20 manifests (datasets, gold, metrics, a model, platform), a 14-day world with 11 incidents | spec draft, cross-checked |
+| [slices/03-clinical/](slices/03-clinical/) | Slice 3, the clinical trial: 16 contracts, 21 manifests (datasets, gold, metrics, platform), a 14-day world with 12 incidents and a compressed 3-day calendar | spec draft, run end to end on the local engine |
 
 DAC starts from the tested technical checks in
 [data-project-review](https://github.com/dataagentsai/data-project-review) and keeps their ids.

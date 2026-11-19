@@ -1,0 +1,41 @@
+# Clinical trial, slice 3: Subject visits (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_clinical.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: clinical-edc-visit
+name: "Subject visits (silver)"
+version: 0.1.0
+status: draft
+domain: operations
+description:
+  purpose: "One row per planned visit: the date the protocol plans it for, the allowed window around that date, and what happened (the actual date, the forms recorded)."
+  limitations: "The planned date is the protocol's target date and does not move when a visit is rebooked. A cancelled visit keeps its planned date and changes its visit_status; visit compliance leaves it out."
+schema:
+  - name: visit
+    physicalName: silver_edc.visit
+    logicalType: object
+    dataGranularityDescription: "One row per planned visit of a subject (current state)"
+    properties:
+      - {name: "visit_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "subject_id", logicalType: "string", required: true, classification: "restricted", description: "Personal data class subject identifier; tokenised before bronze, so every table holds the same token."}
+      - {name: "site_id", logicalType: "string", required: true}
+      - {name: "visit_code", logicalType: "string", required: true, description: "The protocol visit: screening, baseline, a week visit or unscheduled.", quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["SCR", "BL", "W02", "W04", "W08", "W12", "UNS"]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "planned_date", logicalType: "date", required: true, description: "The date the protocol plans the visit for."}
+      - {name: "window_days", logicalType: "integer", required: true, description: "Days either side of the planned date in which the visit still counts.", quality: [{"type": "sql", "description": "window_days is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE window_days < 0", "mustBe": 0, "dimension": "accuracy", "severity": "critical"}]}
+      - {name: "scheduled_ts", logicalType: "timestamp", required: true, description: "When the site created the visit, in UTC."}
+      - {name: "visit_status", logicalType: "string", required: true, description: "scheduled, completed or cancelled.", quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["scheduled", "completed", "cancelled"]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "actual_date", logicalType: "date", required: false, description: "The date the visit took place; set only when completed.", quality: [{"type": "sql", "description": "A completed visit has an actual date and no other visit has one.", "query": "SELECT COUNT(*) FROM ${object} WHERE (visit_status = 'completed') <> (actual_date IS NOT NULL)", "mustBe": 0, "dimension": "consistency", "severity": "major"}]}
+      - {name: "forms_expected", logicalType: "integer", required: true, quality: [{"type": "sql", "description": "forms_expected is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE forms_expected < 0", "mustBe": 0, "dimension": "accuracy", "severity": "critical"}]}
+      - {name: "forms_recorded", logicalType: "integer", required: true, quality: [{"type": "sql", "description": "forms_recorded is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE forms_recorded < 0", "mustBe": 0, "dimension": "accuracy", "severity": "critical"}]}
+      - {name: "kits_expected", logicalType: "integer", required: true, description: "Kits of trial drug the protocol dispenses at this visit (0 or 1).", quality: [{"type": "sql", "description": "kits_expected is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE kits_expected < 0", "mustBe": 0, "dimension": "accuracy", "severity": "critical"}]}
+      - {name: "analytes_ordered", logicalType: "integer", required: true, description: "Laboratory analytes ordered on the sample taken at this visit.", quality: [{"type": "sql", "description": "analytes_ordered is never negative.", "query": "SELECT COUNT(*) FROM ${object} WHERE analytes_ordered < 0", "mustBe": 0, "dimension": "accuracy", "severity": "critical"}]}
+      - {name: "change_seq", logicalType: "integer", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["visit_id", "change_seq"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: clinical-operations-data
+  members:
+    - {username: clinical-operations-data, role: owner}
+slaProperties:
+  - {property: latency, value: 1, unit: h}
+  - {property: retention, value: 15, unit: y}

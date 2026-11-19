@@ -1,0 +1,39 @@
+# DPM v0.2: temperature readings from shipments of trial drug (PA4). The stream bus is the landing; event time with
+# a late allowance; replays dropped by reading id. Events, appended. Read as a stream but run trigger-once on a
+# schedule: each run takes what has arrived since its checkpoint and stops; nothing runs continuously.
+source_name: coldchain_stream
+source_env: prod
+dataset_name: temperature_reading
+is_enabled: true
+kind: dataset
+config:
+  load_type: INCREMENTAL
+  watermark_column: event_ts
+  sla_freshness_hours: "1"
+  sla_freshness_error_hours: "1"
+  schedule_trigger: cron
+  schedule_cron: "*/15 * * * *"
+  schedule_timezone: Asia/Kolkata
+  cost_center: trial-supply
+dedup: {mode: business_key_first, business_keys: [reading_id]}
+contract: ../../contracts/temperature_reading.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA4]
+ingest: {mode: stream, read: events}
+history: {kind: event}
+load:
+  pattern: append
+  batch_key: [source_batch_id]
+  new_columns: hold_in_bronze
+  deletes: {detect: none, apply: none}
+  late_lookback_days: 2
+quality:
+  actions:
+    major: {rows: flag, dataset: alert_owner, page: false}
+reconciliation:
+  hops: [sources, bronze, silver]
+  measures:
+    - {name: row_count}
+  tolerance: {row_count: 0.001}
+owners: {dataset: trial-supply-data, alerts: supply-quality-rota}
+concerns: {}

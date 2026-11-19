@@ -1,0 +1,19 @@
+# DPM v0.2 metric view (ADR-022). Known answers are the clinical world's seed-23 values after its 14-day run at scale 1.0.
+kind: metric_view
+name: mv_cold_chain
+domain: supply
+source: fact_temperature_excursion
+joins: []
+dimensions:
+  - {name: Reading month, expr: "DATE_TRUNC('MONTH', reading_date)"}
+  - {name: Shipment, expr: shipment_id}
+measures:
+  - name: Excursion readings
+    expr: SUM(excursion_readings)
+    additive: true
+    time_dimension: Reading month
+    description: Temperature readings outside the 2 to 8 degree range, each counted once (replayed readings are dropped before gold).
+    certification: certified
+    synonyms: [temperature excursions, excursions, readings out of range, cold chain breaks]
+    known_answer: {where: "reading month = 2026-11", value: 8}
+owners: {dataset: trial-supply-data}

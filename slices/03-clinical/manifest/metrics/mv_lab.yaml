@@ -1,0 +1,25 @@
+# DPM v0.2 metric view (ADR-022). Known answers are the clinical world's seed-23 values after its 14-day run at scale 1.0.
+kind: metric_view
+name: mv_lab
+domain: laboratory
+source: fact_lab_out_of_range
+joins: [dim_site]
+dimensions:
+  - {name: Collection month, expr: "DATE_TRUNC('MONTH', collection_date)"}
+  - {name: Country, expr: dim_site.country}
+measures:
+  - name: Out of range share
+    expr: SUM(results_out_of_range) FILTER (WHERE _is_complete) / SUM(results_reported) FILTER (WHERE _is_complete)
+    additive: false
+    time_dimension: Collection month
+    description: Share of laboratory results outside the laboratory's reference range, over complete site-days only (a day still waiting for a file is left out). Clinical significance is not judged.
+    certification: certified
+    synonyms: [out of range share, abnormal lab results, lab results out of range, abnormal results]
+    known_answer: {where: "collection month = 2026-11", value: 0.0783, tolerance: 0.0005}
+  - name: Results reported
+    expr: SUM(results_reported)
+    additive: true
+    time_dimension: Collection month
+    certification: reviewed
+    synonyms: [lab results, results received]
+owners: {dataset: laboratory-data}

@@ -1,0 +1,30 @@
+# DPM v0.2 gold fact: laboratory results out of range per site and collection day. Modelled: one pure dataframe
+# build() in the harness (D18). A day stays flagged incomplete until every sample taken that day has its results.
+kind: gold_fact
+name: fact_lab_out_of_range
+domain: laboratory
+pipeline: modelled
+contract: ../../contracts/fact_lab_out_of_range.odcs.yaml
+contract_version: 0.1.0
+grain: [site_id, collection_date]
+inputs:
+  - {dataset: edc.visit, bookmark: change_seq, role: driver}
+  - {dataset: lab.lab_result, role: driver}
+dimensions:
+  - {name: dim_site, key: site_sk, business_key: [site_id], as_of: collection_date}
+keys: {surrogate: hash, unknown_member: -1, not_applicable: -2}
+window: {column: collection_date, unit: day, lookback: 14}
+build: {kind: dataframe, ref: "gold.laboratory.out_of_range:build"}
+materialize: table
+corrections: false
+completeness: {on_incomplete: flag}
+checks:
+  grain_unique: true
+  orphan_rate_max: 0.03
+  reconcile:
+    against: silver
+    measures:
+      - {name: results_reported_total, column: results_reported}
+      - {name: results_out_of_range_total, column: results_out_of_range}
+    tolerance: {results_reported_total: 0, results_out_of_range_total: 0}
+owners: {dataset: laboratory-data, alerts: laboratory-data-rota}

@@ -1,0 +1,54 @@
+# DPM v0.2: adverse events from the trial data capture system. Push: the change-capture mover lands change files;
+# history type 2 on severity, outcome and status, because a safety review needs what was known on each date and a
+# site changes all three after the fact. No product names here (R1).
+source_name: edc
+source_env: prod
+dataset_name: adverse_event
+is_enabled: true
+kind: dataset
+config:
+  load_type: INCREMENTAL
+  watermark_column: change_seq
+  sla_freshness_hours: "1"
+  sla_freshness_error_hours: "2"
+  schedule_trigger: cron
+  schedule_cron: "*/15 * * * *"
+  schedule_timezone: Asia/Kolkata
+  cost_center: drug-safety
+dedup: {mode: business_key_latest, business_keys: [ae_id], order_by: change_seq}
+contract: ../../contracts/adverse_event.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA2]
+ingest: {mode: push, read: change_feed}
+history: {kind: transaction, type: scd2, track_columns: [severity, outcome, ae_status]}
+load:
+  pattern: history
+  history_order_by: change_seq
+  batch_key: [delivery_window, content_checksum]
+  new_columns: hold_in_bronze
+  deletes: {detect: change_feed, apply: mark_deleted}
+  quarantine_stop_share: 0.01
+  late_lookback_days: 35
+volume:
+  expected_rows_per_delivery: {min: 1, max: 2000}
+reconciliation:
+  hops: [sources, landing, bronze, silver]
+  measures:
+    - {name: row_count}
+    - {name: serious_total, column: is_serious}
+  tolerance: {row_count: 0, serious_total: 0.0}
+  signed_off_by: drug-safety-lead
+  entries:
+    - name: live_source_vs_silver
+      left: sources
+      right: silver
+      keys: [ae_id]
+      measures:
+        - {name: events, agg: count}
+        - {name: serious_total, agg: sum, column: is_serious}
+      window: {column: reported_ts, days: 35}
+      buckets: 64
+      tolerance: {events: 0, serious_total: 0}
+      schedule: daily 02:00
+owners: {dataset: safety-data, alerts: safety-data-rota}
+concerns: {}

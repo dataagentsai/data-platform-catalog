@@ -1,0 +1,38 @@
+# Clinical trial, slice 3: Adverse events (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_clinical.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: clinical-edc-adverse-event
+name: "Adverse events (silver)"
+version: 0.1.0
+status: draft
+domain: safety
+description:
+  purpose: "One row per adverse event per version, with severity, outcome and status tracked (type 2), because a safety review needs what was known on each date."
+  limitations: "As the site entered it in the trial data capture system; no medical coding and no causality assessment."
+schema:
+  - name: adverse_event
+    physicalName: silver_edc.adverse_event
+    logicalType: object
+    dataGranularityDescription: "One row per adverse event per version; one current row per event"
+    properties:
+      - {name: "ae_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "subject_id", logicalType: "string", required: true, classification: "restricted", description: "Personal data class subject identifier; tokenised before bronze, so every table holds the same token."}
+      - {name: "site_id", logicalType: "string", required: true}
+      - {name: "ae_term", logicalType: "string", required: true, description: "The event as reported, from a short synthetic list of terms."}
+      - {name: "onset_date", logicalType: "date", required: true}
+      - {name: "severity", logicalType: "string", required: true, description: "mild, moderate or severe. A change opens a new version.", quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["mild", "moderate", "severe"]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "is_serious", logicalType: "integer", required: true, description: "1 when the event is serious, else 0.", quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": [0, 1]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "outcome", logicalType: "string", required: true, description: "A change opens a new version.", quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["not_recovered", "recovering", "recovered"]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "ae_status", logicalType: "string", required: true, description: "open while the site still follows the event, closed after.", quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["open", "closed"]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "reported_ts", logicalType: "timestamp", required: true, description: "When the site first entered the event, in UTC."}
+      - {name: "change_seq", logicalType: "integer", required: true, description: "The source's change sequence; history is ordered by it (DPC-0025)."}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["ae_id", "change_seq"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: safety-data
+  members:
+    - {username: safety-data, role: owner}
+slaProperties:
+  - {property: latency, value: 1, unit: h}
+  - {property: retention, value: 15, unit: y}

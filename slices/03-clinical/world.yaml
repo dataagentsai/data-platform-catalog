@@ -1,0 +1,289 @@
+# DWD draft: the clinical trial's data world (goal: the same platform, a second domain). Extends AgentTwin's world format.
+#
+# The rule kept from AWD: a world cites the specification and never declares the domain. Columns, rules and keys live in
+# the contracts and manifests it cites; the world says only what the sources do, how much, when, and which incidents it
+# plants. Each incident names the detector expected to fire (a DAC obligation), the capabilities that must handle it
+# (DPC) and an oracle judged from the world's own truth, never from the platform's logs (R9, SIM-01).
+# No product names (R1): systems are named by what they are (a trial data capture database, a central laboratory
+# drop), not by vendor.
+#
+# Every calendar entry carries a `params:` block: the incident's exact values (site, share, hour...), so the generator
+# reads them from here and never from its own table. `does:` stays the plain sentence for people; when the two
+# disagree, `params:` wins. `site: busiest` means the site with the most laboratory results that day, so a short
+# world always has something to plant the incident on.
+apiVersion: dwd/v0
+extends: awd/v0
+name: clinical-trial
+seed: 23
+cites:
+  platform: {path: manifest/platform.yaml}
+  manifests: manifest/datasets/
+  gold: manifest/gold/
+  metrics: manifest/metrics/
+
+fidelity:
+  faithful_about:
+    - the visit life cycle (scheduled, completed or cancelled), each visit's planned date, its allowed window and the
+      forms and kits it expects; a cancelled visit keeps its planned date and changes only its status
+    - one laboratory file per site per collection day, in the central laboratory's own format (semicolon separated),
+      late or re-sent as laboratories really do
+    - site enrolment logs once a month per site, re-sent under a new name, and sites that join the trial before the
+      trial management interface lists them
+    - temperature loggers in shipments whose readings arrive out of order and are replayed after a logger restart, and a
+      shipment that leaves the 2 to 8 degree range for a short time
+    - subject identifiers as personal data: they appear in clear only in the sources and the laboratory files
+  not_faithful_about:
+    - volume (hundreds of subjects, not thousands of sites and tens of thousands of subjects)
+    - clinical content: adverse event terms, laboratory values and treatment groups are plausible, not modelled
+    - the visit schedule, which is compressed (screening to week 12 in 21 days) so that a short world meets every
+      visit type
+    - lateness of visit data: a visit is recorded on the day it happens (or the day before), never afterwards
+
+clock:
+  start: 2026-11-09T00:00:00+05:30    # jobs read time only through the clock port (DPC-0032)
+  # Enrolment logs are due in the first 5 days of a month, but the clock starts on 9 November. Days 1 to 5 of the clock
+  # stand in for October's log window: every site's October log is due in them, and a log that arrives later is late.
+  days: 14
+  business_timezone: Asia/Kolkata
+
+systems:                              # each is a mock source system the world writes into (resolution as in AWD)
+  edc_db:
+    kind: database
+    resolution: mock
+    change_feed: true                 # inserts, updates and deletes with a change sequence
+    datasets: [edc.subject, edc.visit, edc.adverse_event]
+    delivers: {edc.subject: full copy daily 01:00, edc.visit: every 15 minutes, edc.adverse_event: every 15 minutes}
+  supply_db:
+    kind: database
+    resolution: mock
+    change_feed: true
+    datasets: [supply.kit, supply.dispensing]
+    delivers: {supply.kit: full copy daily 01:00, supply.dispensing: every 15 minutes}
+  lab_drop:
+    kind: file_drop
+    resolution: mock
+    datasets: [lab.lab_result]
+    delivers: {lab.lab_result: one CSV per site per collection day, semicolon separated, in the evening}
+  site_drop:
+    kind: file_drop
+    resolution: mock
+    datasets: [site.site_enrolment_log]
+    delivers: {site.site_enrolment_log: one CSV per site per month, in the first 5 days of the month}
+    file_window_days: 5               # each site's monthly log arrives on one of the first N days of the clock
+  ctms_api:
+    kind: rest_api
+    resolution: mock
+    datasets: [ctms_api.site]
+    delivers: {ctms_api.site: pages of 200 since a cursor, read every 6 hours}
+  coldchain_bus:
+    kind: stream
+    resolution: mock
+    datasets: [coldchain_stream.temperature_reading]
+    delivers: {coldchain_stream.temperature_reading: one reading per shipment logger every 15 minutes}
+
+population:
+  sites: 12
+  subjects: 1200                      # scaled; never fewer than 110 (the subject copy's expected volume starts at 100)
+  cohorts: {A: 0.40, B: 0.35, C: 0.25}
+  screening_days_back: 22             # subjects were screened in the 22 days before the clock starts
+  visit_schedule:                     # offsets are from the screening date; visits are always planned inside the clock
+    SCR: {offset_days: 0, window_days: 1, forms_expected: 4, kits_expected: 0, analytes_ordered: 4}
+    BL: {offset_days: 3, window_days: 1, forms_expected: 6, kits_expected: 1, analytes_ordered: 4}
+    W02: {offset_days: 6, window_days: 1, forms_expected: 5, kits_expected: 0, analytes_ordered: 2}
+    W04: {offset_days: 10, window_days: 2, forms_expected: 5, kits_expected: 1, analytes_ordered: 4}
+    W08: {offset_days: 14, window_days: 2, forms_expected: 5, kits_expected: 1, analytes_ordered: 2}
+    W12: {offset_days: 21, window_days: 3, forms_expected: 6, kits_expected: 1, analytes_ordered: 4}
+  visit_done_share: 0.90              # the rest stay scheduled and are missed (never completed)
+  visit_cancel_share: 0.03
+  visit_early_share: 0.10             # a completed visit happens the day before its planned date
+  forms_short_share: 0.08             # a completed visit with one form not yet recorded
+  kit_missing_share: 0.05             # a visit that expects a kit and has no dispensing record
+  kits_per_subject: 4                 # kits in the depot lists, enough for every kit visit
+  out_of_range_share: 0.08            # laboratory results outside the reference range
+  adverse_events_per_subject_day: 0.03
+  shipments: 24
+  reading_every_s: 900                # at scale 1.0; a smaller scale makes readings less frequent
+  temperature_range_c: {low: 2.0, high: 8.0}
+  excursion: {day: 2, shipments: 2, from_hour: 15, minutes: 50, peak_c: 11.5}   # shipments that leave the range
+  generator: seeded_random            # a seeded deterministic random generator (Python's random, seed 23), behind
+                                      # the population port; no package and never a hosted generator (REUSE.md)
+
+calendar:                             # story: one of the demo stories this world must cover (see covers below)
+  - id: lab-file-late
+    day: 5
+    story: late_data
+    kind: late_delivery
+    dataset: lab.lab_result
+    does: The busiest site's laboratory file for collection day 4 arrives on day 5, a day late.
+    params: {site: busiest, due_day: 4}
+    expect:
+      detector: LATE-01
+      handled_by: [DPC-0080, DPC-0059, DPC-0079]
+      oracle: that site-day is flagged incomplete in fact_lab_out_of_range (results expected but not reported) until the file arrives, then rebuilt complete with the true counts
+  - id: lab-column-renamed
+    day: 8
+    story: schema_change
+    kind: renamed_column
+    dataset: lab.lab_result
+    does: After a protocol amendment the central laboratory renames range_flag to flag in the busiest site's file.
+    params: {site: busiest, column: range_flag, renamed_to: flag, until_day: 8}   # reverts at the end of day 8
+    expect:
+      detector: SCH-02
+      handled_by: [DPC-0008]
+      oracle: the load stops naming range_flag; silver is unchanged; no nulls loaded; the other sites' files keep loading; that site-day stays flagged incomplete in gold
+  - id: enrolment-log-resent
+    day: 6
+    story: resend
+    kind: duplicate_delivery
+    dataset: site.site_enrolment_log
+    does: Re-send site S-0002's October enrolment log byte for byte under a new name.
+    params: {site: S-0002, month: "2026-10"}
+    expect:
+      detector: DUP-01
+      handled_by: [DPC-0024, DPC-0023, DPC-0038]
+      oracle: silver and fact_enrolment for S-0002 October are unchanged; no restatement is logged
+  - id: subject-withdrawn
+    day: 4
+    story: deletes
+    kind: source_delete
+    dataset: edc.subject
+    does: A subject withdraws consent and the site deletes the record in the trial data capture system.
+    pick: 1
+    params: {from_day: 1}
+    expect:
+      detector: DEL-01
+      handled_by: [DPC-0017, DPC-0053]
+      oracle: the subject is marked deleted in silver (the next full copy lacks the key), still a member of dim_subject, and no visit row leaves fact_visit_compliance
+  - id: adverse-event-out-of-order
+    day: 8
+    story: out_of_order
+    kind: late_change
+    dataset: edc.adverse_event
+    does: A severity change for an adverse event reported on day 1 arrives with a change sequence older than one already loaded.
+    pick: 1
+    params: {from_day: 1}
+    expect:
+      detector: SCD-02
+      handled_by: [DPC-0025, DPC-0026]
+      oracle: the event has exactly one current version holding the newest change, with no overlapping periods
+  - id: kit-copy-short
+    day: 9
+    story: mass_delete
+    kind: short_full_copy
+    dataset: supply.kit
+    does: The daily full copy of kits comes back with 40% of rows missing.
+    params: {missing_share: 0.40}
+    expect:
+      detector: DEL-04
+      handled_by: [DPC-0054]
+      oracle: nothing is appended to bronze, the dataset is blocked with the mass-delete alert, silver keeps every kit
+  - id: visits-planned-date-corrected
+    day: 10
+    story: correction
+    kind: correction
+    dataset: edc.visit
+    does: >-
+      The study team records that 6 visits planned on day 1 were always planned a day later, as 6 rows in the metadata
+      store's corrections table (ADR-017, DPC-0082); a backfill plan activates them on day 11. The data capture system
+      is not changed: the correction records come from that table, never from a source system.
+    pick: 6
+    params: {from_day: 1, shift_days: 1, activate_day: 11}
+    expect:
+      detector: HIST-05
+      handled_by: [DPC-0082]
+      oracle: >-
+        silver is unchanged; on day 11 only the planned-date windows of the 6 corrected visits are rebuilt (each visit's
+        date as first planned and its corrected date, one day later); no other window changes; visit compliance
+        equals the corrected truth
+  - id: new-site-late
+    day: 11
+    story: late_dimension
+    kind: late_dimension
+    dataset: ctms_api.site
+    does: Two subjects at new site S-0099 are entered on day 11; the site appears in the trial management interface on day 13.
+    params: {site: S-0099, country: ZA, appears_day: 13, subjects: 2}
+    expect:
+      detector: LATE-02
+      handled_by: [DPC-0046]
+      oracle: no fact row is dropped; the new site's visits sit on the unknown member (-1) and count as orphans on days 11 and 12, then are re-keyed on day 13
+  - id: dispensing-feed-drops-rows
+    day: 12
+    story: recon_mismatch
+    kind: silent_loss
+    dataset: supply.dispensing
+    does: The change feed silently skips 3 dispensing rows during a source maintenance window.
+    pick: 3
+    params: {}                        # pick says how many; the skipped rows are the day's first 3 dispensings
+    expect:
+      detector: REC-05
+      handled_by: [DPC-0052, DPC-0015]
+      oracle: the live-source-against-silver entry fails that night, names the hop sources to landing, and drills to the 3 keys
+  - id: site-status-changed
+    day: 7
+    kind: master_change
+    dataset: ctms_api.site
+    does: Site S-0005 is put on hold in the trial management interface.
+    params: {site: S-0005, from_status: active, to_status: on_hold}
+    expect:
+      detector: SCD-02
+      handled_by: [DPC-0025, DPC-0026]
+      oracle: the site has a closed version with status active and a current version with status on_hold; dim_site holds both versions and no fact row is lost or doubled
+  - id: temperature-readings-out-of-order
+    day: 3
+    story: out_of_order
+    kind: late_events
+    dataset: coldchain_stream.temperature_reading
+    does: For two hours, 30% of the readings from 6 shipment loggers arrive up to 90 seconds late and out of order.
+    params: {from_hour: 10, hours: 2, share: 0.30, shipments: 6, max_delay_s: 90}
+    expect:
+      detector: LATE-03
+      handled_by: [DPC-0060]
+      oracle: every reading lands in the hour of its event time; hourly counts and fact_temperature_excursion equal the world's truth
+  - id: temperature-stream-replayed
+    day: 13
+    story: out_of_order
+    kind: replay
+    dataset: coldchain_stream.temperature_reading
+    does: After a logger gateway restart, the stream replays the last 45 minutes of readings.
+    params: {restart_hour: 14, minutes: 45}
+    expect:
+      detector: DUP-04
+      handled_by: [DPC-0086, DPC-0096]
+      oracle: no reading is counted twice; fact_temperature_excursion counts each excursion reading once
+
+calendars:                            # the same incidents on other days; chosen by name at run time, never by default
+  compressed:
+    purpose: >-
+      The 3-day development loop: every incident above lands on day 2 or 3, so a short run on the platform still meets
+      all twelve. Day 1 stays clean, because several incidents reach back to it. The loader refuses a move that breaks
+      the order (a source day after the incident, an effect before it).
+    days: 3
+    world:                            # existing world settings this calendar changes (a path that is not there is an error)
+      systems.site_drop.file_window_days: 1   # every on-time October log on day 1, so October can complete in 3 days
+    moves:
+      lab-file-late: {day: 2, due_day: 1}
+      lab-column-renamed: {day: 3, until_day: 3}
+      enrolment-log-resent: {day: 3}
+      subject-withdrawn: {day: 2, from_day: 1}
+      adverse-event-out-of-order: {day: 3, from_day: 1}
+      kit-copy-short: {day: 3}
+      visits-planned-date-corrected: {day: 2, from_day: 1, activate_day: 3}
+      new-site-late: {day: 2, appears_day: 3}
+      dispensing-feed-drops-rows: {day: 3}
+      site-status-changed: {day: 2}
+      temperature-readings-out-of-order: {day: 2}
+      temperature-stream-replayed: {day: 3}
+
+covers: [late_data, resend, schema_change, deletes, out_of_order, mass_delete, correction, late_dimension, recon_mismatch]
+
+oracles:                              # judged from world state, never from the platform's own logs
+  - id: silver-agrees-with-world
+    check: For every day and dataset, silver's current rows equal the world's true current rows (count, keys, measure totals).
+  - id: gold-agrees-with-world
+    check: Visit compliance, laboratory counts, enrolment counts and excursion readings per window equal the world's truth once their windows are complete.
+  - id: every-incident-noticed
+    check: Every calendar entry's detector fired on its day and on no clean day (SIM-01).
+  - id: no-personal-value-in-clear
+    check: No subject identifier appears in clear in bronze, silver or gold; only the token does.
+  - id: same-number-everywhere
+    check: The metric view, the dashboard and the conversation interface give the same compliance % for the same question.

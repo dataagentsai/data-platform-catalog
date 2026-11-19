@@ -1,0 +1,54 @@
+# DPM v0.2: subject visits from the trial data capture system. Push change capture, current state only (type 1): the
+# planned date is the protocol's target and does not move, so visit compliance needs no history. A cancelled visit
+# changes visit_status; a visit hard-deleted at the source is marked deleted. Corrections to the planned date are not
+# source changes: they are rows in the metadata store's corrections table (ADR-017), read by fact_visit_compliance.
+source_name: edc
+source_env: prod
+dataset_name: visit
+is_enabled: true
+kind: dataset
+config:
+  load_type: INCREMENTAL
+  watermark_column: change_seq
+  sla_freshness_hours: "1"
+  sla_freshness_error_hours: "2"
+  schedule_trigger: cron
+  schedule_cron: "*/15 * * * *"
+  schedule_timezone: Asia/Kolkata
+  cost_center: clinical-operations
+dedup: {mode: business_key_latest, business_keys: [visit_id], order_by: change_seq}
+contract: ../../contracts/visit.odcs.yaml
+contract_version: 0.1.0
+archetypes: [PA2]
+ingest: {mode: push, read: change_feed}
+history: {kind: transaction}
+load:
+  pattern: upsert
+  batch_key: [delivery_window, content_checksum]
+  new_columns: hold_in_bronze
+  deletes: {detect: change_feed, apply: mark_deleted}
+  quarantine_stop_share: 0.01
+  late_lookback_days: 35
+volume:
+  expected_rows_per_delivery: {min: 5, max: 5000}
+reconciliation:
+  hops: [sources, landing, bronze, silver]
+  measures:
+    - {name: row_count}
+    - {name: forms_expected_total, column: forms_expected}
+  tolerance: {row_count: 0, forms_expected_total: 0.0}
+  signed_off_by: clinical-operations-lead
+  entries:
+    - name: live_source_vs_silver
+      left: sources
+      right: silver
+      keys: [visit_id]
+      measures:
+        - {name: visits, agg: count}
+        - {name: forms_expected_total, agg: sum, column: forms_expected}
+      window: {column: scheduled_ts, days: 35}
+      buckets: 64
+      tolerance: {visits: 0, forms_expected_total: 0}
+      schedule: daily 02:00
+owners: {dataset: clinical-operations-data, alerts: edc-data-rota}
+concerns: {}

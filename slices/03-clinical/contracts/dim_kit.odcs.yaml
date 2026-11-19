@@ -1,0 +1,35 @@
+# Clinical trial, slice 3: Kit dimension (gold). ODCS v3.2.0, adopted not restated (validated by tests/test_clinical.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: clinical-gold-dim-kit
+name: "Kit dimension (gold)"
+version: 0.1.0
+status: draft
+domain: supply
+description:
+  purpose: "Kits of trial drug as of any date, with reserved members -1 (unknown) and -2 (not applicable)."
+  limitations: "From silver kits, without the treatment group: gold is blinded."
+schema:
+  - name: dim_kit
+    physicalName: gold_supply.dim_kit
+    logicalType: object
+    dataGranularityDescription: "One row per kit per version, plus the reserved members"
+    properties:
+      - {name: "kit_sk", logicalType: "integer", required: true, primaryKey: true, primaryKeyPosition: 1}
+      - {name: "kit_id", logicalType: "string", required: true}
+      - {name: "kit_type", logicalType: "string", required: true}
+      - {name: "lot_number", logicalType: "string", required: true}
+      - {name: "expiry_date", logicalType: "date", required: true}
+      - {name: "depot_code", logicalType: "string", required: true}
+      - {name: "valid_from", logicalType: "timestamp", required: true}
+      - {name: "valid_to", logicalType: "timestamp", required: true}
+      - {name: "is_current", logicalType: "boolean", required: true}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["kit_sk"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+team:
+  name: trial-supply-data
+  members:
+    - {username: trial-supply-data, role: owner}
+slaProperties:
+  - {property: latency, value: 24, unit: h}
+  - {property: retention, value: 15, unit: y}

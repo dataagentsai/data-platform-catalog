@@ -1,0 +1,33 @@
+# Clinical trial, slice 3: Subjects (silver). ODCS v3.2.0, adopted not restated (validated by tests/test_clinical.py).
+apiVersion: v3.2.0
+kind: DataContract
+id: clinical-edc-subject
+name: "Subjects (silver)"
+version: 0.1.0
+status: draft
+domain: operations
+description:
+  purpose: "Trial subjects with their site, cohort and status; history kept (type 2)."
+  limitations: "No name, date of birth or contact details: the data capture system holds only the subject identifier."
+schema:
+  - name: subject
+    physicalName: silver_edc.subject
+    logicalType: object
+    dataGranularityDescription: "One row per subject per version"
+    properties:
+      - {name: "subject_id", logicalType: "string", required: true, primaryKey: true, primaryKeyPosition: 1, classification: "restricted", description: "Personal data class subject identifier; tokenised before bronze, so every table holds the same token."}
+      - {name: "site_id", logicalType: "string", required: true}
+      - {name: "cohort", logicalType: "string", required: true, quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["A", "B", "C"]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "subject_status", logicalType: "string", required: true, quality: [{"type": "library", "metric": "invalidValues", "arguments": {"validValues": ["screening", "randomised", "completed", "withdrawn", "screen_failed"]}, "mustBe": 0, "dimension": "conformity", "severity": "major"}]}
+      - {name: "screening_date", logicalType: "date", required: true}
+      - {name: "extracted_at", logicalType: "timestamp", required: true, description: "When the full copy was taken; orders versions of a full copy."}
+    quality:
+      - {"type": "library", "metric": "duplicateValues", "arguments": {"properties": ["subject_id", "extracted_at"]}, "mustBe": 0, "dimension": "uniqueness", "severity": "critical"}
+      - {"type": "library", "metric": "rowCount", "mustBeGreaterThan": 0, "dimension": "completeness", "severity": "critical"}
+team:
+  name: clinical-operations-data
+  members:
+    - {username: clinical-operations-data, role: owner}
+slaProperties:
+  - {property: latency, value: 24, unit: h}
+  - {property: retention, value: 15, unit: y}

@@ -1,0 +1,37 @@
+# DPM v0.2 gold fact: visit compliance. Modelled: one pure build() (a SQL model) inside the gold harness (ADR-003, D18).
+# The harness finds the planned-date days changed in either input, reads them in full, joins dimensions as of the
+# time the visit was created (ADR-005), lays active corrections over silver (ADR-017), checks, and replaces the days
+# (ADR-006). Only scheduled and completed visits are built: a cancelled visit is left out, so the reconcile compares
+# against silver's visits that are not cancelled. Corrections are read from the corrections table in the metadata
+# store (ADR-010, ADR-017), where the planned-date correction in world.yaml (visits-planned-date-corrected) is
+# recorded; a backfill plan names the planned-date windows to rebuild. The kit comes from the dispensing record; its
+# treatment group is never read.
+kind: gold_fact
+name: fact_visit_compliance
+domain: operations
+pipeline: modelled
+contract: ../../contracts/fact_visit_compliance.odcs.yaml
+contract_version: 0.1.0
+grain: [visit_id]
+inputs:
+  - {dataset: edc.visit, bookmark: change_seq, role: driver}
+  - {dataset: supply.dispensing, bookmark: change_seq, role: driver}
+dimensions:
+  - {name: dim_subject, key: subject_sk, business_key: [subject_id], as_of: scheduled_ts}
+  - {name: dim_site, key: site_sk, business_key: [site_id], as_of: scheduled_ts}
+  - {name: dim_kit, key: kit_sk, business_key: [kit_id], as_of: scheduled_ts}
+keys: {surrogate: hash, unknown_member: -1, not_applicable: -2}
+window: {column: planned_date, unit: day, lookback: 35}
+build: {kind: sql, ref: gold/operations/fact_visit_compliance.sql}
+materialize: table
+corrections: true
+completeness: {on_incomplete: flag}
+checks:
+  grain_unique: true
+  orphan_rate_max: 0.03             # a trial has a few dozen sites: one new site is a few visits in a hundred
+  reconcile:
+    against: silver
+    measures:
+      - {name: forms_expected_total, column: forms_expected}
+    tolerance: {forms_expected_total: 0}
+owners: {dataset: clinical-operations-data, alerts: clinical-operations-rota}
