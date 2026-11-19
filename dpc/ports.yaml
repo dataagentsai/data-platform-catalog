@@ -49,7 +49,7 @@
   supplied_outside: The storage itself.
   operations:
     - {name: put, intent: Store a delivery's files and manifest under its delivery id.}
-    - {name: list, intent: List deliveries not yet landed, oldest first.}
+    - {name: deliveries, intent: 'List a dataset''s deliveries in window then name order; the lander skips the ones its file log already holds.'}
     - {name: read, intent: Read one delivery's files by id.}
   invariants:
     - must: A delivery is immutable once its manifest exists.
@@ -504,7 +504,7 @@
   kernel_owns: The names jobs ask for.
   supplied_outside: Storing and rotating secrets.
   operations:
-    - {name: get, intent: Return a credential by name to an authorised job identity.}
+    - {name: get, intent: 'Return a credential by reference (secret://<name>) to an authorised job identity. The name uses the portable grammar, the subset every cloud''s secret store can hold: letters, digits, hyphen, and slash as a separator, with no double hyphen and no hyphen next to a slash, so a reference means the same on every cloud (ADR-036).'}
   invariants:
     - must: No credential appears in the repository.
       because: A secret in history is a secret published.
@@ -624,6 +624,7 @@
   kernel_owns: The event id, the event-time column, the late allowance, and the checkpoint position kept per reader.
   supplied_outside: Receiving, retaining and serving the events.
   operations:
+    - {name: shards, intent: List the parallel partitions of a stream, so a reader keeps one checkpoint per partition.}
     - {name: read, intent: Read events from a checkpoint onwards.}
     - {name: retention, intent: Report how long events are kept, so a reader knows how long it may be down., optional: true}
   invariants:
@@ -967,6 +968,7 @@
   supplied_outside: Durable storage.
   operations:
     - {name: location, intent: Return the storage location for an environment and a layer.}
+    - {name: versioned, intent: 'Say whether the location keeps old versions of what is overwritten or deleted. A cloud that cannot say, or cannot do it for the storage type chosen, reports false, and the recovery targets then rest on the platform''s own retention and table history (ADR-029, ADR-036).'}
   invariants:
     - must: Storage is versioned and copied as far as the declared recovery targets require.
       because: Recovery targets that the storage cannot meet are only words.

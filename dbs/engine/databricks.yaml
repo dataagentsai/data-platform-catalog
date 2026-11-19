@@ -5,7 +5,7 @@
 # cloud. The base bindings below are Databricks on a paid workspace; the free-edition profile replaces what Free
 # Edition lacks and carries over everything slice 1 proved (it was slices/01-orders/binding-databricks.yaml).
 #
-# Sources: the deck's AWS + Databricks big picture and "who provides what" (the client deck sources),
+# Sources: the deck's big picture and "who provides what" (the client deck sources),
 # ~/clean-data-engineering/FREE-EDITION.md, and the slice 1 build (data-platform-framework branch slice1).
 apiVersion: data-binding-layer/v0.1
 layer: engine
@@ -21,8 +21,8 @@ decisions:
   ADR-012: {value: "catalogs <env>_<layer> (landing, bronze, silver, gold, ops), schemas per source or domain", source: chosen}
   streams: {value: "streams run trigger-once (availableNow) on a schedule from the manifest, never continuous (4 Nov); as Structured Streaming or Auto Loader in Lakeflow Jobs writing through the table port, not Lakeflow streaming tables (12 Nov, ADR-026/027); streaming build on hold while batch is finished", source: chosen}
   ADR-027: {value: "table format = setting table_format; default Apache Iceberg as Unity Catalog managed Iceberg tables (client choice 12 Nov, open format); Delta Lake and Apache Hudi adapters kept for portability and the format benchmark; idempotent append decided by our file log, not Delta txnAppId", source: chosen}
-  ADR-028: {value: "Unity Catalog is the catalog of record and the only writer; AWS engines (Redshift, Athena) read through an AWS Glue federated catalog over the Unity Catalog Iceberg REST API (no copy, no sync); grants generated for Unity Catalog and Lake Formation from one manifest plus a nightly drift check; exit drill registers the same Iceberg metadata in a second catalog (Glue or Apache Polaris)", source: chosen}
-  ADR-010: {value: "metadata store on Lakebase (Databricks managed PostgreSQL), stored procedures as the only way in; chosen over Aurora PostgreSQL on 4 Nov to drop one AWS service", source: chosen}
+  ADR-028: {value: "Unity Catalog is the catalog of record and the only writer; other engines read through a federated catalog over the Unity Catalog Iceberg REST API (no copy, no sync), and the cloud layer binds that federation and the grants for its own engines (dbs/cloud/*.yaml, decision federated_catalog); grants for Unity Catalog are generated from one manifest, with a nightly drift check against any other grant store; exit drill registers the same Iceberg metadata in a second catalog (Apache Polaris, or the cloud's own)", source: chosen}
+  ADR-010: {value: "metadata store on Lakebase (Databricks managed PostgreSQL), stored procedures as the only way in; chosen over a separate managed PostgreSQL service on 4 Nov to drop one service from every cloud; available on the clouds this engine runs on, region by region, so a stack checks its region (ADR-036)", source: chosen}
 thresholds:
   quarantine_stop_share: 0.01
   freshness_warn_hours: 4

@@ -1,0 +1,25 @@
+# DBS stack: Databricks on Azure (decision D17's twin; ADR-036, the second cloud). Written 19 Nov 2026 before any run on a
+# real subscription: the decision record stays `proposed` until the 3-day compressed run has passed on one.
+# A stack names one engine layer, one cloud layer and an engine profile, and says which layer wins wherever both bind
+# a port (`prefer`). The composed binding and its coverage are generated: scripts/coverage.py --stack <this file>.
+apiVersion: data-binding-stack/v0.1
+name: azure-databricks
+subject:
+  name: tyre company, the second-cloud test
+  platform: Databricks on Azure (dev and prod as separate storage accounts, key vaults, catalogs and bundle targets)
+  archetypes: [PA1, PA2, PA3, PA4, PA5, PA6, PA9]
+engine: {layer: databricks}
+cloud: {layer: azure}
+prefer:
+  telemetry: engine          # data alerts and freshness live on the engine side; Azure Monitor is joined in by the ops builder
+  cost_ledger: engine        # billing system tables carry job and pipeline ids; Cost Management adds the Azure side
+  secret_store: cloud        # Key Vault is the source; secret scopes are backed by it
+  identity_provider: cloud   # Microsoft Entra ID is the directory; engine groups are provisioned from it
+  compute_pool: engine       # serverless first; virtual machines only for classic compute
+  audit_log: engine          # data access audit; the Activity Log covers the account side
+  infra_provisioner: cloud   # one Terraform run per environment, the azurerm provider first, the engine provider after
+decisions:
+  environments: {value: "dev and prod: separate storage accounts, key vaults, catalogs, metadata schemas and bundle targets, one resource group each, in one subscription to start", source: chosen}
+  metadata_store: {value: "the engine's managed PostgreSQL (generally available on this cloud since 2 Mar 2026, region by region): the chosen region must be on the list", source: chosen}
+  agents: {value: "agent_runtime is not bound on this cloud yet; the engine layer's own offering is used where it binds the port", source: chosen}
+accepted_gaps: []
