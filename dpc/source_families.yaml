@@ -1,0 +1,163 @@
+# Source families: the ways data can leave a system, grouped by what the platform has to do about it.
+# Product-free (rule R1): products and their routes are in dbs/sources/source_profiles.yaml.
+#
+# A family is an ACCESS ROUTE, not a product. One product offers several routes, each in a different family
+# (a business application may offer a shared table, an API and a file export). The platform implements families; a
+# product is a menu of routes with a policy on which to prefer.
+version: 0
+as_of: 2026-11-24
+
+# What the lander sees. Every family arrives as one of these four.
+arrival_shapes:
+  files: Data files plus a small delivery manifest written last (the landing contract).
+  change_files: Files whose rows carry an operation (insert, update, delete), a change sequence and a commit time.
+  tables: A table that someone else keeps, read by version or change feed (a shared or managed table).
+  events: An unbounded flow of small records, delivered at least once, possibly late or repeated.
+
+# Who starts the movement.
+initiators:
+  push: A third party delivers on its own schedule (a partner drop, a vendor export).
+  pull_mover: The platform starts something else that delivers files (a managed copy service, a warehouse export command).
+  pull_reader: The platform reads rows itself.
+  share: Nothing moves. The data is read in place from a table someone shares.
+
+# The closed vocabulary a route may claim. A source profile names these; the mover picks the best available.
+capabilities:
+  bulk_export_to_files: The source can write a large slice to files itself (fastest, least load on the source).
+  incremental_by_watermark: A reliable change-time or increasing key lets a load ask for what is new.
+  log_based_changes: Changes are read from the source's own change log, with operation and sequence.
+  deletes_visible: A delete shows up as an event, a flag or a separate list.
+  ordered_changes: Changes carry a sequence that settles which came last.
+  zero_copy_read: The data is read where it is, with nothing copied by us until we choose to.
+  history_guaranteed: The provider promises how long old versions can be read.
+  events_stream: A continuous, ordered-per-partition flow.
+  row_read: Rows can be read through a standard database or API interface (the universal, slowest route).
+
+# How far a route has been proven. A claim of support names its level.
+proof_levels:
+  0: Declared. A name in a list, no code.
+  1: Code exists (a connector, a generator) but has not been run against a fake or a real source.
+  2: Run against a fake, an emulator or a local copy.
+  3: Run against a real instance for a full load, an incremental load, a delete and a schema change.
+  4: "Hardened for production, with secrets, retries, a volume test, a runbook and supported versions written down."
+
+families:
+  - id: F1
+    name: Files in storage
+    arrival: files
+    initiators: [push, pull_mover]
+    questions:
+      changes: New files appear. A file is complete only when a marker or a manifest says so.
+      deletes: Not visible, except through a later full snapshot.
+      order_and_repeats: Files can be resent, renamed or arrive late. The same bytes twice must change nothing.
+      who_starts: The sender, or a copy service we start.
+      what_arrives: Files, in whatever format the sender chose.
+    approach: Land the files untouched with a manifest, refuse a second write to a delivery, then read.
+    needs: [row_read]
+    fallback: A listing job that copies new files and writes the manifest, when the source cannot write a manifest.
+    contract_test: Delivery names are unique, the manifest comes last, a duplicate write is refused, row counts agree.
+
+  - id: F2
+    name: Databases with log-based change capture
+    arrival: change_files
+    initiators: [pull_mover, push]
+    questions:
+      changes: Read from the database's change log, with operation, sequence and commit time.
+      deletes: Visible as delete events.
+      order_and_repeats: Ordered by sequence. Overlap between the first full load and the first changes needs removing.
+      who_starts: A capture tool, started by us or by the owner.
+      what_arrives: Change files, or an event flow.
+    approach: Take a full baseline, then apply the changes by sequence. Keep deletes soft.
+    needs: [log_based_changes, ordered_changes, deletes_visible]
+    fallback: Query-based loading (F3) with a soft-delete column, or a periodic full copy compared by key.
+    contract_test: Insert, update, delete, a change that arrives late, a replayed change, a feed that silently drops rows.
+
+  - id: F3
+    name: Databases without a change feed (query-based)
+    arrival: files
+    initiators: [pull_mover, pull_reader]
+    questions:
+      changes: Only through a change-time column or an increasing key. Without one, only a full copy works.
+      deletes: Invisible. Needs a soft-delete column, or a full copy compared by key.
+      order_and_repeats: A change-time column can lag or be edited, so a window overlaps and repeats are removed.
+      who_starts: A scheduled job we own.
+      what_arrives: Files.
+    approach: Ask for a window by watermark, write files plus a manifest, advance the watermark only after the load.
+    needs: [incremental_by_watermark, row_read]
+    fallback: A full copy compared by key to find deletes.
+    contract_test: A full load, an incremental window, a row changed inside the window twice, a missing delete.
+
+  - id: F4
+    name: Warehouses and lakehouses as sources
+    arrival: files
+    initiators: [pull_mover, share]
+    questions:
+      changes: Same as F3, plus whatever the warehouse offers to write or share a table.
+      deletes: Usually invisible. A shared table may expose them.
+      order_and_repeats: The export runs on the owner's compute and can slow their reports.
+      who_starts: A job we start that makes the warehouse write files, or a table the warehouse shares.
+      what_arrives: Files, or a table.
+    approach: Prefer the warehouse's own bulk export to files. If it can write an open table, read that (F5). Query in place only for small tables.
+    needs: [bulk_export_to_files, incremental_by_watermark]
+    fallback: Partitioned row reads through a standard interface, written as files.
+    contract_test: The F3 table, plus a large backfill and a check that the owner's load stays within a limit.
+
+  - id: F5
+    name: Shared or managed tables (zero copy)
+    arrival: tables
+    initiators: [share]
+    questions:
+      changes: Table versions, or a change feed when the provider shares history.
+      deletes: Visible in a change feed. Otherwise a full snapshot compared by key.
+      order_and_repeats: A version is atomic. A version the provider has removed cannot be re-read.
+      who_starts: Nothing to start. We read on our schedule.
+      what_arrives: A table.
+    approach: Read by version range, record the range and row counts as the batch, keep only the copy the dataset's policy allows.
+    needs: [zero_copy_read, history_guaranteed]
+    fallback: A snapshot read at one version, with deletes found by key comparison.
+    contract_test: A provider that adds a column, restates rows, removes old versions, and shares a change feed or does not.
+
+  - id: F6
+    name: Business applications through APIs
+    arrival: files
+    initiators: [pull_mover, pull_reader]
+    questions:
+      changes: A cursor or a modified-time field. Custom fields change the schema.
+      deletes: Often a separate endpoint or a flag.
+      order_and_repeats: Pages shift while we read. Rate limits apply.
+      who_starts: A managed connector, or our own pager.
+      what_arrives: Files or a table.
+    approach: Use a managed connector where one exists. Otherwise page with a cursor and write files plus a manifest.
+    needs: [incremental_by_watermark, row_read, deletes_visible]
+    fallback: Our own pager over the public interface.
+    contract_test: A page boundary that shifts, a rate limit, a custom field added, a deleted record.
+
+  - id: F7
+    name: Event streams
+    arrival: events
+    initiators: [pull_reader, push]
+    questions:
+      changes: Every event is a change.
+      deletes: A tombstone event, if the producer sends one.
+      order_and_repeats: Ordered per partition only. Delivered at least once. Late and repeated events are normal.
+      who_starts: A continuous or available-now reader.
+      what_arrives: Events.
+    approach: Read from a saved position into bronze, drop repeats by event id, place late events by event time.
+    needs: [events_stream]
+    fallback: A buffered export of the stream to files.
+    contract_test: A replay, an out-of-order burst, a gap, a restart from the saved position.
+
+  - id: F8
+    name: Documents and media
+    arrival: files
+    initiators: [push, pull_mover]
+    questions:
+      changes: New or changed files.
+      deletes: Not visible.
+      order_and_repeats: The same document in several versions.
+      who_starts: The sender, or a copy service.
+      what_arrives: Files that need text or fields extracted.
+    approach: Land untouched, extract text or fields in a separate step, keep the link from every extracted row to its file.
+    needs: [row_read]
+    fallback: Manual upload to a landing folder.
+    contract_test: An unreadable file, a scanned page, a changed version of a file.

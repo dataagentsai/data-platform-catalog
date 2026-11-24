@@ -1,0 +1,113 @@
+# Source profiles (binding layer: product names allowed here, rule R1): each product is a MENU of routes. A route belongs to
+# one family (dpc/source_families.yaml) and has a proof level and its evidence. The mover prefers, in order: a route the
+# vendor certifies, then one that shows changes and deletes, then a bulk export, then query-based reads. A choice that
+# departs from that order needs a recorded reason in the dataset's manifest.
+#
+# verified: true means the route's existence was checked against the vendor's current documentation on as_of.
+# verified: false means it is written from general knowledge and must be checked before it is promised to anyone.
+# proof_level is the platform's own proof (0 to 4, see source_families.yaml). No route is above 3 today.
+version: 0
+as_of: 2026-11-24
+
+products:
+  - id: sap
+    name: SAP (S/4HANA, ECC, HANA, Business Data Cloud)
+    policy: Only routes the vendor certifies. Do not read the tables of an S/4 system directly (licence and support rules).
+    routes:
+      - {name: Business Data Cloud Connect (zero-copy sharing), family: F5, capabilities: [zero_copy_read, history_guaranteed], proof_level: 0, verified: true, evidence: "Generally available; shared through the open sharing protocol; each data product must be shared explicitly", constraint: Needs the vendor licence}
+      - {name: OData and REST interfaces, family: F6, capabilities: [incremental_by_watermark, row_read], proof_level: 0, verified: false, evidence: none, constraint: Rate limits, slow for bulk}
+      - {name: Export to files by the vendor's data tools, family: F1, capabilities: [bulk_export_to_files], proof_level: 0, verified: false, evidence: none, constraint: Depends on the tool and its cost}
+      - {name: HANA as a plain database (query), family: F3, capabilities: [incremental_by_watermark, row_read], proof_level: 0, verified: false, evidence: none, constraint: Not for the tables of an S/4 system}
+      - {name: Event mesh, family: F7, capabilities: [events_stream], proof_level: 0, verified: false, evidence: none, constraint: Not for history or bulk}
+
+  - id: salesforce
+    name: Salesforce
+    policy: Prefer the managed connector or zero-copy sharing over our own pager.
+    routes:
+      - {name: Lakeflow Connect managed connector, family: F6, capabilities: [incremental_by_watermark, deletes_visible, row_read], proof_level: 0, verified: true, evidence: "Generally available on the three clouds; some products unsupported (for example B2C Commerce Cloud)", constraint: Databricks customers only}
+      - {name: Data Cloud zero-copy sharing and federation, family: F5, capabilities: [zero_copy_read], proof_level: 0, verified: true, evidence: "Offered by Databricks beside the connector", constraint: Needs the Salesforce add-on}
+      - {name: Bulk and REST interfaces through a copy service, family: F6, capabilities: [incremental_by_watermark, row_read], proof_level: 0, verified: false, evidence: none, constraint: Rate limits}
+      - {name: Change events, family: F7, capabilities: [events_stream], proof_level: 0, verified: false, evidence: none, constraint: Not for history}
+
+  - id: oracle
+    name: Oracle Database
+    policy: Prefer log-based capture. Query-based only with a trustworthy change-time column.
+    routes:
+      - {name: Log-based capture to files or a stream, family: F2, capabilities: [log_based_changes, ordered_changes, deletes_visible], proof_level: 0, verified: false, evidence: none, constraint: Needs the owner's capture setup and licence}
+      - {name: Query-based incremental, family: F3, capabilities: [incremental_by_watermark, row_read], proof_level: 1, verified: false, evidence: "A connector class exists in the older framework; not wired into the platform", constraint: Deletes invisible}
+
+  - id: sql_server
+    name: SQL Server and Azure SQL
+    policy: Prefer the managed connector or the engine's own change capture; query-based as the fallback.
+    routes:
+      - {name: Lakeflow Connect managed connector, family: F2, capabilities: [log_based_changes, ordered_changes, deletes_visible], proof_level: 0, verified: true, evidence: "Generally available", constraint: Databricks customers only}
+      - {name: Copy service, whole table (generated, not run), family: F3, capabilities: [row_read], proof_level: 1, verified: true, evidence: "Pipelines generated and tested offline (24 tests); never run against a database", constraint: Whole table only today}
+      - {name: Query-based incremental, family: F3, capabilities: [incremental_by_watermark, row_read], proof_level: 1, verified: false, evidence: "A connector class exists in the older framework", constraint: Deletes invisible}
+
+  - id: postgresql
+    name: PostgreSQL
+    policy: Query-based today. Log-based capture needs a decision on the tool.
+    routes:
+      - {name: Query-based reader, family: F3, capabilities: [incremental_by_watermark, row_read], proof_level: 2, verified: true, evidence: "The platform's own source adapter runs against a real local PostgreSQL, with the simulated company's tables", constraint: Our table layout, not a customer's}
+      - {name: Log-based capture, family: F2, capabilities: [log_based_changes, ordered_changes, deletes_visible], proof_level: 0, verified: false, evidence: none, constraint: Needs a capture tool and a replication slot}
+
+  - id: mysql
+    name: MySQL
+    policy: Query-based today.
+    routes:
+      - {name: Query-based incremental, family: F3, capabilities: [incremental_by_watermark, row_read], proof_level: 1, verified: false, evidence: "A connector class exists in the older framework", constraint: Deletes invisible}
+
+  - id: redshift
+    name: Amazon Redshift
+    policy: Often a derived copy. For ongoing loads go upstream when the upstream sources are reachable. Export for history.
+    routes:
+      - {name: UNLOAD to files, family: F4, capabilities: [bulk_export_to_files, incremental_by_watermark], proof_level: 0, verified: false, evidence: "Designed only", constraint: Runs on the owner's compute; needs a role on the cluster}
+      - {name: Write to an open table (Iceberg), family: F5, capabilities: [zero_copy_read], proof_level: 0, verified: true, evidence: "Redshift can write Iceberg tables to S3 (generally available Nov 2025); append-oriented", constraint: Depends on the client's version and region}
+      - {name: Query in place (federation), family: F4, capabilities: [row_read], proof_level: 0, verified: false, evidence: none, constraint: Loads Redshift on every query}
+
+  - id: snowflake
+    name: Snowflake
+    policy: Prefer a table share or an export to files over row reads.
+    routes:
+      - {name: Export to files, family: F4, capabilities: [bulk_export_to_files, incremental_by_watermark], proof_level: 0, verified: false, evidence: none, constraint: Runs on the owner's compute}
+      - {name: Row reads through a standard interface, family: F4, capabilities: [row_read], proof_level: 0, verified: false, evidence: none, constraint: Slow for large tables}
+
+  - id: bigquery
+    name: Google BigQuery
+    policy: Prefer an export to files.
+    routes:
+      - {name: Export to files, family: F4, capabilities: [bulk_export_to_files, incremental_by_watermark], proof_level: 0, verified: false, evidence: none, constraint: Needs a Google Cloud binding, which does not exist}
+
+  - id: object_storage
+    name: Cloud object storage (S3, ADLS, GCS)
+    policy: Land the files untouched and write the manifest.
+    routes:
+      - {name: Azure Data Lake Storage (CSV files through the copy service), family: F1, capabilities: [bulk_export_to_files], proof_level: 3, verified: true, evidence: "Run for real on 20 Nov 2026: 3 deliveries landed, the lander loaded 1 and skipped 2 as duplicates", constraint: CSV only today}
+      - {name: Amazon S3, family: F1, capabilities: [bulk_export_to_files], proof_level: 2, verified: true, evidence: "Tested on a fake AWS", constraint: This AWS account blocks S3}
+      - {name: Google Cloud Storage, family: F1, capabilities: [bulk_export_to_files], proof_level: 0, verified: true, evidence: none, constraint: No Google binding}
+
+  - id: sftp
+    name: SFTP and partner file drops
+    policy: Land the files untouched and write the manifest.
+    routes:
+      - {name: Copy service or our listing job, family: F1, capabilities: [bulk_export_to_files], proof_level: 1, verified: false, evidence: "A connector class exists in the older framework", constraint: Not wired into the platform}
+
+  - id: rest_api
+    name: A generic REST interface
+    policy: Our pager is for the long tail. Prefer a managed connector for a named product.
+    routes:
+      - {name: Our paged reader, family: F6, capabilities: [incremental_by_watermark, row_read], proof_level: 2, verified: true, evidence: "Runs against the simulated company's dealer interface", constraint: A mock only}
+
+  - id: event_streams
+    name: Event streams (Kinesis, Event Hubs, Kafka, IoT)
+    policy: Batch first. Streaming is parked.
+    routes:
+      - {name: Amazon Kinesis, family: F7, capabilities: [events_stream], proof_level: 2, verified: true, evidence: "Tested on a fake AWS; the replay and out-of-order incidents are handled", constraint: This AWS account blocks Kinesis}
+      - {name: Azure Event Hubs, family: F7, capabilities: [events_stream], proof_level: 0, verified: true, evidence: "The provider is registered; no adapter", constraint: The adapter is not built}
+      - {name: Apache Kafka, family: F7, capabilities: [events_stream], proof_level: 0, verified: true, evidence: none, constraint: No adapter}
+
+  - id: documents
+    name: Documents and media
+    policy: Land untouched, extract in a separate step.
+    routes:
+      - {name: Files plus an extraction step, family: F8, capabilities: [bulk_export_to_files], proof_level: 0, verified: true, evidence: "Setting names exist; no code", constraint: Not built}
