@@ -288,9 +288,9 @@ def lint_dataset_v02(m, contract, platform, name):
             errs.append(f"{name}: ingest {ing['mode']} needs one of archetypes {sorted(INGEST_ARCHETYPES[ing['mode']])}")
         if ing["mode"] in ("pull", "stream") and "landing" in m["reconciliation"]["hops"]:
             errs.append(f"{name}: a {ing['mode']} dataset has no landing hop (ADR-002)")
-        if ing.get("read") == "full_copy" and m["load"]["deletes"]["detect"] == "none":
+        if ing.get("read") in ("full_copy", "shared_snapshot") and m["load"]["deletes"]["detect"] == "none":
             errs.append(f"{name}: a full copy must detect deletes by key_compare")
-    if m["load"].get("mass_delete_max_share") is not None and (ing or {}).get("read") != "full_copy":
+    if m["load"].get("mass_delete_max_share") is not None and (ing or {}).get("read") not in ("full_copy", "shared_snapshot"):
         errs.append(f"{name}: mass_delete_max_share applies only to full copies")
     actions = set(((m.get("quality") or {}).get("actions") or {})) | set((platform or {}).get("quality_defaults") or {})
     for sv in contract_severities(contract):

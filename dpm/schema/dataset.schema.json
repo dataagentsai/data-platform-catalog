@@ -113,7 +113,9 @@
             "watermark",
             "files",
             "pages",
-            "events"
+            "events",
+            "shared_changes",
+            "shared_snapshot"
           ]
         }
       }
